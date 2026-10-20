@@ -79,9 +79,11 @@
 	}
 
 	// Low-level request. Resolves to { status, body } where body is the parsed
-	// JSON (or null for 204 / empty). Rejects with ApiError.
+	// JSON (or null for 204 / empty). Rejects with ApiError. options.maxBytes
+	// raises the response cap for the one call that needs it (the envelope).
 	function request(method, path, options) {
 		options = options || {};
+		var maxBytes = options.maxBytes || cfg.maxResponseBytes;
 		var controller = new AbortController();
 		var timer = setTimeout(function () { controller.abort(); }, cfg.requestTimeoutMs);
 		var headers = { "Accept": "application/json" };
@@ -109,8 +111,10 @@
 				if (status === 204) { return { status: status, body: null }; }
 				var type = res.headers.get("content-type") || "";
 				var isJson = type.indexOf("application/json") === 0 || type.indexOf("application/problem+json") === 0;
+				var declared = parseInt(res.headers.get("content-length") || "", 10);
+				if (Number.isFinite(declared) && declared > maxBytes) { throw new ApiError(KINDS.UNEXPECTED, status); }
 				return res.text().then(function (text) {
-					if (text.length > cfg.maxResponseBytes) { throw new ApiError(KINDS.UNEXPECTED, status); }
+					if (text.length > maxBytes) { throw new ApiError(KINDS.UNEXPECTED, status); }
 					var body = null;
 					if (isJson && text.length > 0) {
 						try { body = JSON.parse(text); } catch (e) { throw new ApiError(KINDS.UNEXPECTED, status); }
@@ -231,6 +235,53 @@
 		return authed("DELETE", "/v1/account/sessions/" + encodeURIComponent(id)).then(function () { return true; });
 	}
 
+	// ---- encrypted sync: what the server holds, and the envelope itself (opaque bytes) ----
+	var HEX64_RE = /^[0-9a-f]{64}$/;
+	var BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+	var MAX_ENVELOPE_BYTES = 16 * 1024 * 1024;
+
+	function parseSyncStatus(b, status) {
+		var updated = b ? parseUtc(b.updatedAt) : NaN;
+		if (!b || typeof b !== "object" || !Number.isInteger(b.revision) || b.revision < 1 ||
+			typeof b.fingerprint !== "string" || !HEX64_RE.test(b.fingerprint) ||
+			!Number.isInteger(b.sizeBytes) || b.sizeBytes < 1 || b.sizeBytes > MAX_ENVELOPE_BYTES || !Number.isFinite(updated)) {
+			throw new ApiError(KINDS.UNEXPECTED, status);
+		}
+		return { revision: b.revision, fingerprint: b.fingerprint, sizeBytes: b.sizeBytes, updatedAt: new Date(updated) };
+	}
+
+	function notFoundAsNull(err) {
+		if (err instanceof ApiError && err.kind === KINDS.NOT_FOUND) { return null; }
+		throw err;
+	}
+
+	// null when the server holds no vault for the account.
+	function syncStatus() {
+		return authed("GET", "/v1/sync/status")
+			.then(function (r) { return parseSyncStatus(r.body, r.status); })
+			.catch(notFoundAsNull);
+	}
+
+	// The stored envelope as bytes, with the server's statements about it. The caller checks the
+	// fingerprint; the size is checked here. null when the server holds nothing.
+	function syncEnvelope() {
+		return authed("GET", "/v1/sync/envelope", { maxBytes: cfg.maxEnvelopeResponseBytes })
+			.then(function (r) {
+				var meta = parseSyncStatus(r.body, r.status);
+				var text = r.body.envelope;
+				if (typeof text !== "string" || text.length === 0 || text.length % 4 !== 0 || !BASE64_RE.test(text)) {
+					throw new ApiError(KINDS.UNEXPECTED, r.status);
+				}
+				var binary = atob(text);
+				if (binary.length !== meta.sizeBytes) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
+				var bytes = new Uint8Array(binary.length);
+				for (var i = 0; i < binary.length; i++) { bytes[i] = binary.charCodeAt(i); }
+				meta.envelope = bytes;
+				return meta;
+			})
+			.catch(notFoundAsNull);
+	}
+
 	function logout() {
 		return authed("POST", "/v1/auth/logout").then(function () { clearSession(); return true; })
 			.catch(function (err) { clearSession(); throw err; });
@@ -253,6 +304,8 @@
 		me: me,
 		sessions: sessions,
 		revokeSession: revokeSession,
+		syncStatus: syncStatus,
+		syncEnvelope: syncEnvelope,
 		logout: logout,
 		logoutAll: logoutAll
 	});

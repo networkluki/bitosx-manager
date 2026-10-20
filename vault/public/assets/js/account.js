@@ -18,6 +18,8 @@
 	var idleTimer = null;
 
 	function showLogin(message, level) {
+		// The vault panel locks and hides itself on this; see vault.js.
+		document.dispatchEvent(new CustomEvent("bitosx:signed-out"));
 		accountPanel.hidden = true;
 		loginPanel.hidden = false;
 		ui.notice(loginNotice, level || "warn", message || "");
@@ -87,6 +89,7 @@
 			renderSessions(r[1]);
 			showAccount();
 			armIdle();
+			document.dispatchEvent(new CustomEvent("bitosx:signed-in"));
 		});
 	}
 

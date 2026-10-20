@@ -1,0 +1,14 @@
+{
+  "note": "ForTesting profile (1 MiB); ASCII password; canonical encoding.",
+  "typedPassword": "correct horse battery",
+  "passwordBytesHex": "636f727265637420686f7273652062617474657279",
+  "fingerprint": "b50558dac6f466e6565c9077e7749f3eac1a6b3a021c3e779ae5a8e789baee1a",
+  "sizeBytes": 1851,
+  "kdf": {
+    "MemoryKiB": 1024,
+    "Iterations": 1,
+    "DegreeOfParallelism": 1,
+    "KeyLengthBytes": 32
+  },
+  "plaintextUtf8": "{\u0022schemaVersion\u0022:1,\u0022items\u0022:[{\u0022type\u0022:\u0022login\u0022,\u0022Username\u0022:\u0022octocat@example.com\u0022,\u0022Password\u0022:\u0022P@ssw0rd-Strong-123\u0022,\u0022Urls\u0022:[\u0022https://github.com\u0022],\u0022Id\u0022:\u002211111111-1111-4111-8111-111111111111\u0022,\u0022Name\u0022:\u0022GitHub\u0022,\u0022Favorite\u0022:true,\u0022CreatedAt\u0022:\u00222026-10-01T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-10-02T09:00:00\u002B00:00\u0022},{\u0022type\u0022:\u0022login\u0022,\u0022Username\u0022:\u0022alice\u0022,\u0022Password\u0022:\u0022hunter2 \\u0026 \\u0022quotes\\u0022 \\u003Cb\\u003E\u0022,\u0022Urls\u0022:[\u0022https://bank.example\u0022,\u0022https://login.bank.example/portal\u0022],\u0022Id\u0022:\u002222222222-2222-4222-8222-222222222222\u0022,\u0022Name\u0022:\u0022Bank \\u003Cscript\\u003Ealert(1)\\u003C/script\\u003E\u0022,\u0022Notes\u0022:\u0022Security question: first pet.\\nSecond line \\u0026 \\u003Ci\\u003Emarkup\\u003C/i\\u003E\u0022,\u0022Favorite\u0022:false,\u0022CreatedAt\u0022:\u00222026-10-01T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-10-01T09:00:00\u002B00:00\u0022},{\u0022type\u0022:\u0022login\u0022,\u0022Password\u0022:\u0022\\u00F1and\\u00FA-\\u03A9mega-\\uD83D\\uDD10\u0022,\u0022Urls\u0022:[],\u0022Id\u0022:\u002233333333-3333-4333-8333-333333333333\u0022,\u0022Name\u0022:\u0022Wi-Fi caf\\u00E9\u0022,\u0022Favorite\u0022:false,\u0022CreatedAt\u0022:\u00222026-10-03T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-10-03T09:00:00\u002B00:00\u0022}]}"
+}

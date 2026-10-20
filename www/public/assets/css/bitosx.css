@@ -251,3 +251,24 @@ footer .footer-copyright{color:#6a6f78;font-size:11px;letter-spacing:.3px}
 .card-subhead{margin-top:18px}
 .panel-subhead{font-size:1.15rem}
 .panel.stacked{margin-top:22px}
+
+/* Vault view (vault.bitosx.se, phase 4) */
+.vault-status{color:var(--text-soft);font-size:.92rem;margin:0 0 16px}
+.vault-progress{color:var(--text-soft);font-size:.85rem}
+.vault-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px}
+.vault-toolbar input{flex:1 1 220px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--page-bg);color:var(--text);font-size:.95rem;font-family:inherit}
+.vault-count{color:var(--text-soft);font-size:.85rem;white-space:nowrap}
+.vault-items{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.vault-item{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:var(--page-bg)}
+.vault-item__head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px;margin-bottom:8px}
+.vault-item__name{font-size:1.05rem;font-weight:600;margin:0;overflow-wrap:anywhere}
+.vault-item__star{color:var(--warn)}
+.vault-item__meta{color:var(--text-soft);font-size:.78rem;white-space:nowrap}
+.vault-item__rows{display:grid;grid-template-columns:90px 1fr;gap:6px 12px;margin:0;font-size:.93rem}
+.vault-item__rows dt{color:var(--text-soft);font-size:.82rem;padding-top:4px}
+.vault-item__rows dd{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0}
+.vault-value{font-family:"SFMono-Regular",Menlo,Consolas,"Liberation Mono","Courier New",monospace;font-size:.9rem;overflow-wrap:anywhere}
+.vault-url{overflow-wrap:anywhere}
+.vault-notes{white-space:pre-wrap;overflow-wrap:anywhere}
+.vault-empty{color:var(--text-soft);text-align:center;padding:18px 0}
+@media (max-width:560px){.vault-item__rows{grid-template-columns:1fr}.vault-item__rows dt{padding-top:6px}}

@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://api.bitosx.se; base-uri 'none'; form-action 'none'; upgrade-insecure-requests" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self'; connect-src https://api.bitosx.se; base-uri 'none'; form-action 'none'; upgrade-insecure-requests" />
     <meta name="referrer" content="no-referrer" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>Sign in — BitosX</title>
+    <title>Sign in — BitosX vault</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.1.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.2.0" />
     <meta name="theme-color" content="#26292E" />
     <script src="/assets/js/theme-init.js"></script>
 </head>
@@ -25,7 +25,7 @@
     <div class="container">
       <a class="brand" href="/">
         <img src="/favicon.svg" alt="" width="28" height="28" />
-        <span>BitosX<small>Web account · phase 1</small></span>
+        <span>BitosX<small>Web account &amp; vault</small></span>
       </a>
       <nav class="site-nav" aria-label="Site">
         <a href="/">Sign in</a>
@@ -85,14 +85,45 @@
           <button class="btn ghost small" type="button" id="logout">Sign out</button>
           <button class="btn danger small" type="button" id="logout-all">Sign out everywhere</button>
         </div>
-        <p class="inline-note">Vault contents are not available online in phase 1. Use the desktop app for your vault; this page manages the account only. You are signed out automatically after 15 minutes without activity, and whenever this tab is closed or reloaded.</p>
+        <p class="inline-note">You are signed out automatically after 15 minutes without activity, and whenever this tab is closed or reloaded.</p>
+      </section>
+
+      <section class="panel wide" id="vault-panel" hidden>
+        <h1>Your vault</h1>
+        <p class="help">The server stores your vault exactly as the desktop app encrypted it and cannot open it. It is opened <strong>in this browser</strong> with the vault's <strong>master password</strong>, which is never sent anywhere. Read-only: edit in the desktop app and sync.</p>
+        <div class="notice" id="vault-notice" role="status"></div>
+        <p class="vault-status" id="vault-status-text"></p>
+
+        <form id="vault-unlock-form" novalidate hidden>
+          <div class="field">
+            <label for="vault-master-password">Master password of the vault</label>
+            <input id="vault-master-password" name="masterPassword" type="password" autocomplete="off" spellcheck="false" maxlength="1024" required />
+            <span class="hint">Not your account password. Derived into the key here, with Argon2id, exactly as on the desktop.</span>
+          </div>
+          <div class="form-actions">
+            <button class="btn" type="submit" id="vault-unlock-submit">Open in this browser</button>
+            <span class="spacer"></span>
+            <span class="vault-progress" id="vault-progress" role="status" aria-live="polite"></span>
+          </div>
+        </form>
+
+        <div id="vault-items-section" hidden>
+          <div class="vault-toolbar">
+            <label class="visually-hidden" for="vault-search">Search items</label>
+            <input id="vault-search" type="search" placeholder="Search by name, username or URL" autocomplete="off" spellcheck="false" maxlength="256" />
+            <span class="vault-count" id="vault-count"></span>
+            <button class="btn ghost small" type="button" id="vault-lock">Lock</button>
+          </div>
+          <ul class="vault-items" id="vault-items"></ul>
+          <p class="inline-note">Passwords are hidden until you press Show. A copied value is cleared from the clipboard after 30 seconds if it is still there. The vault locks after 5 minutes without activity, when this tab is hidden, when you sign out, and when the tab is closed or reloaded.</p>
+        </div>
       </section>
 
     </div>
   </main>
 
   <footer>
-    <div class="footer-version">web v0.1.0</div>
+    <div class="footer-version">web v0.2.0</div>
     <div class="footer-links">
       <a href="https://bitosx.se/#security" rel="noopener noreferrer">How your data is protected</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">API source</a>
@@ -105,6 +136,9 @@
   <script src="/assets/js/config.js"></script>
   <script src="/assets/js/api.js"></script>
   <script src="/assets/js/ui.js"></script>
+  <script src="/assets/vendor/hash-wasm/argon2.umd.min.js"></script>
+  <script src="/assets/js/vault-crypto.js"></script>
   <script src="/assets/js/account.js" defer></script>
+  <script src="/assets/js/vault.js" defer></script>
 </body>
 </html>
