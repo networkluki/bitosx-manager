@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://api.bitosx.se; base-uri 'none'; form-action 'none'; upgrade-insecure-requests" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Verify your email — BitosX</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.1.0" />
+    <meta name="theme-color" content="#26292E" />
+    <script src="/assets/js/theme-init.js"></script>
+</head>
+<body>
+  <div class="theme-switch">
+    <button type="button" id="themeSwitch" class="theme-switch__btn" role="switch" aria-checked="false" aria-label="Toggle light and dark theme">
+      <svg class="theme-switch__icon theme-switch__icon--sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g></svg>
+      <svg class="theme-switch__icon theme-switch__icon--moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.5 14.7A8.5 8.5 0 0 1 9.3 3.5a8.5 8.5 0 1 0 11.2 11.2z"/></svg>
+      <span class="theme-switch__knob"></span>
+    </button>
+  </div>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/">
+        <img src="/favicon.svg" alt="" width="28" height="28" />
+        <span>BitosX<small>Web account · phase 1</small></span>
+      </a>
+      <nav class="site-nav" aria-label="Site">
+        <a href="/">Sign in</a>
+        <a href="/register">Register</a>
+        <a href="https://bitosx.se/" rel="noopener noreferrer">About BitosX</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div class="container">
+
+      <section class="panel" id="verify-panel">
+        <h1>Verify your email</h1>
+        <p class="help">Choose your <strong>account password</strong> (12–128 characters, used exactly as typed). This is the password you sign in with. It is not your vault master password; keep the two different.</p>
+        <div class="notice" id="verify-notice" role="alert"></div>
+        <form id="verify-form" novalidate>
+          <div class="field">
+            <label for="verify-password">New account password</label>
+            <input id="verify-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+            <span class="hint">At least 12 characters. Leading and trailing spaces count.</span>
+          </div>
+          <div class="field">
+            <label for="verify-password2">Repeat password</label>
+            <input id="verify-password2" name="password2" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn" type="submit" id="verify-submit">Set password and verify</button>
+          </div>
+        </form>
+        <p class="links"><a href="/register#resend">Request a new link</a><a href="/">Sign in</a></p>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-version">web v0.1.0</div>
+    <div class="footer-links">
+      <a href="https://bitosx.se/#security" rel="noopener noreferrer">How your data is protected</a>
+      <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">API source</a>
+    </div>
+    <div class="footer-copyright">&copy; <span id="current-year"></span> BitosX · Luki Hackwell</div>
+  </footer>
+
+  <script src="/assets/js/year.js"></script>
+  <script src="/assets/js/theme-switch.js"></script>
+  <script src="/assets/js/config.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/ui.js"></script>
+  <script src="/assets/js/verify-email.js" defer></script>
+</body>
+</html>

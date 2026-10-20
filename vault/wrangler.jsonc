@@ -1,0 +1,15 @@
+{
+  // vault.bitosx.se — web account app (static assets only; all API calls go
+  // from the browser to https://api.bitosx.se). Deploy from this directory:
+  // `wrangler deploy`, then attach the custom domain vault.bitosx.se.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bitosx-vault",
+  "compatibility_date": "2026-08-14",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page"
+  },
+  "observability": {
+    "enabled": false
+  }
+}
