@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Mirrors the edge policy in _headers so the preview on GitHub Pages is covered too.
+         frame-ancestors is not honoured in a <meta> policy; the _headers file carries it. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://api.bitosx.se; base-uri 'none'; form-action 'none'; upgrade-insecure-requests" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Luki Hackwell" />
+    <meta name="description" content="BitosX is a security-focused password manager built around zero-knowledge encryption and a strict separation between account authentication and vault encryption." />
+    <title>BitosX — Your Security</title>
+    <link rel="canonical" href="https://bitosx.se/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.1.0" />
+    <meta name="theme-color" content="#26292E" />
+    <!-- Theme applied before first paint (avoids a flash of the wrong theme) -->
+    <script src="/assets/js/theme-init.js"></script>
+</head>
+<body>
+  <div class="theme-switch">
+    <button type="button" id="themeSwitch" class="theme-switch__btn" role="switch" aria-checked="false" aria-label="Toggle light and dark theme">
+      <svg class="theme-switch__icon theme-switch__icon--sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g></svg>
+      <svg class="theme-switch__icon theme-switch__icon--moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.5 14.7A8.5 8.5 0 0 1 9.3 3.5a8.5 8.5 0 1 0 11.2 11.2z"/></svg>
+      <span class="theme-switch__knob"></span>
+    </button>
+  </div>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/">
+        <img src="/favicon.svg" alt="" width="28" height="28" />
+        <span>BitosX<small>Your Security</small></span>
+      </a>
+      <nav class="site-nav" aria-label="Site">
+        <a href="#security">Security</a>
+        <a href="#today">Today</a>
+        <a href="#status">Status</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="https://github.com/networkluki/bitosx" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h1>BitosX</h1>
+      <p class="lede">An advanced password manager built around zero-knowledge encryption and a strict separation between account authentication and vault encryption.</p>
+      <p class="tagline">Encrypted locally • Fail closed • No backdoors</p>
+      <div class="actions">
+        <a class="btn" href="https://github.com/networkluki/bitosx/releases" target="_blank" rel="noopener noreferrer">Desktop app (GitHub releases)</a>
+        <a class="btn ghost" href="https://vault.bitosx.se/">Web account</a>
+      </div>
+    </div>
+  </section>
+
+  <main>
+    <section class="section" id="what">
+      <div class="container">
+        <h2>What BitosX is</h2>
+        <p class="intro">Vault data is encrypted on your device before it ever reaches a server. The backend never needs your master password, your raw encryption keys, or a single decrypted password.</p>
+        <div class="grid">
+          <article class="card">
+            <h3>Zero-knowledge by design</h3>
+            <p>The master password, the vault key and the decrypted contents never leave the device. A compromised server must not be able to reveal vault plaintext. This rule is enforced at the API contract and database schema level, not just promised.</p>
+          </article>
+          <article class="card">
+            <h3>Two separate systems</h3>
+            <p>Your <strong>account password</strong> signs you in to the service. Your <strong>master password</strong> decrypts your vault. They are different secrets, hashed and derived in different places, and are never conflated in code, storage or transport.</p>
+          </article>
+          <article class="card">
+            <h3>Fails closed</h3>
+            <p>Unknown formats, tampered files, wrong passwords and unexpected errors all end the same way: nothing is decrypted, nothing falls back to plaintext, and an unlocked vault locks itself. There is no recovery key and no universal decryption key.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="security">
+      <div class="container">
+        <h2>How your vault is protected</h2>
+        <p class="intro">Vetted primitives only, composed the boring way: Argon2id derives a key from the master password, and that key only ever wraps a random vault key.</p>
+        <div class="two-col">
+          <pre class="keychain" aria-label="Key hierarchy">master password
+      │  <strong>Argon2id</strong>(salt, 256 MiB, 3 passes, 4 lanes)
+      ▼
+key-encryption key (256-bit)
+      │  <strong>AES-256-GCM</strong> wrap   (AAD = vault header)
+      ▼
+random vault key (256-bit, CSPRNG)
+      │  <strong>AES-256-GCM</strong> encrypt (fresh nonce each write)
+      ▼
+encrypted vault — the only thing written to disk</pre>
+          <div class="card">
+            <table>
+              <thead><tr><th scope="col">Property</th><th scope="col">Value</th></tr></thead>
+              <tbody>
+                <tr><td>Key derivation</td><td>Argon2id, 256 MiB memory, 3 iterations, parallelism 4, 32-byte key</td></tr>
+                <tr><td>Encryption</td><td>AES-256-GCM, 128-bit tag, 96-bit random nonce per operation</td></tr>
+                <tr><td>Salt</td><td>128-bit, random per vault</td></tr>
+                <tr><td>Tamper detection</td><td>Header fields bound as associated data; any change fails authentication</td></tr>
+                <tr><td>Untrusted input</td><td>Vault file capped at 16 MiB; KDF parameters bounded before any derivation</td></tr>
+                <tr><td>Wrong password vs tampering</td><td>Indistinguishable: one generic error</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="inline-note centered">Full details, including an explicit list of what BitosX does <em>not</em> protect against, live in the repository: <a href="https://github.com/networkluki/bitosx/blob/main/docs/SECURITY_MODEL.md" target="_blank" rel="noopener noreferrer">SECURITY_MODEL.md</a>, <a href="https://github.com/networkluki/bitosx/blob/main/docs/THREAT_MODEL.md" target="_blank" rel="noopener noreferrer">THREAT_MODEL.md</a>, <a href="https://github.com/networkluki/bitosx/blob/main/docs/CRYPTOGRAPHY.md" target="_blank" rel="noopener noreferrer">CRYPTOGRAPHY.md</a>.</p>
+      </div>
+    </section>
+
+    <section class="section" id="today">
+      <div class="container">
+        <h2>What works today</h2>
+        <p class="intro">Honest status, no marketing. The desktop application (0.7.0) is a complete local encrypted vault. Server features are being built behind it, one audited layer at a time.</p>
+        <div class="two-col">
+          <article class="card">
+            <h3>Desktop app — available</h3>
+            <ul>
+              <li>Create, unlock and lock a local vault protected by a master password</li>
+              <li>Add, edit, delete, favourite and search login items</li>
+              <li>Automatic locking on inactivity, workstation lock and suspend</li>
+              <li>Change the master password, rotate the vault key, strengthen key derivation</li>
+              <li>Encrypted backup and authenticated restore</li>
+              <li>Clipboard copy with timed clear and “do not keep” markers</li>
+              <li>Cryptographically secure password generator and a local Security Center</li>
+              <li>Windows, Linux and macOS builds (tested on all three; run on Windows)</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>Online account — phase 1</h3>
+            <ul>
+              <li>Email-first registration: no password is accepted until you own the address</li>
+              <li>Email verification sets the account password (12–128 characters)</li>
+              <li>Sign in, short-lived access tokens, rotating refresh tokens</li>
+              <li>See and revoke your own sessions at <a href="https://vault.bitosx.se/">vault.bitosx.se</a></li>
+            </ul>
+            <h3 class="card-subhead">Not yet</h3>
+            <ul class="muted">
+              <li>Vault synchronisation between the desktop app and the server</li>
+              <li>Reading your vault in the browser</li>
+              <li>Browser extension, mobile apps, password reset, two-factor authentication</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="status">
+      <div class="container">
+        <h2>Service status</h2>
+        <p class="intro">Three hostnames, three jobs. The API status below is fetched live from your browser; if the API is not reachable from here, that is shown as such rather than guessed.</p>
+        <div class="card">
+          <ul class="status-list">
+            <li>
+              <span class="host">bitosx.se</span>
+              <span class="badge ok">static</span>
+              <span class="desc">This page. Product information only. No account data, no cookies, no tracking.</span>
+            </li>
+            <li>
+              <span class="host">vault.bitosx.se</span>
+              <span class="badge ok">phase 1</span>
+              <span class="desc">Web account: register, verify your email, sign in, manage sessions. Talks to the API directly from your browser.</span>
+            </li>
+            <li>
+              <span class="host">api.bitosx.se</span>
+              <span class="badge neutral" id="api-badge" aria-live="polite">checking…</span>
+              <span class="desc" id="api-desc">Account and session API, operated alongside the desktop app. Behind Cloudflare and a reverse proxy; the service itself only listens on loopback.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="roadmap">
+      <div class="container">
+        <h2>Roadmap</h2>
+        <ol class="roadmap">
+          <li>
+            <div class="phase">Phase 1<small>now</small></div>
+            <div><p><strong>Public site and web account.</strong> This page, plus registration, email verification, sign-in and session management against the existing account API. No vault data is involved anywhere online.</p></div>
+          </li>
+          <li>
+            <div class="phase">Phase 2<small>next</small></div>
+            <div><p><strong>Desktop app signs in.</strong> The desktop app gets a real API client: account sign-in, session handling and token refresh, still with no vault data leaving the device.</p></div>
+          </li>
+          <li>
+            <div class="phase">Phase 3<small>planned</small></div>
+            <div><p><strong>Encrypted sync.</strong> The server stores the encrypted vault envelope as opaque bytes. The desktop app uploads and downloads ciphertext only; conflicts fail closed rather than merge blindly.</p></div>
+          </li>
+          <li>
+            <div class="phase">Phase 4<small>planned</small></div>
+            <div><p><strong>Web vault.</strong> Decrypting in the browser with the master password, using the same Argon2id and AES-256-GCM parameters as the desktop app, so the server stays zero-knowledge even when you read your vault online.</p></div>
+          </li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-version">web v0.1.0 · app v0.7.0 · api v0.1.0</div>
+    <div class="footer-links">
+      <a href="https://github.com/networkluki/bitosx" target="_blank" rel="noopener noreferrer">bitosx</a>
+      <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">bitosx-api</a>
+      <a href="https://github.com/networkluki/bitosx/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer">Security policy</a>
+      <a href="https://lukihackwell.com/" target="_blank" rel="noopener noreferrer">networkluki</a>
+    </div>
+    <div class="footer-copyright">&copy; <span id="current-year"></span> BitosX · Luki Hackwell</div>
+  </footer>
+
+  <script src="/assets/js/year.js"></script>
+  <script src="/assets/js/theme-switch.js"></script>
+  <script src="/assets/js/api-status.js" defer></script>
+</body>
+</html>

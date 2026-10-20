@@ -1,0 +1,15 @@
+{
+  // bitosx.se — public product site (static assets only, no Worker code).
+  // Deploy from this directory: `wrangler deploy`. Attach the custom domain
+  // bitosx.se to the Worker in the Cloudflare dashboard (Workers → Settings → Domains & Routes).
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bitosx-se",
+  "compatibility_date": "2026-08-14",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page"
+  },
+  "observability": {
+    "enabled": false
+  }
+}
