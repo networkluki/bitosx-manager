@@ -27,6 +27,7 @@ function createMockApi(options = {}) {
 	const refreshTokens = new Map(); // refreshToken -> { sessionId, consumed }
 	const accessTokens = new Map(); // accessToken -> sessionId
 	const calls = []; // { method, path, body, headers }
+	const envelopes = new Map(); // accountId -> { bytes, revision, updatedAt, fingerprintOverride }
 
 	const accessLifetimeMs = options.accessLifetimeMs ?? 15 * 60 * 1000;
 	const flags = { emailDelivery: true, rateLimitLogin: false, failHealth: false };
@@ -52,6 +53,24 @@ function createMockApi(options = {}) {
 			expiresAt: new Date(now() + 30 * 86400000).toISOString(), revoked: false
 		});
 		return id;
+	}
+
+	// Puts an encrypted envelope on the "server" for an account, as a desktop sync would.
+	// fingerprintOverride lets a test make the server lie about the bytes.
+	function seedEnvelope(accountId, bytes, options = {}) {
+		const prev = envelopes.get(accountId);
+		envelopes.set(accountId, {
+			bytes: Buffer.from(bytes), revision: prev ? prev.revision + 1 : 1,
+			updatedAt: new Date(now()).toISOString(), fingerprintOverride: options.fingerprintOverride || null
+		});
+	}
+	function envelopeStatus(e) {
+		return {
+			revision: e.revision,
+			fingerprint: e.fingerprintOverride || crypto.createHash("sha256").update(e.bytes).digest("hex"),
+			sizeBytes: e.bytes.length,
+			updatedAt: e.updatedAt
+		};
 	}
 
 	function issueTokens(sessionId) {
@@ -165,6 +184,17 @@ function createMockApi(options = {}) {
 				.map(([id, s]) => ({ id, createdAt: s.createdAt, lastSeenAt: s.lastSeenAt, expiresAt: s.expiresAt, current: id === auth.sessionId }));
 			return json(200, list);
 		}
+		if (method === "GET" && path === "/v1/sync/status") {
+			const e = envelopes.get(auth.session.accountId);
+			return e ? json(200, envelopeStatus(e)) : problem(404, "Not Found", "No vault is stored for this account.");
+		}
+		if (method === "GET" && path === "/v1/sync/envelope") {
+			const e = envelopes.get(auth.session.accountId);
+			if (!e) { return problem(404, "Not Found", "No vault is stored for this account."); }
+			const r = json(200, Object.assign(envelopeStatus(e), { envelope: e.bytes.toString("base64") }));
+			r.headers = { "Cache-Control": "no-store" };
+			return r;
+		}
 		const m = /^\/v1\/account\/sessions\/([0-9a-f-]{36})$/i.exec(path);
 		if (method === "DELETE" && m) {
 			const s = sessions.get(m[1]);
@@ -175,7 +205,7 @@ function createMockApi(options = {}) {
 		return problem(404, "Not Found", "Not found.");
 	}
 
-	return { handle, calls, flags, seedAccount, seedVerificationToken, seedSession, sessions, accounts };
+	return { handle, calls, flags, seedAccount, seedVerificationToken, seedSession, seedEnvelope, sessions, accounts, envelopes };
 }
 
 module.exports = { createMockApi };

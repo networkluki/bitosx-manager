@@ -1,0 +1,95 @@
+{
+  "source": "Computed with Konscious.Security.Cryptography.Argon2 through BitosX.Crypto.Argon2idKeyDerivation (the desktop app\u0027s KDF). The first eight match the reference implementation\u0027s test.c.",
+  "vectors": [
+    {
+      "password": "password",
+      "salt": "somesalt",
+      "memoryKiB": 65536,
+      "iterations": 2,
+      "parallelism": 1,
+      "hashLength": 32,
+      "expectedHex": "09316115d5cf24ed5a15a31a3ba326e5cf32edc24702987c02b6566f61913cf7"
+    },
+    {
+      "password": "password",
+      "salt": "somesalt",
+      "memoryKiB": 262144,
+      "iterations": 2,
+      "parallelism": 1,
+      "hashLength": 32,
+      "expectedHex": "78fe1ec91fb3aa5657d72e710854e4c3d9b9198c742f9616c2f085bed95b2e8c"
+    },
+    {
+      "password": "password",
+      "salt": "somesalt",
+      "memoryKiB": 256,
+      "iterations": 2,
+      "parallelism": 1,
+      "hashLength": 32,
+      "expectedHex": "9dfeb910e80bad0311fee20f9c0e2b12c17987b4cac90c2ef54d5b3021c68bfe"
+    },
+    {
+      "password": "password",
+      "salt": "somesalt",
+      "memoryKiB": 256,
+      "iterations": 2,
+      "parallelism": 2,
+      "hashLength": 32,
+      "expectedHex": "6d093c501fd5999645e0ea3bf620d7b8be7fd2db59c20d9fff9539da2bf57037"
+    },
+    {
+      "password": "password",
+      "salt": "somesalt",
+      "memoryKiB": 65536,
+      "iterations": 1,
+      "parallelism": 1,
+      "hashLength": 32,
+      "expectedHex": "f6a5adc1ba723dddef9b5ac1d464e180fcd9dffc9d1cbf76cca2fed795d9ca98"
+    },
+    {
+      "password": "password",
+      "salt": "somesalt",
+      "memoryKiB": 65536,
+      "iterations": 4,
+      "parallelism": 1,
+      "hashLength": 32,
+      "expectedHex": "9025d48e68ef7395cca9079da4c4ec3affb3c8911fe4f86d1a2520856f63172c"
+    },
+    {
+      "password": "differentpassword",
+      "salt": "somesalt",
+      "memoryKiB": 65536,
+      "iterations": 2,
+      "parallelism": 1,
+      "hashLength": 32,
+      "expectedHex": "0b84d652cf6b0c4beaef0dfe278ba6a80df6696281d7e0d2891b817d8c458fde"
+    },
+    {
+      "password": "password",
+      "salt": "diffsalt",
+      "memoryKiB": 65536,
+      "iterations": 2,
+      "parallelism": 1,
+      "hashLength": 32,
+      "expectedHex": "bdf32b05ccc42eb15d58fd19b1f856b113da1e9a5874fdcc544308565aa8141c"
+    },
+    {
+      "password": "correct horse battery",
+      "salt": "0123456789abcdef",
+      "memoryKiB": 1024,
+      "iterations": 1,
+      "parallelism": 1,
+      "hashLength": 32,
+      "expectedHex": "87e268f26133ac3646fc872f25bc8558b64e19088887261e9b719ff902df6ff9"
+    },
+    {
+      "password": "correct horse battery",
+      "salt": "0123456789abcdef",
+      "memoryKiB": 8192,
+      "iterations": 3,
+      "parallelism": 4,
+      "hashLength": 32,
+      "expectedHex": "8c2c20ce524553735a9338dc3a245fdafc01d39801b0e9d20655731270410468"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "kdf": "argon2id",
+  "kdfParameters": {
+    "memoryKiB": 1024,
+    "iterations": 1,
+    "parallelism": 1,
+    "keyLengthBytes": 32
+  },
+  "salt": "ab3BmP1uMuGTOs3gLobLVQ==",
+  "algorithm": "AES-256-GCM",
+  "keyWrapNonce": "RXwwFiuYp6tpIa\u002BB",
+  "encryptedVaultKey": "B6BBJxXSKeeuReJVZksXQ30I5zmFtuT8UwkXWCWs08H46rFd8SptZwTNHVh1CwS4",
+  "contentNonce": "ALswuxVmbCLyVV92",
+  "ciphertext": "sqRrheHTqeljs6giKHqZfIJHM4XxQUUXdsz3Rxd4A2RWcR2MCzFGL5rVo/TxK5jRrAHfHC\u002BFXcIlPlgXtDGLn\u002BIeGqUmlRbkLpV/A4kL\u002BUrSXc/7LaNi86ICk\u002B\u002BU8JmupwhMTpAADA0QFgRcfIGUSg4TNbEcjExxc5QwLJU8oMLRGiw\u002BIRd9JtV5OHzcRjtDgYqrCb3BE0EHt2M/v46f/9BVdRngUVYUi1OAITsO8K8YhiDTdxDqXvK2k5xeGG2h3KG17kpQ/o\u002BI4UxgzG5BtpAw8KCdlMr\u002B9k3eubeGkbr8w02dDqwVTwU3qsoFM/V7Y/Bw4p3crjwiBUWBXk17r\u002BFw/S046Sojro1bvwpdfGdqf\u002BNcV7LwRsDK6ovQHtAVxvn1\u002Bt60MCRr8QwdbSY/Sk55pHXyxzb/n4jz8McPt9ZvpnqD4Fz\u002BPzhJFLtcvsAtnsmTGxKvmuDwzE2S2yWFAGqIGul5teVsrkHRDfmDWnCjoe34kjpp6Gyr0eoGMzZie/6hM0ELywh7bhip74PbD6RFZAtenZFBxsLX4KS9a8EdyQpKJ/qe5M6LNqQnosu5bGesQaVTqc7pGLgqDFfvv82RaMosoFlwW00b9HB5u5aXg1anygLRSPWwLErxlUUxKVX\u002BQtNePwN\u002B/NCAa3bH0UIk6uNm6FWfMs0AWSQSPXpgjUl09Jh607CfATTw4NBEwQqpc/AWbLtah6FGw\u002BAFKiwqruz3WY2FrTwZ4/Qsf7R7giYjbO1g4f\u002Bt6dFWSsSUps8m1U6s9DnPTwBJbwdpIi3klU6vZdQQEzB/JKKWXK8Mo7xr7KkdSIDKP6IIevax5FZPBjdGC0JYNWDzbtAq2Z2t6iHLoarMKzNEZOon6X5m4tHU\u002BQz02cw1mTdKhQf1t05Coo/Xi1oeqE6w/satEkicY11tYBgbLRTEXzmht0KdzKfxYc2gVzSAzlKlzdsg\u002B29qW7FmzIkbNndFqXl7ST5XGQjGE\u002BTD5L1KXuyF\u002Bth9b9ZKgwuw0fbThl76A7v0O68BS9WPeeTNv5fPiZD91D\u002BVGUI8jm2e6ZmYQzJDmfeq2x/AI9czfUrD49Salr2D1NjeqZ00fuRnG0p2i/vJVC/w7yc4gu72tF0PLwLi1iGn3LKBWPHcOkQTT0iv6/sh6c5m5U2lDzKKNM0AQTNwPy2XfQx2mMV39ClYRaPBgkH63KVwDYFC5Lu0\u002BgGjPesUekehxelpwUCeKqrNSC1nkOuNuJnSSJXNRHEVEJmdSj7xtr324Lah7cBgI/ltA8XdMLtxH8oAxXnviORBoAo2j5cDsbaz0FiCAR0YZEzd4/IszKcCjRAP1xFqokqDWjjRTuSu7lQP8i/S\u002Bkvg"
+}

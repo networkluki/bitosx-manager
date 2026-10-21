@@ -13,7 +13,7 @@
     <title>BitosX — Your Security</title>
     <link rel="canonical" href="https://bitosx.se/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.1.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.2.0" />
     <meta name="theme-color" content="#26292E" />
     <!-- Theme applied before first paint (avoids a flash of the wrong theme) -->
     <script src="/assets/js/theme-init.js"></script>
@@ -178,20 +178,20 @@ encrypted vault — the only thing written to disk</pre>
         <h2>Roadmap</h2>
         <ol class="roadmap">
           <li>
-            <div class="phase">Phase 1<small>now</small></div>
-            <div><p><strong>Public site and web account.</strong> This page, plus registration, email verification, sign-in and session management against the existing account API. No vault data is involved anywhere online.</p></div>
+            <div class="phase">Phase 1<small>built</small></div>
+            <div><p><strong>Public site and web account.</strong> This page, plus registration, email verification, sign-in and session management against the account API.</p></div>
           </li>
           <li>
-            <div class="phase">Phase 2<small>next</small></div>
+            <div class="phase">Phase 2<small>in review</small></div>
             <div><p><strong>Desktop app signs in.</strong> The desktop app gets a real API client: account sign-in, session handling and token refresh, still with no vault data leaving the device.</p></div>
           </li>
           <li>
-            <div class="phase">Phase 3<small>planned</small></div>
+            <div class="phase">Phase 3<small>in review</small></div>
             <div><p><strong>Encrypted sync.</strong> The server stores the encrypted vault envelope as opaque bytes. The desktop app uploads and downloads ciphertext only; conflicts fail closed rather than merge blindly.</p></div>
           </li>
           <li>
-            <div class="phase">Phase 4<small>planned</small></div>
-            <div><p><strong>Web vault.</strong> Decrypting in the browser with the master password, using the same Argon2id and AES-256-GCM parameters as the desktop app, so the server stays zero-knowledge even when you read your vault online.</p></div>
+            <div class="phase">Phase 4<small>in review</small></div>
+            <div><p><strong>Web vault, read-only.</strong> vault.bitosx.se downloads the encrypted envelope and opens it in the browser with the master password — Argon2id (a vetted WebAssembly build, checked against the desktop's own test vectors) and AES-256-GCM from WebCrypto, with the exact parameters of the desktop app. The server stays zero-knowledge even when you read your vault online. Editing stays in the desktop app.</p></div>
           </li>
         </ol>
       </div>
@@ -199,7 +199,7 @@ encrypted vault — the only thing written to disk</pre>
   </main>
 
   <footer>
-    <div class="footer-version">web v0.1.0 · app v0.7.0 · api v0.1.0</div>
+    <div class="footer-version">web v0.2.0 · app v0.9.0 · api v0.1.0</div>
     <div class="footer-links">
       <a href="https://github.com/networkluki/bitosx" target="_blank" rel="noopener noreferrer">bitosx</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">bitosx-api</a>
