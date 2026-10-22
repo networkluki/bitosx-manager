@@ -22,7 +22,7 @@ const API_ORIGIN = "https://api.bitosx.se";
 
 const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".txt": "text/plain; charset=utf-8", ".xml": "application/xml" };
 
-// Minimal static server: "/" -> index.html, "/verify-email" -> verify-email.html.
+// Minimal static server: "/" -> index.html, "/verify-email" -> verify-email.html, and so on.
 function serveStatic(dir) {
 	return new Promise((resolve) => {
 		const server = http.createServer((req, res) => {
@@ -66,9 +66,9 @@ async function routeApi(page, mock) {
 function watchConsole(page, bucket) {
 	page.on("console", (msg) => {
 		if (msg.type() !== "error") { return; }
-		// Chromium logs every non-2xx response as an error; 400/401/413/429/503 from
+		// Chromium logs every non-2xx response as an error; 400/401/403/413/429/503 from
 		// the API are expected outcomes the app handles, so they are not failures here.
-		if (/^Failed to load resource: the server responded with a status of (400|401|404|409|413|429|503)/.test(msg.text())) { return; }
+		if (/^Failed to load resource: the server responded with a status of (400|401|403|404|409|413|429|503)/.test(msg.text())) { return; }
 		bucket.push(`console.error: ${msg.text()}`);
 	});
 	page.on("pageerror", (err) => bucket.push(`pageerror: ${err.message}`));
@@ -216,6 +216,128 @@ async function test(name, fn) {
 		await page.close();
 	});
 
+	// ------------------------------------------------- forgot / reset password
+	console.log("vault.bitosx.se — forgot / reset password");
+	await test("forgot-password: sign-in page links to it; valid email -> generic message; invalid -> no request", async () => {
+		const mock = createMockApi();
+		mock.seedAccount("user@example.com", "correct horse battery");
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/`);
+		await page.click("a[href='/forgot-password']");
+		await page.waitForSelector("#forgot-form");
+		await page.waitForFunction(() => document.activeElement && document.activeElement.id === "forgot-email");
+		await page.fill("#forgot-email", "not-an-email");
+		await page.click("#forgot-submit");
+		assert.match(await page.textContent("#forgot-notice"), /valid email/);
+		assert.equal(mock.calls.length, 0);
+		// Unknown and known addresses show the very same text.
+		await page.fill("#forgot-email", "nobody@example.com");
+		await page.click("#forgot-submit");
+		await page.waitForSelector("#forgot-notice.ok");
+		const unknownText = await page.textContent("#forgot-notice");
+		await page.fill("#forgot-email", "user@example.com");
+		await page.click("#forgot-submit");
+		await page.waitForFunction(() => document.getElementById("forgot-email").value === "");
+		assert.equal(await page.textContent("#forgot-notice"), unknownText);
+		assert.match(unknownText, /reset link is on its way/);
+		assert.deepEqual(mock.calls.map(c => c.path), ["/v1/auth/forgot-password", "/v1/auth/forgot-password"]);
+		assert.equal(mock.resetTokens.size, 1, "only the real account got a token");
+		assert.ok((await page.textContent("#forgot-panel")).includes("master password"), "the page says the vault is out of scope");
+		await page.close();
+	});
+	await test("forgot-password: 503 when delivery is off and 429 when limited -> clear messages", async () => {
+		const mock = createMockApi();
+		mock.flags.emailDelivery = false;
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/forgot-password`);
+		await page.fill("#forgot-email", "user@example.com");
+		await page.click("#forgot-submit");
+		await page.waitForSelector("#forgot-notice.err");
+		assert.match(await page.textContent("#forgot-notice"), /not available right now/);
+		mock.flags.emailDelivery = true;
+		mock.flags.rateLimitForgot = true;
+		await page.fill("#forgot-email", "user@example.com");
+		await page.click("#forgot-submit");
+		await page.waitForFunction(() => /Too many attempts/.test(document.getElementById("forgot-notice").textContent));
+		assert.match(await page.textContent("#forgot-notice"), /about 60 seconds/);
+		await page.close();
+	});
+	await test("reset-password: token read from fragment, fragment scrubbed, password replaced, sessions revoked", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const oldSession = mock.seedSession(accountId, 3600000);
+		const token = mock.seedResetToken("user@example.com");
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/reset-password#token=${token}`);
+		await page.waitForFunction(() => !window.location.hash);
+		assert.equal(new URL(page.url()).hash, "", "fragment must be removed from the address bar");
+		await page.fill("#reset-password", "brand new password 42");
+		await page.fill("#reset-password2", "brand new password 42");
+		await page.click("#reset-submit");
+		await page.waitForSelector("#reset-notice.ok");
+		assert.match(await page.textContent("#reset-notice"), /reset and every device is signed out/);
+		const call = mock.calls.find(c => c.path === "/v1/auth/reset-password");
+		assert.deepEqual(call.body, { token, password: "brand new password 42" });
+		assert.equal(mock.accounts.get("user@example.com").password, "brand new password 42");
+		assert.equal(mock.sessions.get(oldSession).revoked, true);
+		assert.equal(await page.isDisabled("#reset-submit"), true, "single-use token: form stays disabled after success");
+		assert.ok(!(await page.content()).includes(token), "token never lands in the DOM");
+		// The new password signs in; the old one does not.
+		await page.goto(`${vault.origin}/`);
+		await page.fill("#login-email", "user@example.com");
+		await page.fill("#login-password", "correct horse battery");
+		await page.click("#login-submit");
+		await page.waitForSelector("#login-notice.err");
+		await page.fill("#login-email", "user@example.com");
+		await page.fill("#login-password", "brand new password 42");
+		await page.click("#login-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		await page.close();
+	});
+	await test("reset-password: client-side policy mirrors server (length, match) without calling the API", async () => {
+		const mock = createMockApi();
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/reset-password#token=${TOKEN_43}`);
+		await page.fill("#reset-password", "short");
+		await page.fill("#reset-password2", "short");
+		await page.click("#reset-submit");
+		assert.match(await page.textContent("#reset-notice"), /12–128/);
+		await page.fill("#reset-password", "brand new password 42");
+		await page.fill("#reset-password2", "brand new password 43");
+		await page.click("#reset-submit");
+		assert.match(await page.textContent("#reset-notice"), /do not match/);
+		assert.equal(mock.calls.length, 0, "no request leaves the browser for invalid input");
+		await page.close();
+	});
+	await test("reset-password: spent/unknown token -> generic invalid message, form locked; a verification token is not a reset token", async () => {
+		const mock = createMockApi();
+		const verifyToken = mock.seedVerificationToken("new@example.com");
+		const page = await newPage(mock);
+		for (const token of [TOKEN_43, verifyToken]) {
+			await page.goto(`${vault.origin}/`); // a fresh document each time (a fragment-only change would not reload)
+			await page.goto(`${vault.origin}/reset-password#token=${token}`);
+			await page.fill("#reset-password", "brand new password 42");
+			await page.fill("#reset-password2", "brand new password 42");
+			await page.click("#reset-submit");
+			await page.waitForSelector("#reset-notice.err");
+			assert.match(await page.textContent("#reset-notice"), /reset link is invalid, expired or already used/);
+			assert.equal(await page.isDisabled("#reset-submit"), true);
+		}
+		assert.equal(mock.accounts.get("new@example.com").password, null, "a verification token never sets a password through reset");
+		await page.close();
+	});
+	await test("reset-password: missing or malformed token disables the form", async () => {
+		const mock = createMockApi();
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/reset-password`);
+		assert.match(await page.textContent("#reset-notice"), /incomplete or malformed/);
+		assert.equal(await page.isDisabled("#reset-submit"), true);
+		await page.goto(`${vault.origin}/reset-password#token=<script>alert(1)</script>`);
+		assert.match(await page.textContent("#reset-notice"), /incomplete or malformed/);
+		assert.equal(mock.calls.length, 0);
+		await page.close();
+	});
+
 	// ------------------------------------------------------ sign in / account
 	console.log("vault.bitosx.se — sign in and sessions");
 	await test("login: wrong password -> generic 401 message; nothing stored", async () => {
@@ -340,6 +462,59 @@ async function test(name, fn) {
 		await page.reload();
 		await page.waitForSelector("#login-panel:not([hidden])");
 		assert.equal(await page.isHidden("#account-panel"), true);
+		await page.close();
+	});
+
+	// --------------------------------------------------------- delete account
+	console.log("vault.bitosx.se — delete account");
+	async function signedInPlain(mock) {
+		mock.seedAccount("user@example.com", "correct horse battery");
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/`);
+		await page.fill("#login-email", "user@example.com");
+		await page.fill("#login-password", "correct horse battery");
+		await page.click("#login-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		return page;
+	}
+	await test("delete account: button needs the acknowledgement; wrong password -> 403 message, nothing deleted, still signed in", async () => {
+		const mock = createMockApi();
+		const page = await signedInPlain(mock);
+		assert.equal(await page.isDisabled("#delete-submit"), true, "disabled until acknowledged");
+		await page.fill("#delete-password", "wrong wrong wrong wrong");
+		await page.check("#delete-ack");
+		assert.equal(await page.isDisabled("#delete-submit"), false);
+		await page.click("#delete-submit");
+		await page.waitForSelector("#delete-notice.err");
+		assert.match(await page.textContent("#delete-notice"), /password is wrong. Nothing was deleted/);
+		assert.equal(mock.accounts.size, 1);
+		assert.equal(await page.isHidden("#account-panel"), false, "a 403 is not a dead session");
+		assert.equal(await page.inputValue("#delete-password"), "", "password field cleared");
+		const call = mock.calls.find(c => c.path === "/v1/account/delete");
+		assert.deepEqual(Object.keys(call.body), ["password"], "only the password travels; the account is the session's");
+		assert.ok(call.headers["authorization"].startsWith("Bearer "));
+		await page.close();
+	});
+	await test("delete account: correct password -> account, sessions and stored vault gone; signed out; login fails", async () => {
+		const mock = createMockApi();
+		const page = await signedInPlain(mock);
+		const accountId = mock.accounts.get("user@example.com").id;
+		mock.seedEnvelope(accountId, Buffer.from(JSON.stringify({ version: 1, kdf: "argon2id" })));
+		mock.seedSession(accountId, 3600000);
+		await page.fill("#delete-password", "correct horse battery");
+		await page.check("#delete-ack");
+		await page.click("#delete-submit");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		assert.match(await page.textContent("#login-notice"), /account and the vault stored on the server are deleted/);
+		assert.equal(mock.accounts.size, 0);
+		assert.equal(mock.envelopes.size, 0);
+		assert.ok([...mock.sessions.values()].every(s => s.revoked));
+		assert.equal(await page.isHidden("#vault-panel"), true, "the vault panel is gone with the session");
+		await page.fill("#login-email", "user@example.com");
+		await page.fill("#login-password", "correct horse battery");
+		await page.click("#login-submit");
+		await page.waitForSelector("#login-notice.err");
+		assert.equal(await page.textContent("#login-notice"), "Invalid email or password.");
 		await page.close();
 	});
 

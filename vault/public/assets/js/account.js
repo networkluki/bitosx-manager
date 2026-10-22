@@ -1,4 +1,4 @@
-// Sign-in page + account/session management (vault.bitosx.se, phase 1).
+// Sign-in page + account/session management + account deletion (vault.bitosx.se).
 (function () {
 	"use strict";
 
@@ -24,6 +24,10 @@
 		loginPanel.hidden = false;
 		ui.notice(loginNotice, level || "warn", message || "");
 		$("login-password").value = "";
+		$("delete-password").value = "";
+		$("delete-ack").checked = false;
+		$("delete-submit").disabled = true;
+		ui.notice($("delete-notice"), "ok", "");
 		$("login-email").focus();
 	}
 
@@ -172,6 +176,42 @@
 			.catch(function (err) {
 				if (err && err.kind === api.KINDS.UNAUTHENTICATED) { showLogin("You are signed out.", "ok"); }
 				else { showLogin(ui.describeError(err, "account"), "err"); }
+			});
+	});
+
+	// ---- delete account (password-confirmed; the server re-checks it) ----
+	var deleteForm = $("delete-form");
+	var deleteNotice = $("delete-notice");
+	var deletePass = $("delete-password");
+	var deleteAck = $("delete-ack");
+	var deleteSubmit = $("delete-submit");
+	deleteAck.addEventListener("change", function () { deleteSubmit.disabled = !deleteAck.checked; });
+	deleteForm.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		var password = deletePass.value;
+		if (!deleteAck.checked) { return; }
+		deletePass.setAttribute("aria-invalid", ui.validPassword(password) ? "false" : "true");
+		if (!ui.validPassword(password)) {
+			ui.notice(deleteNotice, "err", "Enter your account password (12–128 characters) to confirm.");
+			return;
+		}
+		ui.notice(deleteNotice, "ok", "");
+		ui.setBusy(deleteForm, true);
+		api.deleteAccount(password)
+			.then(function () {
+				deletePass.value = "";
+				deleteAck.checked = false;
+				showLogin("Your account and the vault stored on the server are deleted. Any vault file on your own devices is untouched.", "ok");
+			})
+			.catch(function (err) {
+				if (err && err.kind === api.KINDS.UNAUTHENTICATED) { showLogin(ui.describeError(err, "session"), "warn"); return; }
+				ui.notice(deleteNotice, "err", ui.describeError(err, "delete"));
+			})
+			.finally(function () {
+				deletePass.value = "";
+				ui.setBusy(deleteForm, false);
+				deleteSubmit.disabled = !deleteAck.checked;
+				password = null;
 			});
 	});
 

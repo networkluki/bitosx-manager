@@ -43,8 +43,12 @@
 				return "The request was too large.";
 			case KINDS.UNAUTHENTICATED:
 				return context === "login" ? "Invalid email or password." : "Your session has ended. Sign in again.";
+			case KINDS.FORBIDDEN:
+				return context === "delete" ? "The account password is wrong. Nothing was deleted." : "The request was refused.";
 			case KINDS.INVALID:
-				return context === "verify" ? "This verification link is invalid, expired or already used. Request a new one." : "The request was rejected. Check the fields and try again.";
+				if (context === "verify") { return "This verification link is invalid, expired or already used. Request a new one."; }
+				if (context === "reset") { return "This reset link is invalid, expired or already used. Request a new one."; }
+				return "The request was rejected. Check the fields and try again.";
 			case KINDS.NOT_FOUND:
 				return "That item no longer exists.";
 			case KINDS.CONFLICT:

@@ -23,6 +23,7 @@ function createMockApi(options = {}) {
 	const now = () => Date.now();
 	const accounts = new Map(); // email -> { id, password, verified, createdAt }
 	const verificationTokens = new Map(); // token -> email
+	const resetTokens = new Map(); // token -> email (password reset, verified accounts only)
 	const sessions = new Map(); // sessionId -> { accountId, createdAt, lastSeenAt, expiresAt, revoked }
 	const refreshTokens = new Map(); // refreshToken -> { sessionId, consumed }
 	const accessTokens = new Map(); // accessToken -> sessionId
@@ -30,7 +31,7 @@ function createMockApi(options = {}) {
 	const envelopes = new Map(); // accountId -> { bytes, revision, updatedAt, fingerprintOverride }
 
 	const accessLifetimeMs = options.accessLifetimeMs ?? 15 * 60 * 1000;
-	const flags = { emailDelivery: true, rateLimitLogin: false, failHealth: false };
+	const flags = { emailDelivery: true, rateLimitLogin: false, rateLimitForgot: false, failHealth: false };
 
 	function seedAccount(email, password) {
 		const id = crypto.randomUUID();
@@ -44,6 +45,14 @@ function createMockApi(options = {}) {
 			accounts.set(email.toLowerCase(), { id: crypto.randomUUID(), email, password: null, verified: false, createdAt: new Date().toISOString() });
 		}
 		return token;
+	}
+	function seedResetToken(email) {
+		const token = crypto.randomBytes(32).toString("base64url");
+		resetTokens.set(token, email.toLowerCase());
+		return token;
+	}
+	function revokeAllSessions(accountId) {
+		for (const s of sessions.values()) { if (s.accountId === accountId) { s.revoked = true; } }
 	}
 	function seedSession(accountId, ageMs) {
 		const id = crypto.randomUUID();
@@ -142,6 +151,31 @@ function createMockApi(options = {}) {
 			return json(200, { message: "Your email is verified and your password is set." });
 		}
 
+		if (method === "POST" && path === "/v1/auth/forgot-password") {
+			if (flags.rateLimitForgot) {
+				return { ...problem(429, "Too Many Requests", "Too many requests. Try again later."), headers: { "Retry-After": "60" } };
+			}
+			if (!flags.emailDelivery) { return problem(503, "Service unavailable", "Email verification is temporarily unavailable."); }
+			// Generic for every address; a reset token exists only for a verified account with a password.
+			const acct = typeof body.email === "string" ? accounts.get(body.email.toLowerCase()) : undefined;
+			if (acct && acct.verified && acct.password !== null) { seedResetToken(acct.email); }
+			return json(202, { message: "If an account exists for this address, check your email for a password-reset link." });
+		}
+
+		if (method === "POST" && path === "/v1/auth/reset-password") {
+			if (typeof body.password !== "string" || body.password.length < 12 || body.password.length > 128) {
+				return problem(400, "Invalid request", "Password must be between 12 and 128 characters.");
+			}
+			const email = typeof body.token === "string" ? resetTokens.get(body.token) : undefined;
+			const acct = email ? accounts.get(email) : undefined;
+			if (!acct || !acct.verified || acct.password === null) { return problem(400, "Invalid request", "Invalid or expired password-reset token."); }
+			resetTokens.delete(body.token);
+			for (const [t, e] of resetTokens) { if (e === email) { resetTokens.delete(t); } }
+			acct.password = body.password;
+			revokeAllSessions(acct.id);
+			return json(200, { message: "Your password has been reset. Sign in again on every device." });
+		}
+
 		if (method === "POST" && path === "/v1/auth/login") {
 			if (flags.rateLimitLogin) {
 				return { ...problem(429, "Too Many Requests", "Too many requests. Try again later."), headers: { "Retry-After": "30" } };
@@ -174,6 +208,17 @@ function createMockApi(options = {}) {
 		if (method === "POST" && path === "/v1/auth/logout") { auth.session.revoked = true; return noContent(); }
 		if (method === "POST" && path === "/v1/auth/logout-all") {
 			for (const s of sessions.values()) { if (s.accountId === auth.session.accountId) { s.revoked = true; } }
+			return noContent();
+		}
+		if (method === "POST" && path === "/v1/account/delete") {
+			const acct = [...accounts.values()].find(a => a.id === auth.session.accountId);
+			if (typeof body.password !== "string" || body.password.length === 0 || !acct || acct.password !== body.password) {
+				return problem(403, "Forbidden", "Password confirmation failed.");
+			}
+			accounts.delete(acct.email.toLowerCase());
+			revokeAllSessions(acct.id);
+			envelopes.delete(acct.id);
+			for (const [t, e] of resetTokens) { if (e === acct.email.toLowerCase()) { resetTokens.delete(t); } }
 			return noContent();
 		}
 		if (method === "GET" && path === "/v1/account/me") {
@@ -235,7 +280,7 @@ function createMockApi(options = {}) {
 		return problem(404, "Not Found", "Not found.");
 	}
 
-	return { handle, calls, flags, seedAccount, seedVerificationToken, seedSession, seedEnvelope, sessions, accounts, envelopes };
+	return { handle, calls, flags, seedAccount, seedVerificationToken, seedResetToken, seedSession, seedEnvelope, sessions, accounts, envelopes, resetTokens };
 }
 
 module.exports = { createMockApi };
