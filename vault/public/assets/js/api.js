@@ -170,9 +170,39 @@
 	function resetPassword(token, password) {
 		return request("POST", "/v1/auth/reset-password", { body: { token: token, password: password } }).then(function () { return true; });
 	}
+	// 43 unpadded Base64URL characters, as the refresh token is.
+	var MFA_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+
+	// Resolves to { signedIn: true } when the password alone signs in, or
+	// { signedIn: false, mfaToken, mfaTokenExpiresAt } when the account has a second factor
+	// (HTTP 202: the password was accepted, no session exists yet). The status decides; a 202 that
+	// carries session tokens, or a 200 that carries a challenge, is refused.
 	function login(email, password) {
 		clearSession();
 		return request("POST", "/v1/auth/login", { body: { email: email, password: password } })
+			.then(function (r) {
+				var b = r.body;
+				if (r.status === 202) {
+					var exp = b ? parseUtc(b.mfaTokenExpiresAt) : NaN;
+					if (!b || typeof b.mfaToken !== "string" || !MFA_TOKEN_RE.test(b.mfaToken) || !Number.isFinite(exp) ||
+						b.accessToken !== undefined || b.refreshToken !== undefined ||
+						(b.method !== undefined && b.method !== "totp")) {
+						throw new ApiError(KINDS.UNEXPECTED, 202);
+					}
+					return { signedIn: false, mfaToken: b.mfaToken, mfaTokenExpiresAt: new Date(exp) };
+				}
+				if (b && b.mfaToken !== undefined) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
+				adoptTokens(b);
+				return { signedIn: true };
+			});
+	}
+
+	// Second sign-in step: the challenge token from login() and a TOTP or recovery code.
+	function loginTotp(mfaToken, code) {
+		if (typeof mfaToken !== "string" || !MFA_TOKEN_RE.test(mfaToken) || typeof code !== "string" || code.length === 0 || code.length > 32) {
+			return Promise.reject(new ApiError(KINDS.UNAUTHENTICATED, 401));
+		}
+		return request("POST", "/v1/auth/login/totp", { body: { mfaToken: mfaToken, code: code } })
 			.then(function (r) { adoptTokens(r.body); return true; });
 	}
 
@@ -310,6 +340,67 @@
 			});
 	}
 
+	// ---- two-factor authentication (TOTP) for the signed-in account ----
+	var BASE32_RE = /^[A-Z2-7]{16,128}$/;
+
+	function totpStatus() {
+		return authed("GET", "/v1/account/totp").then(function (r) {
+			var b = r.body;
+			if (!b || typeof b.enabled !== "boolean" || typeof b.pendingEnrollment !== "boolean" ||
+				!Number.isInteger(b.recoveryCodesRemaining) || b.recoveryCodesRemaining < 0 || b.recoveryCodesRemaining > 100) {
+				throw new ApiError(KINDS.UNEXPECTED, r.status);
+			}
+			var confirmed = b.confirmedAt === undefined || b.confirmedAt === null ? null : parseUtc(b.confirmedAt);
+			if (confirmed !== null && !Number.isFinite(confirmed)) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
+			return { enabled: b.enabled, confirmedAt: confirmed === null ? null : new Date(confirmed), recoveryCodesRemaining: b.recoveryCodesRemaining, pendingEnrollment: b.pendingEnrollment };
+		});
+	}
+
+	// The new secret comes back exactly once; the caller shows it and never stores it.
+	function totpEnroll(password) {
+		if (typeof password !== "string" || password.length === 0 || password.length > cfg.passwordMaxLength) {
+			return Promise.reject(new ApiError(KINDS.FORBIDDEN, 403));
+		}
+		return authed("POST", "/v1/account/totp/enroll", { body: { password: password } }).then(function (r) {
+			var b = r.body;
+			if (!b || typeof b.secret !== "string" || !BASE32_RE.test(b.secret) ||
+				typeof b.otpauthUri !== "string" || b.otpauthUri.indexOf("otpauth://totp/") !== 0 || b.otpauthUri.length > 2048 ||
+				!isNonEmptyString(b.issuer, 64) || !isNonEmptyString(b.label, 320) ||
+				!Number.isInteger(b.digits) || b.digits < 6 || b.digits > 8 || !Number.isInteger(b.periodSeconds) || b.periodSeconds < 15 || b.periodSeconds > 120) {
+				throw new ApiError(KINDS.UNEXPECTED, r.status);
+			}
+			return { secret: b.secret, otpauthUri: b.otpauthUri, issuer: b.issuer, label: b.label, digits: b.digits, periodSeconds: b.periodSeconds };
+		});
+	}
+
+	function parseRecoveryCodes(r) {
+		var list = r.body && r.body.recoveryCodes;
+		if (!Array.isArray(list) || list.length < 1 || list.length > 20 ||
+			!list.every(function (c) { return typeof c === "string" && /^[a-z2-9]{5}-[a-z2-9]{5}$/.test(c); })) {
+			throw new ApiError(KINDS.UNEXPECTED, r.status);
+		}
+		return list.slice();
+	}
+
+	function totpConfirm(code) {
+		if (typeof code !== "string" || code.length === 0 || code.length > 32) { return Promise.reject(new ApiError(KINDS.INVALID, 400)); }
+		return authed("POST", "/v1/account/totp/confirm", { body: { code: code } }).then(parseRecoveryCodes);
+	}
+
+	function totpDisable(password, code) {
+		if (typeof password !== "string" || password.length === 0 || password.length > cfg.passwordMaxLength || typeof code !== "string" || code.length === 0 || code.length > 32) {
+			return Promise.reject(new ApiError(KINDS.FORBIDDEN, 403));
+		}
+		return authed("POST", "/v1/account/totp/disable", { body: { password: password, code: code } }).then(function () { return true; });
+	}
+
+	function totpRecoveryCodes(password, code) {
+		if (typeof password !== "string" || password.length === 0 || password.length > cfg.passwordMaxLength || typeof code !== "string" || code.length === 0 || code.length > 32) {
+			return Promise.reject(new ApiError(KINDS.FORBIDDEN, 403));
+		}
+		return authed("POST", "/v1/account/totp/recovery-codes", { body: { password: password, code: code } }).then(parseRecoveryCodes);
+	}
+
 	// Permanently deletes the signed-in account (and the vault stored on the server) after the
 	// server re-checks the account password. The local session is gone either way on success.
 	function deleteAccount(password) {
@@ -339,6 +430,12 @@
 		resendVerification: resendVerification,
 		verifyEmail: verifyEmail,
 		login: login,
+		loginTotp: loginTotp,
+		totpStatus: totpStatus,
+		totpEnroll: totpEnroll,
+		totpConfirm: totpConfirm,
+		totpDisable: totpDisable,
+		totpRecoveryCodes: totpRecoveryCodes,
 		me: me,
 		sessions: sessions,
 		revokeSession: revokeSession,

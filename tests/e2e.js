@@ -15,7 +15,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
 const { chromium } = require("playwright");
-const { createMockApi } = require("./mock-api.js");
+const { createMockApi, totpCode, totpStep, base32Decode } = require("./mock-api.js");
 
 const ROOT = path.resolve(__dirname, "..");
 const API_ORIGIN = "https://api.bitosx.se";
@@ -465,8 +465,8 @@ async function test(name, fn) {
 		await page.close();
 	});
 
-	// --------------------------------------------------------- delete account
-	console.log("vault.bitosx.se — delete account");
+	// ---------------------------------------------------- two-factor (TOTP)
+	console.log("vault.bitosx.se — two-factor authentication");
 	async function signedInPlain(mock) {
 		mock.seedAccount("user@example.com", "correct horse battery");
 		const page = await newPage(mock);
@@ -477,6 +477,204 @@ async function test(name, fn) {
 		await page.waitForSelector("#account-panel:not([hidden])");
 		return page;
 	}
+	const codeNow = (secret, offset = 0) => totpCode(secret, totpStep(Date.now()) + offset);
+
+	await test("2fa sign-in: password alone gives a 202 and the code step; the code signs in; nothing stored meanwhile", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const secret = mock.seedTotp(accountId);
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/`);
+		await page.fill("#login-email", "user@example.com");
+		await page.fill("#login-password", "correct horse battery");
+		await page.click("#login-submit");
+		await page.waitForSelector("#code-form:not([hidden])");
+		assert.equal(await page.isHidden("#login-form"), true);
+		assert.equal(await page.isHidden("#account-panel"), true, "no session yet");
+		assert.equal(await page.inputValue("#login-password"), "", "the password never waits on the page");
+		assert.match(await page.textContent("#login-notice"), /authenticator app/);
+		assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), "login-code");
+		assert.equal(mock.sessions.size, 0);
+		// Only the password step has happened; the challenge token is not in the DOM.
+		const token = [...mock.mfaChallenges.keys()][0];
+		assert.ok(!(await page.content()).includes(token), "challenge token never in the DOM");
+
+		await page.fill("#login-code", "12345");
+		await page.click("#code-submit");
+		assert.match(await page.textContent("#login-notice"), /6-digit code/);
+		assert.equal(mock.calls.filter(c => c.path === "/v1/auth/login/totp").length, 0, "no request for a non-code");
+
+		await page.fill("#login-code", codeNow(secret));
+		await page.click("#code-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		const call = mock.calls.find(c => c.path === "/v1/auth/login/totp");
+		assert.deepEqual(call.body, { mfaToken: token, code: codeNow(secret) });
+		assert.equal(mock.sessions.size, 1);
+		assert.equal(await page.isHidden("#code-form"), true);
+		await page.waitForFunction(() => /Enabled/.test(document.getElementById("totp-status").textContent));
+		assert.match(await page.textContent("#totp-status"), /Recovery codes left: 2/);
+		assert.equal(await page.isHidden("#totp-manage-form"), false);
+		assert.equal(await page.isHidden("#totp-enroll-form"), true);
+		await page.close();
+	});
+
+	await test("2fa sign-in: wrong code -> generic message, stays on the code step; recovery code works once; start over returns to the password", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		mock.seedTotp(accountId, ["abcde-fghjk"]);
+		const page = await newPage(mock);
+		async function passwordStep() {
+			await page.fill("#login-email", "user@example.com");
+			await page.fill("#login-password", "correct horse battery");
+			await page.click("#login-submit");
+			await page.waitForSelector("#code-form:not([hidden])");
+		}
+		await page.goto(`${vault.origin}/`);
+		await passwordStep();
+		await page.fill("#login-code", "000000");
+		await page.click("#code-submit");
+		await page.waitForSelector("#login-notice.err");
+		assert.match(await page.textContent("#login-notice"), /not accepted/);
+		assert.equal(await page.isHidden("#code-form"), false, "a refused code keeps the step");
+		assert.equal(await page.inputValue("#login-code"), "", "the code never stays on the page");
+
+		await page.click("#code-cancel");
+		await page.waitForSelector("#login-form:not([hidden])");
+		assert.equal(await page.isHidden("#code-form"), true);
+
+		await passwordStep();
+		await page.fill("#login-code", "ABCDE FGHJK"); // separators and case are the user's business
+		await page.click("#code-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		await page.waitForFunction(() => /Recovery codes left: 0/.test(document.getElementById("totp-status").textContent));
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+
+		await passwordStep();
+		await page.fill("#login-code", "abcde-fghjk");
+		await page.click("#code-submit");
+		await page.waitForSelector("#login-notice.err");
+		assert.match(await page.textContent("#login-notice"), /not accepted/); // used once, never again
+		await page.close();
+	});
+
+	await test("2fa sign-in: server without the capability -> clear message, no password-only session", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		mock.seedTotp(accountId);
+		mock.flags.totpCapability = false;
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/`);
+		await page.fill("#login-email", "user@example.com");
+		await page.fill("#login-password", "correct horse battery");
+		await page.click("#login-submit");
+		await page.waitForSelector("#login-notice.err");
+		assert.match(await page.textContent("#login-notice"), /Two-factor authentication is temporarily unavailable/);
+		assert.equal(await page.isHidden("#account-panel"), true);
+		assert.equal(mock.sessions.size, 0);
+		await page.close();
+	});
+
+	await test("2fa setup: password -> secret shown once -> code confirms -> recovery codes shown once; wrong code refused", async () => {
+		const mock = createMockApi();
+		const page = await signedInPlain(mock);
+		await page.waitForFunction(() => document.getElementById("totp-status").textContent === "Not enabled.");
+		assert.equal(await page.isHidden("#totp-enroll-form"), false);
+
+		await page.fill("#totp-enroll-password", "wrong wrong wrong wrong");
+		await page.click("#totp-enroll-submit");
+		await page.waitForSelector("#totp-notice.err");
+		assert.match(await page.textContent("#totp-notice"), /password or the code was not accepted/);
+		assert.equal(await page.isHidden("#totp-setup"), true);
+
+		await page.fill("#totp-enroll-password", "correct horse battery");
+		await page.click("#totp-enroll-submit");
+		await page.waitForSelector("#totp-setup:not([hidden])");
+		const secretText = await page.textContent("#totp-setup-secret");
+		assert.match(secretText, /^[A-Z2-7]{32}$/);
+		assert.match(await page.textContent("#totp-setup-uri"), /^otpauth:\/\/totp\/BitosX:user%40example\.com\?secret=[A-Z2-7]{32}&issuer=BitosX/);
+		assert.equal(await page.inputValue("#totp-enroll-password"), "");
+		const secret = base32Decode(secretText);
+
+		// A pending setup is not a factor: the mock's status says so, and the server would still sign in with the password alone.
+		await page.fill("#totp-confirm-code", "000000");
+		await page.click("#totp-confirm-submit");
+		await page.waitForSelector("#totp-notice.err");
+		assert.match(await page.textContent("#totp-notice"), /code is not valid/);
+		assert.equal(await page.isHidden("#totp-setup"), false);
+
+		await page.fill("#totp-confirm-code", codeNow(secret));
+		await page.click("#totp-confirm-submit");
+		await page.waitForSelector("#totp-codes:not([hidden])");
+		const codes = (await page.textContent("#totp-codes-list")).trim().split("\n");
+		assert.equal(codes.length, 10);
+		for (const c of codes) { assert.match(c, /^[a-z2-9]{5}-[a-z2-9]{5}$/); }
+		assert.match(await page.textContent("#totp-notice"), /is enabled/);
+		assert.equal(await page.textContent("#totp-setup-secret"), "", "the secret is wiped from the page once confirmed");
+		await page.waitForFunction(() => /Recovery codes left: 10/.test(document.getElementById("totp-status").textContent));
+		assert.equal(await page.isHidden("#totp-manage-form"), false);
+
+		await page.click("#totp-codes-done");
+		assert.equal(await page.isHidden("#totp-codes"), true);
+		assert.equal(await page.textContent("#totp-codes-list"), "", "codes are wiped once acknowledged");
+		assert.equal(mock.totp.get(mock.accounts.get("user@example.com").id).confirmed, true);
+		await page.close();
+	});
+
+	await test("2fa manage: new recovery codes and turn off need password + current code; a wrong one changes nothing", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const secret = mock.seedTotp(accountId, ["abcde-fghjk"]);
+		// Sign in through the code step first.
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/`);
+		await page.fill("#login-email", "user@example.com");
+		await page.fill("#login-password", "correct horse battery");
+		await page.click("#login-submit");
+		await page.waitForSelector("#code-form:not([hidden])");
+		await page.fill("#login-code", codeNow(secret));
+		await page.click("#code-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		await page.waitForSelector("#totp-manage-form:not([hidden])");
+
+		await page.fill("#totp-manage-password", "correct horse battery");
+		await page.fill("#totp-manage-code", "000000");
+		await page.click("#totp-regenerate");
+		await page.waitForSelector("#totp-notice.err");
+		assert.match(await page.textContent("#totp-notice"), /not accepted/);
+		assert.equal(await page.isHidden("#totp-codes"), true);
+		assert.equal(await page.inputValue("#totp-manage-password"), "");
+
+		await page.fill("#totp-manage-password", "correct horse battery");
+		await page.fill("#totp-manage-code", codeNow(secret, 1)); // the sign-in used the current step; the next one is fresh
+		await page.click("#totp-regenerate");
+		await page.waitForSelector("#totp-codes:not([hidden])");
+		const fresh = (await page.textContent("#totp-codes-list")).trim().split("\n");
+		assert.equal(fresh.length, 10);
+		assert.ok(!fresh.includes("abcde-fghjk"));
+		await page.waitForFunction(() => /Recovery codes left: 10/.test(document.getElementById("totp-status").textContent));
+
+		await page.fill("#totp-manage-password", "correct horse battery");
+		await page.fill("#totp-manage-code", fresh[0]);
+		await page.click("#totp-disable");
+		await page.waitForFunction(() => document.getElementById("totp-status").textContent === "Not enabled.");
+		assert.match(await page.textContent("#totp-notice"), /turned off/);
+		assert.equal(await page.isHidden("#totp-enroll-form"), false);
+		assert.equal(mock.totp.has(accountId), false);
+
+		// Password alone signs in again.
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		await page.fill("#login-email", "user@example.com");
+		await page.fill("#login-password", "correct horse battery");
+		await page.click("#login-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		assert.equal(await page.isHidden("#code-form"), true);
+		await page.close();
+	});
+
+	// --------------------------------------------------------- delete account
+	console.log("vault.bitosx.se — delete account");
 	await test("delete account: button needs the acknowledgement; wrong password -> 403 message, nothing deleted, still signed in", async () => {
 		const mock = createMockApi();
 		const page = await signedInPlain(mock);

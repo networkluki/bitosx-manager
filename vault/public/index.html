@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Sign in — BitosX vault</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.4.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.5.0" />
     <meta name="theme-color" content="#26292E" />
     <script src="/assets/js/theme-init.js"></script>
 </head>
@@ -56,6 +56,17 @@
             <span class="spacer"></span>
           </div>
         </form>
+        <form id="code-form" novalidate hidden>
+          <p class="help">This account has two-factor authentication. Enter the 6-digit code from your authenticator app, or one of your recovery codes. The code goes only to the BitosX server, together with the one-time token it issued for this sign-in.</p>
+          <div class="field">
+            <label for="login-code">Sign-in code</label>
+            <input id="login-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="12" placeholder="123456 or xxxxx-xxxxx" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn" type="submit" id="code-submit">Continue</button>
+            <button class="btn ghost" type="button" id="code-cancel">Start over</button>
+          </div>
+        </form>
         <p class="links"><a href="/register">Create an account</a><a href="/forgot-password">Forgot your password?</a><a href="/register#resend">Resend verification email</a></p>
       </section>
 
@@ -86,6 +97,68 @@
           <button class="btn danger small" type="button" id="logout-all">Sign out everywhere</button>
         </div>
         <p class="inline-note">You are signed out automatically after 15 minutes without activity, and whenever this tab is closed or reloaded.</p>
+
+        <h2 class="panel-subhead">Two-factor authentication</h2>
+        <p class="help">A code from an authenticator app (TOTP) in addition to your account password when you sign in. It protects the account sign-in only; the vault master password is a separate thing and stays as it is.</p>
+        <div class="notice" id="totp-notice" role="status"></div>
+        <p class="vault-status" id="totp-status"></p>
+
+        <form id="totp-enroll-form" novalidate hidden>
+          <div class="field">
+            <label for="totp-enroll-password">Account password</label>
+            <input id="totp-enroll-password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn" type="submit" id="totp-enroll-submit">Set up two-factor authentication</button>
+          </div>
+        </form>
+
+        <div id="totp-setup" hidden>
+          <p class="help">Add this secret to your authenticator app (type it, or paste the full link into an app that accepts one), then enter the code the app shows to confirm. The secret is shown once and is not kept by this page.</p>
+          <dl class="kv">
+            <dt>Account</dt><dd id="totp-setup-label"></dd>
+            <dt>Secret</dt><dd><code id="totp-setup-secret"></code></dd>
+            <dt>Link</dt><dd><code id="totp-setup-uri"></code></dd>
+            <dt>Settings</dt><dd id="totp-setup-params"></dd>
+          </dl>
+          <form id="totp-confirm-form" novalidate>
+            <div class="field">
+              <label for="totp-confirm-code">Code from the app</label>
+              <input id="totp-confirm-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="8" required />
+            </div>
+            <div class="form-actions">
+              <button class="btn" type="submit" id="totp-confirm-submit">Confirm and enable</button>
+              <button class="btn ghost" type="button" id="totp-setup-cancel">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="totp-codes" hidden>
+          <p class="help"><strong>Recovery codes.</strong> Each signs you in once if you lose the authenticator app. Save them somewhere safe now; they are shown only this once.</p>
+          <pre id="totp-codes-list"></pre>
+          <div class="form-actions">
+            <button class="btn ghost small" type="button" id="totp-codes-copy">Copy codes</button>
+            <span class="spacer"></span>
+            <button class="btn small" type="button" id="totp-codes-done">I have saved them</button>
+          </div>
+        </div>
+
+        <form id="totp-manage-form" novalidate hidden>
+          <p class="help">To turn two-factor authentication off, or to replace your recovery codes, confirm with your account password and a current code (from the app, or a recovery code).</p>
+          <div class="field">
+            <label for="totp-manage-password">Account password</label>
+            <input id="totp-manage-password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required />
+          </div>
+          <div class="field">
+            <label for="totp-manage-code">Code</label>
+            <input id="totp-manage-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="12" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn ghost small" type="submit" id="totp-regenerate">New recovery codes</button>
+            <span class="spacer"></span>
+            <button class="btn danger small" type="button" id="totp-disable">Turn off</button>
+          </div>
+        </form>
 
         <h2 class="panel-subhead">Delete this account</h2>
         <p class="help">Permanently deletes the account, every session and the <strong>encrypted vault stored on the server</strong>. A vault file on your own devices is not touched. This cannot be undone; the address can register again from scratch.</p>
@@ -188,7 +261,7 @@
   </main>
 
   <footer>
-    <div class="footer-version">web v0.4.0</div>
+    <div class="footer-version">web v0.5.0</div>
     <div class="footer-links">
       <a href="https://bitosx.se/#security" rel="noopener noreferrer">How your data is protected</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">API source</a>
