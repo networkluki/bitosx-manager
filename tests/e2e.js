@@ -68,7 +68,7 @@ function watchConsole(page, bucket) {
 		if (msg.type() !== "error") { return; }
 		// Chromium logs every non-2xx response as an error; 400/401/413/429/503 from
 		// the API are expected outcomes the app handles, so they are not failures here.
-		if (/^Failed to load resource: the server responded with a status of (400|401|404|413|429|503)/.test(msg.text())) { return; }
+		if (/^Failed to load resource: the server responded with a status of (400|401|404|409|413|429|503)/.test(msg.text())) { return; }
 		bucket.push(`console.error: ${msg.text()}`);
 	});
 	page.on("pageerror", (err) => bucket.push(`pageerror: ${err.message}`));
@@ -407,7 +407,7 @@ async function test(name, fn) {
 		const page = await newPage(mock);
 		await signedIn(mock, page);
 		await unlockWith(page, meta.typedPassword);
-		assert.match(await page.textContent("#vault-notice"), /Vault opened\. It is read-only here/);
+		assert.match(await page.textContent("#vault-notice"), /^Vault opened\. Changes are uploaded only when you press Save to server/);
 		await page.waitForSelector("#vault-items-section:not([hidden])");
 		assert.equal(await page.locator("#vault-items .vault-item").count(), 3);
 		assert.equal(await page.textContent("#vault-count"), "3 items");
@@ -507,7 +507,7 @@ async function test(name, fn) {
 		const page = await newPage(mock);
 		await signedIn(mock, page);
 		await unlockWith(page, canonical.meta.typedPassword.normalize("NFD").replace(/\u3000/g, "\u00A0"));
-		assert.match(await page.textContent("#vault-notice"), /^Vault opened\. It is read-only/);
+		assert.match(await page.textContent("#vault-notice"), /^Vault opened\. Changes are uploaded/);
 		await page.waitForSelector("#vault-items-section:not([hidden])");
 		await page.click("#vault-lock");
 		// The legacy vault, keyed with the raw NFD bytes.
@@ -538,6 +538,197 @@ async function test(name, fn) {
 		await page.close();
 	});
 
+	// ------------------------------------------------------- editing (phase 5)
+	console.log("vault.bitosx.se — editing");
+	const vcNode = require("../vault/public/assets/js/vault-crypto.js")(require("../vault/public/assets/vendor/hash-wasm/argon2.umd.min.js"), globalThis.crypto);
+	// Opens what the mock server holds with the fixture's password, as the desktop would.
+	async function serverItems(mock, accountId, password) {
+		const e = mock.envelopes.get(accountId);
+		const opened = await vcNode.unlock(vcNode.parseEnvelope(new Uint8Array(e.bytes)), password);
+		return vcNode.parseVault(opened.plaintext).items;
+	}
+	async function openedVault(mock) {
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const { bytes, meta } = fixture("small");
+		mock.seedEnvelope(accountId, bytes);
+		const page = await newPage(mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		return { page, accountId, meta, bytes };
+	}
+
+	await test("edit: add a login, save -> the server holds a new revision that opens with the master password and contains it; the desktop's header is untouched", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta, bytes } = await openedVault(mock);
+		assert.equal(await page.isDisabled("#vault-save"), true);
+		await page.click("#vault-add");
+		await page.waitForSelector("#vault-editor:not([hidden])");
+		await page.fill("#edit-name", "Added here <b>");
+		await page.fill("#edit-username", "web@example.com");
+		await page.click("#edit-password-generate");
+		const generated = await page.inputValue("#edit-password");
+		assert.equal(generated.length, 24);
+		await page.fill("#edit-urls", "https://example.com/login\n\nhttps://example.org");
+		await page.fill("#edit-notes", "line one\nline two");
+		await page.check("#edit-favorite");
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 4);
+		assert.equal(await page.isHidden("#vault-dirty"), false);
+		assert.equal(await page.isDisabled("#vault-save"), false);
+		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), true);
+		assert.equal(mock.calls.filter(c => c.method === "PUT").length, 0, "nothing uploaded before Save");
+
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		assert.equal(await page.isHidden("#vault-dirty"), true);
+		const put = mock.calls.find(c => c.method === "PUT" && c.path === "/v1/sync/envelope");
+		assert.equal(put.body.baseRevision, 1);
+		assert.match(put.headers["authorization"], /^Bearer jwt\./);
+		// The master password never left the browser; the body carries only the envelope.
+		assert.deepEqual(Object.keys(put.body).sort(), ["baseRevision", "envelope"]);
+		assert.ok(!JSON.stringify(put.body).includes(meta.typedPassword));
+		// What the server holds now opens with the same master password and has the new item.
+		const items = await serverItems(mock, accountId, meta.typedPassword);
+		assert.equal(items.length, 4);
+		const added = items.find(i => i.name === "Added here <b>");
+		assert.equal(added.username, "web@example.com");
+		assert.equal(added.password, generated);
+		assert.deepEqual([...added.urls], ["https://example.com/login", "https://example.org"]);
+		assert.equal(added.notes, "line one\nline two");
+		assert.equal(added.favorite, true);
+		// The key-wrap header is exactly the desktop's: only the content changed.
+		const before = JSON.parse(bytes.toString("utf8"));
+		const after = JSON.parse(mock.envelopes.get(accountId).bytes.toString("utf8"));
+		for (const k of ["version", "kdf", "kdfParameters", "salt", "algorithm", "keyWrapNonce", "encryptedVaultKey"]) {
+			assert.deepEqual(after[k], before[k], k);
+		}
+		assert.notEqual(after.contentNonce, before.contentNonce);
+		if (process.env.BITOSX_E2E_DUMP) {
+			fs.mkdirSync(process.env.BITOSX_E2E_DUMP, { recursive: true });
+			fs.writeFileSync(path.join(process.env.BITOSX_E2E_DUMP, "web-written.vault.json"), mock.envelopes.get(accountId).bytes);
+			fs.writeFileSync(path.join(process.env.BITOSX_E2E_DUMP, "web-written.expected.json"), JSON.stringify({ password: meta.typedPassword, generated, itemCount: 4 }));
+		}
+		await page.close();
+	});
+
+	await test("edit: change and delete, with the delete asked for and then confirmed; save uploads once", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		const github = page.locator('.vault-item[data-item-id="11111111-1111-4111-8111-111111111111"]');
+		await github.locator("button[data-edit]").click();
+		await page.waitForSelector("#vault-editor:not([hidden])");
+		assert.equal(await page.inputValue("#edit-name"), "GitHub");
+		assert.equal(await page.inputValue("#edit-password"), "P@ssw0rd-Strong-123");
+		await page.fill("#edit-name", "GitHub (work)");
+		await page.fill("#edit-password", "new-password-42");
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		// Delete needs two presses.
+		const bank = page.locator('.vault-item[data-item-id="22222222-2222-4222-8222-222222222222"]');
+		await bank.locator("button[data-delete]").click();
+		assert.equal(await bank.locator("button[data-delete]").textContent(), "Confirm delete");
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 3);
+		await bank.locator("button[data-delete]").click();
+		await page.waitForFunction(() => document.querySelectorAll("#vault-items .vault-item").length === 2);
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		assert.equal(mock.calls.filter(c => c.method === "PUT").length, 1);
+		const items = await serverItems(mock, accountId, meta.typedPassword);
+		assert.deepEqual(items.map(i => i.name).sort(), ["GitHub (work)", "Wi-Fi café"]);
+		const edited = items.find(i => i.name === "GitHub (work)");
+		assert.equal(edited.password, "new-password-42");
+		assert.equal(edited.createdAt.toISOString(), "2026-10-01T09:00:00.000Z", "CreatedAt kept");
+		assert.ok(edited.updatedAt > edited.createdAt, "UpdatedAt stamped");
+		await page.close();
+	});
+
+	await test("edit: the editor validates as the desktop does, and nothing invalid is kept", async () => {
+		const mock = createMockApi();
+		const { page } = await openedVault(mock);
+		await page.click("#vault-add");
+		await page.click("#edit-save");
+		assert.match(await page.textContent("#vault-editor-notice"), /Name is required/);
+		await page.fill("#edit-name", "x");
+		await page.fill("#edit-urls", "not a url");
+		await page.click("#edit-save");
+		assert.match(await page.textContent("#vault-editor-notice"), /not a valid absolute http\(s\) URL/);
+		assert.equal(await page.isHidden("#vault-editor"), false);
+		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), false);
+		await page.click("#edit-cancel");
+		assert.equal(await page.isHidden("#vault-editor"), true);
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 3);
+		await page.close();
+	});
+
+	await test("edit: a conflict (another device uploaded first) uploads nothing and offers both ways out; overwrite is compare-and-set and needs the acknowledgement", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta, bytes } = await openedVault(mock);
+		await page.click("#vault-add");
+		await page.fill("#edit-name", "Mine");
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		// Meanwhile another device uploads revision 2.
+		mock.seedEnvelope(accountId, bytes);
+		await page.click("#vault-save");
+		await page.waitForSelector("#vault-conflict:not([hidden])");
+		assert.match(await page.textContent("#vault-notice"), /Another device changed the vault on the server first/);
+		assert.equal(mock.envelopes.get(accountId).revision, 2, "the server kept the other device's revision");
+		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), true);
+		assert.equal(await page.isDisabled("#vault-overwrite"), true);
+		await page.check("#vault-overwrite-ack");
+		assert.equal(await page.isDisabled("#vault-overwrite"), false);
+		await page.click("#vault-overwrite");
+		await page.waitForFunction(() => /this browser's version/.test(document.getElementById("vault-notice").textContent));
+		const puts = mock.calls.filter(c => c.method === "PUT");
+		assert.deepEqual(puts.map(p => p.body.baseRevision), [1, 2], "first against what was opened, then against what the server holds now");
+		assert.equal(mock.envelopes.get(accountId).revision, 3);
+		assert.equal(await page.isHidden("#vault-conflict"), true);
+		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), false);
+		const items = await serverItems(mock, accountId, meta.typedPassword);
+		assert.ok(items.some(i => i.name === "Mine"));
+		await page.close();
+	});
+
+	await test("edit: 'reload the server's vault' discards the changes and asks for the master password again", async () => {
+		const mock = createMockApi();
+		const { page, accountId, bytes } = await openedVault(mock);
+		await page.click("#vault-add");
+		await page.fill("#edit-name", "Mine");
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		mock.seedEnvelope(accountId, bytes);
+		await page.click("#vault-save");
+		await page.waitForSelector("#vault-conflict:not([hidden])");
+		await page.click("#vault-reload");
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.evaluate(() => window.bitosxVault.isUnlocked()), false);
+		await page.waitForFunction(() => /revision 2/.test(document.getElementById("vault-status-text").textContent));
+		assert.equal(mock.envelopes.get(accountId).revision, 2);
+		await page.close();
+	});
+
+	await test("edit: unsaved changes survive the tab being hidden, but locking discards them and wipes the DOM", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		await page.click("#vault-add");
+		await page.fill("#edit-name", "Mine");
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		await page.evaluate(() => {
+			Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
+		assert.equal(await page.evaluate(() => window.bitosxVault.isUnlocked()), true, "not locked while there are unsaved changes");
+		await page.click("#vault-lock");
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), false);
+		await assertNoSecretInDom(page);
+		assert.equal((await serverItems(mock, accountId, meta.typedPassword)).length, 3, "nothing was uploaded");
+		await page.close();
+	});
+
 	if (process.env.BITOSX_E2E_SLOW) {
 		await test("vault (slow, opt-in): the desktop's default profile — 256 MiB Argon2id — opens in Chromium", async () => {
 			const mock = createMockApi();
@@ -559,7 +750,7 @@ async function test(name, fn) {
 	// ------------------------------------------------------------- hygiene
 	console.log("hygiene");
 	await test("no console errors, page errors or CSP violations in any flow", async () => {
-		assert.deepEqual(errors, []);
+		assert.deepEqual(errors, [], errors.join("\n"));
 	});
 	await test("static CSP: no inline scripts/styles/handlers in any HTML", async () => {
 		const files = [];

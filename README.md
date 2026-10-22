@@ -8,7 +8,7 @@ WebAssembly build the web vault needs (`vault/public/assets/vendor/hash-wasm/`, 
 | Hostname | Directory | Purpose | Talks to |
 |---|---|---|---|
 | `bitosx.se` | `www/public/` | Public product page: what BitosX is, how the vault is protected, what works today, live API status, roadmap | `api.bitosx.se` (`GET /health`, `GET /version` only) |
-| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password, read-only | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`) |
+| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
 | `api.bitosx.se` | — | The account API. Lives in [`networkluki/bitosx-api`](https://github.com/networkluki/bitosx-api) and is operated alongside the desktop app; nothing here | — |
 
 The desktop app lives in [`networkluki/bitosx`](https://github.com/networkluki/bitosx).
@@ -34,8 +34,8 @@ revision, size, when stored) and asks for the vault's **master password**. On *O
 5. The decrypted JSON is read strictly (schema version 1, `login` items, no unknown fields, no
    duplicate ids) and rendered as **text** — never HTML — with passwords hidden until *Show*.
 
-**Read-only.** Nothing is edited, nothing is uploaded, nothing decrypted is ever sent anywhere. The
-master password and the items live only in the page's memory while unlocked. The vault locks after 5
+Nothing decrypted is ever sent anywhere; since phase 5 (below) edits are encrypted in the browser
+before they are uploaded. The master password and the items live only in the page's memory while unlocked. The vault locks after 5
 minutes without input, when the tab is hidden, on sign-out, and on reload/close. A copied value is
 cleared from the clipboard after 30 seconds — only if it is still what was copied, and only when the
 browser lets the page read the clipboard back; otherwise it is left alone. JavaScript strings cannot
@@ -45,7 +45,7 @@ be wiped, so "dropped" means unreferenced, as in the desktop app.
 bytes that are not the vault; the fingerprint check and the parser refuse the last, and the first two
 leave the user with the desktop copy. It cannot produce a vault that opens with the user's master
 password without that password, and it never sees the password: the only requests the web vault makes
-are the two `GET`s above.
+are the two `GET`s above and, on *Save to server*, the `PUT` of a freshly encrypted envelope.
 
 **Why `'wasm-unsafe-eval'`.** WebCrypto has no Argon2, so the KDF is WebAssembly. `hash-wasm`
 embeds the module as Base64 and instantiates it with `WebAssembly.instantiate`, which the CSP must
@@ -54,6 +54,43 @@ and `_headers`; the other pages keep `script-src 'self'` and the test enforces b
 `'unsafe-eval'`: JavaScript `eval` stays blocked. The build's version, tarball integrity and file hash
 are recorded in `vault/public/assets/vendor/hash-wasm/README.md`, and it is checked against Argon2id
 vectors computed by the desktop's own KDF before any vault goes near it.
+
+## Editing in the browser (phase 5)
+
+Since web `0.3.0` the vault page can add, change and delete logins. Nothing leaves the browser
+until *Save to server*:
+
+1. The items are written as the desktop writes them (`serializeVault`: the same JSON shape, the
+   same validation as `VaultValidation` — name required and ≤ 200, username ≤ 320, password ≤ 4096,
+   notes ≤ 16384, at most 64 absolute http(s) URLs, `UpdatedAt` never before `CreatedAt`), then
+   encrypted **under the vault key that was unwrapped at unlock**, with a fresh 96-bit nonce and the
+   desktop's content associated data (`VaultCryptor.ReEncryptContent`). The key-wrap header — salt,
+   KDF parameters, wrapped vault key — is carried over untouched, so the desktop's master password
+   still opens the result. The ciphertext is decrypted again before it is accepted (self-check).
+2. The envelope is serialized byte for byte as `EncryptedVaultSerializer` writes it and sent with
+   `PUT /v1/sync/envelope` and the **base revision the vault was opened at**. The server's reply
+   must state the size and SHA-256 of exactly what was sent.
+3. A **409** means another device uploaded first. Nothing is overwritten; the page offers the two
+   ways out the desktop offers: reload the server's vault (the changes here are discarded, the
+   master password is asked for again) or replace the server's vault with this browser's version,
+   behind an acknowledgement — still compare-and-set against the revision the server holds at that
+   moment, so a device that uploads in between is not silently overwritten.
+
+While there are unsaved changes the page says so, the browser warns before the tab is closed, and
+hiding the tab does **not** lock (a lock would discard the changes); the idle lock after 5 minutes,
+sign-out and unload still do. A delete is asked for and then confirmed, as in the desktop app. The
+generator makes 24-character passwords from a fixed alphabet with rejection sampling, from
+`crypto.getRandomValues`.
+
+The vault key lives in the page's memory while unlocked, exactly as it lives in the desktop
+process; it is zeroed on lock. The master password is still never kept.
+
+**Verified against the desktop's own code:** the e2e suite opens what the mock server holds after
+a browser save with `vault-crypto.js` under Node, and the same envelope was opened with
+`BitosX.Crypto.VaultCryptor` + `VaultSerializer` + `VaultValidation` from a .NET console program
+(parse, unlock with the canonical password encoding, deserialize, validate all items) — see the
+pull request for the run. Not verified: a real desktop syncing a browser-written revision through
+`api.bitosx.se`.
 
 ## What phase 1 was
 
@@ -74,9 +111,10 @@ Phases as presented on the product page, and where each stands:
 3. **Phase 3:** encrypted sync — the server stores the encrypted vault envelope as opaque bytes
    (`networkluki/bitosx-api` PR #3, `GET/PUT/DELETE /v1/sync/*`), the desktop uploads and downloads
    ciphertext only (`networkluki/bitosx` PR #5).
-4. **Phase 4:** the web vault above — this repository. It needs phase 3 on both sides to be deployed:
-   until `/v1/sync/*` exists on `api.bitosx.se` and a desktop has synced, the page says the server holds
-   no vault.
+4. **Phase 4:** the web vault above — this repository, merged. It needs phase 3 on both sides to be
+   deployed: until `/v1/sync/*` exists on `api.bitosx.se` and a desktop has synced, the page says the
+   server holds no vault.
+5. **Phase 5:** editing in the browser, above — this repository.
 
 ## Blockers outside this repository (must be done before vault.bitosx.se works)
 
@@ -194,7 +232,7 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 ## Versioning
 
-`web v0.2.0` (phase 4, the web vault; `v0.1.0` was phase 1). Bump the version in the footers and in
+`web v0.3.0` (phase 5, editing in the browser; `v0.2.0` was the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
 the `?v=` cache-busting query on the stylesheet links together. The desktop app (`0.9.0` on its phase 3
 branch) and the API (`0.1.0`) have their own version numbers, shown in the footer of the product page
 for orientation only.

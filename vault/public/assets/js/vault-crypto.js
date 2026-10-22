@@ -226,7 +226,10 @@
 					return aesGcmDecrypt(vaultKey, envelope.contentNonce, envelope.ciphertext, dataAad);
 				})
 				.then(function (plaintext) {
-					return { plaintext: plaintext, usedCanonical: i === 0 && candidates.firstIsCanonical };
+					// The vault key is handed to the caller (who wipes it on lock); the KEK is not.
+					var key = vaultKey;
+					vaultKey = null;
+					return { plaintext: plaintext, vaultKey: key, usedCanonical: i === 0 && candidates.firstIsCanonical };
 				})
 				.catch(function (err) {
 					// Not this encoding; the vault may have been keyed with an earlier one. The last
@@ -300,6 +303,166 @@
 		return Object.freeze({ schemaVersion: 1, items: Object.freeze(items) });
 	}
 
+	// ---- writing (VaultSerializer.SerializeToUtf8Bytes, EncryptedVaultSerializer.Serialize) ----
+	// System.Text.Json's default encoder escapes the quote, the HTML-sensitive characters and every
+	// non-ASCII character as \uXXXX (uppercase hex, UTF-16 units), so the bytes come out as the
+	// desktop writes them. The desktop parses JSON, so this is for consistency, not correctness.
+	function jsonString(text) {
+		var out = "\"";
+		for (var i = 0; i < text.length; i++) {
+			var c = text.charCodeAt(i);
+			if (c === 0x5C) { out += "\\\\"; }
+			else if (c === 0x0A) { out += "\\n"; }
+			else if (c === 0x0D) { out += "\\r"; }
+			else if (c === 0x09) { out += "\\t"; }
+			else if (c === 0x08) { out += "\\b"; }
+			else if (c === 0x0C) { out += "\\f"; }
+			else if (c < 0x20 || c > 0x7E || c === 0x22 || c === 0x26 || c === 0x27 || c === 0x2B || c === 0x3C || c === 0x3E || c === 0x60) {
+				out += "\\u" + ("000" + c.toString(16).toUpperCase()).slice(-4);
+			}
+			else { out += text[i]; }
+		}
+		return out + "\"";
+	}
+
+	// DateTimeOffset as System.Text.Json writes a UTC value: seconds, a trimmed fraction, "+00:00".
+	function jsonDate(date) {
+		var iso = date.toISOString();            // 2026-10-01T09:00:00.123Z
+		var base = iso.slice(0, 19);
+		var ms = iso.slice(20, 23);
+		var fraction = ms === "000" ? "" : "." + ms.replace(/0+$/, "");
+		return base + fraction + "+00:00";
+	}
+
+	var LIMITS = Object.freeze({ name: 200, username: 320, password: 4096, notes: 16384, url: 2048, urls: 64 }); // VaultValidation
+
+	// VaultValidation.Validate for a login item, with the desktop's messages.
+	function validateItem(item) {
+		if (!isPlainObject(item)) { throw new VaultError(KINDS.CONTENT, "Item is required."); }
+		if (typeof item.id !== "string" || !UUID_RE.test(item.id)) { throw new VaultError(KINDS.CONTENT, "Item id must not be empty."); }
+		if (typeof item.name !== "string" || item.name.trim().length === 0) { throw new VaultError(KINDS.CONTENT, "Name is required."); }
+		if (item.name.length > LIMITS.name) { throw new VaultError(KINDS.CONTENT, "Name must be at most " + LIMITS.name + " characters."); }
+		if (item.notes != null && (typeof item.notes !== "string" || item.notes.length > LIMITS.notes)) { throw new VaultError(KINDS.CONTENT, "Notes must be at most " + LIMITS.notes + " characters."); }
+		if (item.username != null && (typeof item.username !== "string" || item.username.length > LIMITS.username)) { throw new VaultError(KINDS.CONTENT, "Username must be at most " + LIMITS.username + " characters."); }
+		if (item.password != null && (typeof item.password !== "string" || item.password.length > LIMITS.password)) { throw new VaultError(KINDS.CONTENT, "Password must be at most " + LIMITS.password + " characters."); }
+		if (!Array.isArray(item.urls)) { throw new VaultError(KINDS.CONTENT, "The URL list must not be null."); }
+		if (item.urls.length > LIMITS.urls) { throw new VaultError(KINDS.CONTENT, "An item may have at most " + LIMITS.urls + " URLs."); }
+		item.urls.forEach(function (url) {
+			if (typeof url !== "string" || url.trim().length === 0) { throw new VaultError(KINDS.CONTENT, "A URL must not be blank."); }
+			if (url.length > LIMITS.url) { throw new VaultError(KINDS.CONTENT, "A URL must be at most " + LIMITS.url + " characters."); }
+			var parsed;
+			try { parsed = new URL(url); } catch (e) { parsed = null; }
+			if (!parsed || (parsed.protocol !== "http:" && parsed.protocol !== "https:")) { throw new VaultError(KINDS.CONTENT, "'" + url + "' is not a valid absolute http(s) URL."); }
+		});
+		if (!(item.createdAt instanceof Date) || !(item.updatedAt instanceof Date) || isNaN(item.createdAt) || isNaN(item.updatedAt)) { throw new VaultError(KINDS.CONTENT, "Item dates are required."); }
+		if (item.updatedAt < item.createdAt) { throw new VaultError(KINDS.CONTENT, "UpdatedAt must not be earlier than CreatedAt."); }
+		if (typeof item.favorite !== "boolean") { throw new VaultError(KINDS.CONTENT, "Favorite must be a boolean."); }
+	}
+
+	// The decrypted document as the desktop writes it: compact, "type" first, the login fields, then
+	// the common ones, nulls omitted. Every item is validated and ids must be unique.
+	function serializeVault(vault) {
+		if (!isPlainObject(vault) || !Array.isArray(vault.items) || vault.items.length > MAX_ITEMS) { throw new VaultError(KINDS.CONTENT, "The vault's item list is invalid."); }
+		var seen = Object.create(null);
+		var parts = vault.items.map(function (item) {
+			validateItem(item);
+			var id = item.id.toLowerCase();
+			if (seen[id]) { throw new VaultError(KINDS.CONTENT, "The vault contains duplicate item identifiers."); }
+			seen[id] = true;
+			var fields = ["\"type\":\"login\""];
+			if (item.username != null) { fields.push("\"Username\":" + jsonString(item.username)); }
+			if (item.password != null) { fields.push("\"Password\":" + jsonString(item.password)); }
+			fields.push("\"Urls\":[" + item.urls.map(jsonString).join(",") + "]");
+			fields.push("\"Id\":" + jsonString(id));
+			fields.push("\"Name\":" + jsonString(item.name));
+			if (item.notes != null) { fields.push("\"Notes\":" + jsonString(item.notes)); }
+			fields.push("\"Favorite\":" + (item.favorite ? "true" : "false"));
+			// Dates are written by System.Text.Json's date formatter, not its string encoder: no escaping.
+			fields.push("\"CreatedAt\":\"" + jsonDate(item.createdAt) + "\"");
+			fields.push("\"UpdatedAt\":\"" + jsonDate(item.updatedAt) + "\"");
+			return "{" + fields.join(",") + "}";
+		});
+		return utf8("{\"schemaVersion\":1,\"items\":[" + parts.join(",") + "]}");
+	}
+
+	// The envelope as the desktop writes it: indented with two spaces, the fields in this order.
+	function serializeEnvelope(envelope) {
+		var p = envelope.kdfParameters;
+		var text = "{\n"
+			+ "  \"version\": " + envelope.version + ",\n"
+			+ "  \"kdf\": " + jsonString(envelope.kdf) + ",\n"
+			+ "  \"kdfParameters\": {\n"
+			+ "    \"memoryKiB\": " + p.memoryKiB + ",\n"
+			+ "    \"iterations\": " + p.iterations + ",\n"
+			+ "    \"parallelism\": " + p.parallelism + ",\n"
+			+ "    \"keyLengthBytes\": " + p.keyLengthBytes + "\n"
+			+ "  },\n"
+			+ "  \"salt\": " + jsonString(bytesToBase64(envelope.salt)) + ",\n"
+			+ "  \"algorithm\": " + jsonString(envelope.algorithm) + ",\n"
+			+ "  \"keyWrapNonce\": " + jsonString(bytesToBase64(envelope.keyWrapNonce)) + ",\n"
+			+ "  \"encryptedVaultKey\": " + jsonString(bytesToBase64(envelope.encryptedVaultKey)) + ",\n"
+			+ "  \"contentNonce\": " + jsonString(bytesToBase64(envelope.contentNonce)) + ",\n"
+			+ "  \"ciphertext\": " + jsonString(bytesToBase64(envelope.ciphertext)) + "\n"
+			+ "}";
+		return utf8(text);
+	}
+
+	function aesGcmEncrypt(keyBytes, nonce, plaintext, aad) {
+		return webcrypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, ["encrypt"])
+			.then(function (key) {
+				return webcrypto.subtle.encrypt({ name: "AES-GCM", iv: nonce, additionalData: aad, tagLength: TAG_BYTES * 8 }, key, plaintext);
+			})
+			.then(function (out) { return new Uint8Array(out); });
+	}
+
+	// VaultCryptor.ReEncryptContent: new plaintext under the same vault key and header, with a fresh
+	// content nonce. The result is checked by decrypting it again before it is returned, so an
+	// envelope that would not open can never leave this function.
+	function encryptContent(envelope, vaultKey, plaintext) {
+		if (!(vaultKey instanceof Uint8Array) || vaultKey.length !== KEY_BYTES) { return Promise.reject(new VaultError(KINDS.CONTENT, "Invalid vault key length.")); }
+		var nonce = new Uint8Array(NONCE_BYTES);
+		webcrypto.getRandomValues(nonce);
+		var aad = contentAad(envelope.version);
+		return aesGcmEncrypt(vaultKey, nonce, plaintext, aad).then(function (ciphertext) {
+			var next = Object.freeze({
+				version: envelope.version, kdf: envelope.kdf, kdfParameters: envelope.kdfParameters, salt: envelope.salt,
+				algorithm: envelope.algorithm, keyWrapNonce: envelope.keyWrapNonce, encryptedVaultKey: envelope.encryptedVaultKey,
+				contentNonce: nonce, ciphertext: ciphertext
+			});
+			return aesGcmDecrypt(vaultKey, nonce, ciphertext, aad).then(function (check) {
+				if (!bytesEqual(check, plaintext)) { throw new VaultError(KINDS.CONTENT, "Encryption self-check failed."); }
+				check.fill(0);
+				return next;
+			});
+		});
+	}
+
+	function newId() {
+		if (typeof webcrypto.randomUUID === "function") { return webcrypto.randomUUID().toLowerCase(); }
+		var b = new Uint8Array(16);
+		webcrypto.getRandomValues(b);
+		b[6] = (b[6] & 0x0F) | 0x40;
+		b[8] = (b[8] & 0x3F) | 0x80;
+		var h = bytesToHex(b);
+		return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+	}
+
+	// A random password from a fixed alphabet, without modulo bias (rejection sampling).
+	var PASSWORD_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+,-./:;<=>?@[]^_{|}~";
+	function generatePassword(length) {
+		length = length || 24;
+		var out = "";
+		var limit = 256 - (256 % PASSWORD_ALPHABET.length);
+		var buf = new Uint8Array(64);
+		while (out.length < length) {
+			webcrypto.getRandomValues(buf);
+			for (var i = 0; i < buf.length && out.length < length; i++) {
+				if (buf[i] < limit) { out += PASSWORD_ALPHABET[buf[i] % PASSWORD_ALPHABET.length]; }
+			}
+		}
+		return out;
+	}
+
 	function sha256Hex(bytes) {
 		return webcrypto.subtle.digest("SHA-256", bytes).then(function (d) { return bytesToHex(new Uint8Array(d)); });
 	}
@@ -317,6 +480,16 @@
 		parseVault: parseVault,
 		sha256Hex: sha256Hex,
 		base64ToBytes: base64ToBytes,
-		bytesToHex: bytesToHex
+		bytesToHex: bytesToHex,
+		bytesToBase64: bytesToBase64,
+		LIMITS: LIMITS,
+		validateItem: validateItem,
+		serializeVault: serializeVault,
+		serializeEnvelope: serializeEnvelope,
+		encryptContent: encryptContent,
+		newId: newId,
+		generatePassword: generatePassword,
+		_jsonString: jsonString,
+		_jsonDate: jsonDate
 	});
 });
