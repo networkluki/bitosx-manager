@@ -47,6 +47,8 @@
 				return context === "verify" ? "This verification link is invalid, expired or already used. Request a new one." : "The request was rejected. Check the fields and try again.";
 			case KINDS.NOT_FOUND:
 				return "That item no longer exists.";
+			case KINDS.CONFLICT:
+				return "Another device changed the vault on the server first. Nothing was changed.";
 			default:
 				return "Something unexpected happened. Nothing was changed. Try again.";
 		}

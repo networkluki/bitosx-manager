@@ -232,3 +232,92 @@ test("content this version does not understand is refused rather than guessed at
 	const back = vc.parseVault(doc([Object.assign({}, item, { UpdatedAt: "2020-01-01T00:00:00+00:00" })])).items[0];
 	assert.equal(back.updatedAt.getTime(), back.createdAt.getTime());
 });
+
+// ------------------------------------------------------------------ writing
+test("the document and the envelope are written byte for byte as the desktop writes them", async () => {
+	const { bytes, meta } = readFixture("small");
+	const env = vc.parseEnvelope(bytes);
+	assert.deepEqual(Buffer.from(vc.serializeEnvelope(env)), Buffer.from(bytes));
+	const vault = vc.parseVault((await vc.unlock(env, meta.typedPassword)).plaintext);
+	assert.equal(Buffer.from(vc.serializeVault(vault)).toString("utf8"), meta.plaintextUtf8);
+	for (const name of ["unicode-canonical", "strong"]) {
+		const f = readFixture(name);
+		assert.deepEqual(Buffer.from(vc.serializeEnvelope(vc.parseEnvelope(f.bytes))), Buffer.from(f.bytes), name);
+	}
+});
+
+test("strings and dates are encoded like System.Text.Json's default encoder", () => {
+	assert.equal(vc._jsonString("a\"b\\c\nd\te<f>g&h'i+j`k é 🔐"), "\"a\\u0022b\\\\c\\nd\\te\\u003Cf\\u003Eg\\u0026h\\u0027i\\u002Bj\\u0060k \\u00E9 \\uD83D\\uDD10\"");
+	assert.equal(vc._jsonString("\u0001"), "\"\\u0001\"");
+	assert.equal(vc._jsonDate(new Date("2026-10-01T09:00:00Z")), "2026-10-01T09:00:00+00:00");
+	assert.equal(vc._jsonDate(new Date("2026-10-01T09:00:00.120Z")), "2026-10-01T09:00:00.12+00:00");
+});
+
+test("a changed vault re-encrypts under the same vault key with a fresh nonce, and opens again with the master password", async () => {
+	const { bytes, meta } = readFixture("small");
+	const env = vc.parseEnvelope(bytes);
+	const opened = await vc.unlock(env, meta.typedPassword);
+	const vault = vc.parseVault(opened.plaintext);
+	const now = new Date("2026-10-22T08:00:00Z");
+	const added = {
+		id: vc.newId(), name: "Added in the browser", username: "web@example.com", password: vc.generatePassword(24),
+		urls: ["https://example.com/login"], notes: null, favorite: false, createdAt: now, updatedAt: now
+	};
+	const plaintext = vc.serializeVault({ items: [...vault.items, added] });
+
+	const next = await vc.encryptContent(env, opened.vaultKey, plaintext);
+
+	assert.notDeepEqual(Buffer.from(next.contentNonce), Buffer.from(env.contentNonce));
+	assert.deepEqual(Buffer.from(next.encryptedVaultKey), Buffer.from(env.encryptedVaultKey)); // header untouched
+	assert.deepEqual(Buffer.from(next.salt), Buffer.from(env.salt));
+	const written = vc.serializeEnvelope(next);
+	const reopened = await vc.unlock(vc.parseEnvelope(written), meta.typedPassword);
+	const items = vc.parseVault(reopened.plaintext).items;
+	assert.equal(items.length, 4);
+	const back = items.find((i) => i.id === added.id);
+	assert.equal(back.name, "Added in the browser");
+	assert.equal(back.password, added.password);
+	assert.equal(back.createdAt.toISOString(), "2026-10-22T08:00:00.000Z");
+	// Two encryptions of the same plaintext never share a nonce or a ciphertext.
+	const again = await vc.encryptContent(env, opened.vaultKey, plaintext);
+	assert.notDeepEqual(Buffer.from(again.contentNonce), Buffer.from(next.contentNonce));
+	assert.notDeepEqual(Buffer.from(again.ciphertext), Buffer.from(next.ciphertext));
+	await assert.rejects(vc.encryptContent(env, new Uint8Array(16), plaintext), (e) => e.kind === vc.KINDS.CONTENT);
+});
+
+test("items are validated as VaultValidation validates them before anything is written", () => {
+	const now = new Date("2026-10-22T08:00:00Z");
+	const ok = { id: vc.newId(), name: "x", username: null, password: null, urls: [], notes: null, favorite: false, createdAt: now, updatedAt: now };
+	vc.validateItem(ok);
+	const bad = (patch, message) => assert.throws(() => vc.validateItem(Object.assign({}, ok, patch)), (e) => e.kind === vc.KINDS.CONTENT && e.message.includes(message), message);
+	bad({ id: "nope" }, "Item id");
+	bad({ name: "   " }, "Name is required");
+	bad({ name: "n".repeat(201) }, "at most 200");
+	bad({ username: "u".repeat(321) }, "Username");
+	bad({ password: "p".repeat(4097) }, "Password");
+	bad({ notes: "n".repeat(16385) }, "Notes");
+	bad({ urls: null }, "URL list");
+	bad({ urls: new Array(65).fill("https://x.example") }, "at most 64");
+	bad({ urls: [" "] }, "must not be blank");
+	bad({ urls: ["ftp://x.example"] }, "not a valid absolute http(s) URL");
+	bad({ urls: ["example.com"] }, "not a valid absolute http(s) URL");
+	bad({ urls: ["https://" + "x".repeat(2049)] }, "at most 2048");
+	bad({ updatedAt: new Date("2020-01-01T00:00:00Z") }, "UpdatedAt");
+	bad({ favorite: "yes" }, "Favorite");
+	assert.throws(() => vc.serializeVault({ items: [ok, Object.assign({}, ok)] }), (e) => e.message.includes("duplicate"));
+});
+
+test("ids and generated passwords come from the CSPRNG and have the expected shape", () => {
+	const ids = new Set();
+	for (let i = 0; i < 100; i++) {
+		const id = vc.newId();
+		assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+		ids.add(id);
+	}
+	assert.equal(ids.size, 100);
+	const pw = vc.generatePassword(24);
+	assert.equal(pw.length, 24);
+	assert.notEqual(pw, vc.generatePassword(24));
+	assert.equal(vc.generatePassword().length, 24);
+	assert.ok(/^[A-Za-z0-9!#$%&()*+,\-./:;<=>?@[\]^_{|}~]+$/.test(vc.generatePassword(200)));
+});

@@ -98,15 +98,17 @@ function createMockApi(options = {}) {
 		return { sessionId: sid, session: s };
 	}
 
-	function parseBody(raw) {
+	// The real server caps auth bodies at 4 KiB and only the envelope upload at ~22 MiB.
+	function parseBody(raw, limit) {
 		if (!raw) { return {}; }
-		if (Buffer.byteLength(raw) > 4096) { return { __tooLarge: true }; }
+		if (Buffer.byteLength(raw) > limit) { return { __tooLarge: true }; }
 		try { return JSON.parse(raw); } catch { return { __malformed: true }; }
 	}
 
 	// Returns { status, contentType, body, headers? }
 	function handle(method, path, headers, rawBody) {
-		const body = parseBody(rawBody);
+		const isUpload = method === "PUT" && path === "/v1/sync/envelope";
+		const body = parseBody(rawBody, isUpload ? 23 * 1024 * 1024 : 4096);
 		calls.push({ method, path, body, headers });
 		if (body.__tooLarge) { return problem(413, "Payload Too Large", "Request body too large."); }
 		if (body.__malformed) { return problem(400, "Bad Request", "Malformed JSON."); }
@@ -194,6 +196,34 @@ function createMockApi(options = {}) {
 			const r = json(200, Object.assign(envelopeStatus(e), { envelope: e.bytes.toString("base64") }));
 			r.headers = { "Cache-Control": "no-store" };
 			return r;
+		}
+		if (method === "PUT" && path === "/v1/sync/envelope") {
+			if (!Number.isInteger(body.baseRevision) || body.baseRevision < 0 || typeof body.envelope !== "string") {
+				return problem(400, "Bad Request", "baseRevision and envelope are required.");
+			}
+			if (!/^[A-Za-z0-9+/]*={0,2}$/.test(body.envelope) || body.envelope.length % 4 !== 0 || body.envelope.length === 0) {
+				return problem(400, "Bad Request", "envelope must be Base64.");
+			}
+			const bytes = Buffer.from(body.envelope, "base64");
+			if (bytes.length > 16 * 1024 * 1024) { return problem(413, "Payload Too Large", "The envelope is larger than allowed."); }
+			let doc;
+			try { doc = JSON.parse(bytes.toString("utf8")); } catch { doc = null; }
+			if (!doc || typeof doc !== "object" || Array.isArray(doc) || !Number.isInteger(doc.version) || doc.version < 1) {
+				return problem(400, "Bad Request", "The envelope is not a vault envelope.");
+			}
+			const current = envelopes.get(auth.session.accountId);
+			const currentRevision = current ? current.revision : 0;
+			if (body.baseRevision !== currentRevision) {
+				const p = problem(409, "Conflict", "The server holds a newer revision.");
+				p.body = JSON.stringify(Object.assign(JSON.parse(p.body), { currentRevision }));
+				return p;
+			}
+			seedEnvelope(auth.session.accountId, bytes);
+			return json(200, envelopeStatus(envelopes.get(auth.session.accountId)));
+		}
+		if (method === "DELETE" && path === "/v1/sync/envelope") {
+			envelopes.delete(auth.session.accountId);
+			return noContent();
 		}
 		const m = /^\/v1\/account\/sessions\/([0-9a-f-]{36})$/i.exec(path);
 		if (method === "DELETE" && m) {

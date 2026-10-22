@@ -45,6 +45,7 @@
 		TOO_LARGE: "too_large",         // 413
 		RATE_LIMITED: "rate_limited",   // 429
 		UNAVAILABLE: "unavailable",     // 503
+		CONFLICT: "conflict",           // 409: the server holds a newer revision than the upload was based on
 		UNEXPECTED: "unexpected"        // anything else, incl. malformed bodies
 	});
 
@@ -71,6 +72,7 @@
 			case 400: return KINDS.INVALID;
 			case 401: return KINDS.UNAUTHENTICATED;
 			case 404: return KINDS.NOT_FOUND;
+			case 409: return KINDS.CONFLICT;
 			case 413: return KINDS.TOO_LARGE;
 			case 429: return KINDS.RATE_LIMITED;
 			case 503: return KINDS.UNAVAILABLE;
@@ -282,6 +284,24 @@
 			.catch(notFoundAsNull);
 	}
 
+	// Stores the envelope as the account's vault if the server still holds baseRevision (0 for
+	// "nothing yet"); CONFLICT otherwise, and the server keeps what it had. The caller checks the
+	// fingerprint the server reports against the bytes it sent.
+	function syncUpload(baseRevision, envelopeBytes) {
+		if (!Number.isInteger(baseRevision) || baseRevision < 0) { return Promise.reject(new ApiError(KINDS.INVALID, 400)); }
+		if (!(envelopeBytes instanceof Uint8Array) || envelopeBytes.length === 0 || envelopeBytes.length > MAX_ENVELOPE_BYTES) {
+			return Promise.reject(new ApiError(KINDS.TOO_LARGE, 413));
+		}
+		var binary = "";
+		for (var i = 0; i < envelopeBytes.length; i++) { binary += String.fromCharCode(envelopeBytes[i]); }
+		return authed("PUT", "/v1/sync/envelope", { body: { baseRevision: baseRevision, envelope: btoa(binary) } })
+			.then(function (r) {
+				var stored = parseSyncStatus(r.body, r.status);
+				if (stored.sizeBytes !== envelopeBytes.length || stored.revision <= baseRevision) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
+				return stored;
+			});
+	}
+
 	function logout() {
 		return authed("POST", "/v1/auth/logout").then(function () { clearSession(); return true; })
 			.catch(function (err) { clearSession(); throw err; });
@@ -306,6 +326,7 @@
 		revokeSession: revokeSession,
 		syncStatus: syncStatus,
 		syncEnvelope: syncEnvelope,
+		syncUpload: syncUpload,
 		logout: logout,
 		logoutAll: logoutAll
 	});
