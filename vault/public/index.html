@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Sign in — BitosX vault</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.3.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.4.0" />
     <meta name="theme-color" content="#26292E" />
     <script src="/assets/js/theme-init.js"></script>
 </head>
@@ -56,7 +56,7 @@
             <span class="spacer"></span>
           </div>
         </form>
-        <p class="links"><a href="/register">Create an account</a><a href="/register#resend">Resend verification email</a></p>
+        <p class="links"><a href="/register">Create an account</a><a href="/forgot-password">Forgot your password?</a><a href="/register#resend">Resend verification email</a></p>
       </section>
 
       <section class="panel wide" id="account-panel" hidden>
@@ -86,6 +86,22 @@
           <button class="btn danger small" type="button" id="logout-all">Sign out everywhere</button>
         </div>
         <p class="inline-note">You are signed out automatically after 15 minutes without activity, and whenever this tab is closed or reloaded.</p>
+
+        <h2 class="panel-subhead">Delete this account</h2>
+        <p class="help">Permanently deletes the account, every session and the <strong>encrypted vault stored on the server</strong>. A vault file on your own devices is not touched. This cannot be undone; the address can register again from scratch.</p>
+        <div class="notice" id="delete-notice" role="alert"></div>
+        <form id="delete-form" novalidate>
+          <div class="field">
+            <label for="delete-password">Account password</label>
+            <input id="delete-password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required />
+          </div>
+          <div class="field">
+            <label class="vault-editor__check"><input id="delete-ack" type="checkbox" /> I understand that the account and the vault stored on the server are deleted for good</label>
+          </div>
+          <div class="form-actions">
+            <button class="btn danger" type="submit" id="delete-submit" disabled>Delete account</button>
+          </div>
+        </form>
       </section>
 
       <section class="panel wide" id="vault-panel" hidden>
@@ -172,7 +188,7 @@
   </main>
 
   <footer>
-    <div class="footer-version">web v0.3.0</div>
+    <div class="footer-version">web v0.4.0</div>
     <div class="footer-links">
       <a href="https://bitosx.se/#security" rel="noopener noreferrer">How your data is protected</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">API source</a>

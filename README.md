@@ -8,7 +8,7 @@ WebAssembly build the web vault needs (`vault/public/assets/vendor/hash-wasm/`, 
 | Hostname | Directory | Purpose | Talks to |
 |---|---|---|---|
 | `bitosx.se` | `www/public/` | Public product page: what BitosX is, how the vault is protected, what works today, live API status, roadmap | `api.bitosx.se` (`GET /health`, `GET /version` only) |
-| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
+| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
 | `api.bitosx.se` | — | The account API. Lives in [`networkluki/bitosx-api`](https://github.com/networkluki/bitosx-api) and is operated alongside the desktop app; nothing here | — |
 
 The desktop app lives in [`networkluki/bitosx`](https://github.com/networkluki/bitosx).
@@ -91,6 +91,29 @@ a browser save with `vault-crypto.js` under Node, and the same envelope was open
 (parse, unlock with the canonical password encoding, deserialize, validate all items) — see the
 pull request for the run. Not verified: a real desktop syncing a browser-written revision through
 `api.bitosx.se`.
+
+## Account recovery and deletion (phase 6)
+
+Two more pages and one more panel, all against the phase-6 API endpoints:
+
+- **`/forgot-password`** posts the email to `POST /v1/auth/forgot-password` and shows the same
+  generic text for every address (the API answers 202 for unknown, unverified and existing accounts
+  alike). The page says plainly that this resets only the *account* password: the vault master
+  password was never on the server and cannot be reset by anyone.
+- **`/reset-password`** is the `verify-email` page's twin: the token arrives in the URL fragment
+  (never sent to the server, scrubbed from the address bar and history on load, kept in memory
+  only), the new password is checked against the same 12–128 policy client-side, and
+  `POST /v1/auth/reset-password` replaces the account password and signs out every device. The
+  token is single-use, so the form stays locked after success or a generic "invalid, expired or
+  already used".
+- **Delete this account** on the account panel: the account password plus an explicit
+  acknowledgement, then `POST /v1/account/delete`. Only the password travels; the account is the
+  session's. The server deletes the account, every session and the stored encrypted vault; the page
+  signs out locally and says so. A wrong password is a 403 the page shows as such, without treating
+  the session as dead.
+
+The e2e suite covers each path against the mock API, including that a verification token is not
+accepted as a reset token and that the delete call carries nothing but the password.
 
 ## What phase 1 was
 
@@ -232,7 +255,7 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 ## Versioning
 
-`web v0.3.0` (phase 5, editing in the browser; `v0.2.0` was the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
+`web v0.4.0` (phase 6, account recovery and deletion; `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
 the `?v=` cache-busting query on the stylesheet links together. The desktop app (`0.9.0` on its phase 3
 branch) and the API (`0.1.0`) have their own version numbers, shown in the footer of the product page
 for orientation only.

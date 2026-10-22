@@ -1,4 +1,4 @@
-// Minimal client for the BitosX account API (api.bitosx.se), phase 1.
+// Minimal client for the BitosX account API (api.bitosx.se).
 //
 // Security posture:
 //  - Tokens live only in this module's memory. Nothing is written to
@@ -41,6 +41,7 @@
 		NETWORK: "network",             // offline, DNS, CORS, timeout
 		INVALID: "invalid",             // 400
 		UNAUTHENTICATED: "unauthenticated", // 401
+		FORBIDDEN: "forbidden",         // 403: authenticated, but the password confirmation failed
 		NOT_FOUND: "not_found",         // 404
 		TOO_LARGE: "too_large",         // 413
 		RATE_LIMITED: "rate_limited",   // 429
@@ -71,6 +72,7 @@
 		switch (status) {
 			case 400: return KINDS.INVALID;
 			case 401: return KINDS.UNAUTHENTICATED;
+			case 403: return KINDS.FORBIDDEN;
 			case 404: return KINDS.NOT_FOUND;
 			case 409: return KINDS.CONFLICT;
 			case 413: return KINDS.TOO_LARGE;
@@ -161,6 +163,12 @@
 	}
 	function verifyEmail(token, password) {
 		return request("POST", "/v1/auth/verify-email", { body: { token: token, password: password } }).then(function () { return true; });
+	}
+	function forgotPassword(email) {
+		return request("POST", "/v1/auth/forgot-password", { body: { email: email } }).then(function () { return true; });
+	}
+	function resetPassword(token, password) {
+		return request("POST", "/v1/auth/reset-password", { body: { token: token, password: password } }).then(function () { return true; });
 	}
 	function login(email, password) {
 		clearSession();
@@ -302,6 +310,16 @@
 			});
 	}
 
+	// Permanently deletes the signed-in account (and the vault stored on the server) after the
+	// server re-checks the account password. The local session is gone either way on success.
+	function deleteAccount(password) {
+		if (typeof password !== "string" || password.length === 0 || password.length > cfg.passwordMaxLength) {
+			return Promise.reject(new ApiError(KINDS.FORBIDDEN, 403));
+		}
+		return authed("POST", "/v1/account/delete", { body: { password: password } })
+			.then(function () { clearSession(); return true; });
+	}
+
 	function logout() {
 		return authed("POST", "/v1/auth/logout").then(function () { clearSession(); return true; })
 			.catch(function (err) { clearSession(); throw err; });
@@ -324,6 +342,9 @@
 		me: me,
 		sessions: sessions,
 		revokeSession: revokeSession,
+		forgotPassword: forgotPassword,
+		resetPassword: resetPassword,
+		deleteAccount: deleteAccount,
 		syncStatus: syncStatus,
 		syncEnvelope: syncEnvelope,
 		syncUpload: syncUpload,
