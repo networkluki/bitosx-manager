@@ -1,4 +1,4 @@
-// Sign-in page + account/session management + account deletion (vault.bitosx.se).
+// Sign-in page (with the second-factor step) + account/session management, two-factor setup and account deletion (vault.bitosx.se).
 (function () {
 	"use strict";
 
@@ -17,9 +17,31 @@
 
 	var idleTimer = null;
 
+	var codeForm = $("code-form");
+	var codeEl = $("login-code");
+	var mfaToken = null; // the one-step challenge token from the password step; memory only
+
+	function showCodeStep() {
+		loginForm.hidden = true;
+		codeForm.hidden = false;
+		codeEl.value = "";
+		ui.setBusy(codeForm, false);
+		ui.notice(loginNotice, "ok", "Enter the 6-digit code from your authenticator app, or one of your recovery codes.");
+		codeEl.focus();
+	}
+
+	function leaveCodeStep() {
+		mfaToken = null;
+		codeEl.value = "";
+		codeForm.hidden = true;
+		loginForm.hidden = false;
+	}
+
 	function showLogin(message, level) {
 		// The vault panel locks and hides itself on this; see vault.js.
 		document.dispatchEvent(new CustomEvent("bitosx:signed-out"));
+		leaveCodeStep();
+		resetTotpSection();
 		accountPanel.hidden = true;
 		loginPanel.hidden = false;
 		ui.notice(loginNotice, level || "warn", message || "");
@@ -94,6 +116,7 @@
 			showAccount();
 			armIdle();
 			document.dispatchEvent(new CustomEvent("bitosx:signed-in"));
+			return loadTotpStatus(); // separate call: its failure must not undo the sign-in
 		});
 	}
 
@@ -122,8 +145,14 @@
 		ui.notice(loginNotice, "ok", "");
 		ui.setBusy(loginForm, true);
 		api.login(email, password)
-			.then(function () {
+			.then(function (result) {
 				passEl.value = "";
+				if (!result.signedIn) {
+					// Password accepted, second factor required: no session yet, only the challenge token.
+					mfaToken = result.mfaToken;
+					showCodeStep();
+					return undefined;
+				}
 				return loadAccount();
 			})
 			.catch(function (err) {
@@ -136,6 +165,43 @@
 				ui.setBusy(loginForm, false);
 				password = null;
 			});
+	});
+
+	// 6 digits, or a 10-character recovery code with an optional separator. The server decides; this saves a round trip.
+	function looksLikeCode(code) {
+		return /^[0-9]{6}$/.test(code) || /^[A-Za-z0-9]{5}[- ]?[A-Za-z0-9]{5}$/.test(code);
+	}
+
+	codeForm.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		var code = codeEl.value.trim();
+		codeEl.setAttribute("aria-invalid", looksLikeCode(code) ? "false" : "true");
+		if (!looksLikeCode(code)) {
+			ui.notice(loginNotice, "err", "Enter the 6-digit code from your authenticator app, or a recovery code (xxxxx-xxxxx).");
+			return;
+		}
+		if (!mfaToken) { leaveCodeStep(); ui.notice(loginNotice, "warn", "Start over with your password."); return; }
+		ui.notice(loginNotice, "ok", "");
+		ui.setBusy(codeForm, true);
+		api.loginTotp(mfaToken, code)
+			.then(function () {
+				leaveCodeStep();
+				return loadAccount();
+			})
+			.catch(function (err) {
+				api.clearSession();
+				// A refused code keeps the challenge for another try (the server allows a few); anything else too.
+				ui.notice(loginNotice, "err", ui.describeError(err, "code"));
+				ui.setBusy(codeForm, false);
+				codeEl.focus();
+			})
+			.finally(function () { codeEl.value = ""; code = null; });
+	});
+
+	$("code-cancel").addEventListener("click", function () {
+		leaveCodeStep();
+		ui.notice(loginNotice, "ok", "");
+		$("login-password").focus();
 	});
 
 	// ---- session actions ----
@@ -177,6 +243,199 @@
 				if (err && err.kind === api.KINDS.UNAUTHENTICATED) { showLogin("You are signed out.", "ok"); }
 				else { showLogin(ui.describeError(err, "account"), "err"); }
 			});
+	});
+
+	// ---- two-factor authentication (TOTP) ----
+	var totpNotice = $("totp-notice");
+	var totpStatusEl = $("totp-status");
+	var enrollForm = $("totp-enroll-form");
+	var setupEl = $("totp-setup");
+	var confirmForm = $("totp-confirm-form");
+	var codesEl = $("totp-codes");
+	var codesList = $("totp-codes-list");
+	var manageForm = $("totp-manage-form");
+	var totpClipboardTimer = null;
+
+	function resetTotpSection() {
+		enrollForm.hidden = true;
+		setupEl.hidden = true;
+		codesEl.hidden = true;
+		manageForm.hidden = true;
+		$("totp-enroll-password").value = "";
+		$("totp-manage-password").value = "";
+		$("totp-manage-code").value = "";
+		$("totp-confirm-code").value = "";
+		$("totp-setup-secret").textContent = "";
+		$("totp-setup-uri").textContent = "";
+		$("totp-setup-label").textContent = "";
+		$("totp-setup-params").textContent = "";
+		ui.clear(codesList);
+		totpStatusEl.textContent = "";
+		ui.notice(totpNotice, "ok", "");
+	}
+
+	function renderTotpStatus(status) {
+		setupEl.hidden = true;
+		codesEl.hidden = true;
+		if (status.enabled) {
+			totpStatusEl.textContent = "Enabled" + (status.confirmedAt ? " since " + ui.formatDate(status.confirmedAt) : "") +
+				". Recovery codes left: " + status.recoveryCodesRemaining + ".";
+			enrollForm.hidden = true;
+			manageForm.hidden = false;
+		} else {
+			totpStatusEl.textContent = status.pendingEnrollment
+				? "Not enabled. A setup was started but never confirmed; starting again replaces it."
+				: "Not enabled.";
+			enrollForm.hidden = false;
+			manageForm.hidden = true;
+		}
+	}
+
+	function loadTotpStatus() {
+		return api.totpStatus().then(renderTotpStatus).catch(function (err) {
+			if (err && err.kind === api.KINDS.UNAVAILABLE) {
+				totpStatusEl.textContent = "Two-factor authentication is not available on this server right now.";
+				enrollForm.hidden = true;
+				manageForm.hidden = true;
+				return;
+			}
+			handleAuthFailure(err, "totp");
+		});
+	}
+
+	function showRecoveryCodes(codes) {
+		ui.clear(codesList);
+		codesList.textContent = codes.join("\n");
+		codesEl.hidden = false;
+	}
+
+	enrollForm.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		var passEl = $("totp-enroll-password");
+		var password = passEl.value;
+		if (!ui.validPassword(password)) {
+			ui.notice(totpNotice, "err", "Enter your account password (12–128 characters) to confirm.");
+			return;
+		}
+		ui.notice(totpNotice, "ok", "");
+		ui.setBusy(enrollForm, true);
+		api.totpEnroll(password)
+			.then(function (enrollment) {
+				$("totp-setup-label").textContent = enrollment.issuer + ": " + enrollment.label;
+				$("totp-setup-secret").textContent = enrollment.secret;
+				$("totp-setup-uri").textContent = enrollment.otpauthUri;
+				$("totp-setup-params").textContent = "Time-based, SHA-1, " + enrollment.digits + " digits, every " + enrollment.periodSeconds + " seconds";
+				enrollForm.hidden = true;
+				setupEl.hidden = false;
+				$("totp-confirm-code").value = "";
+				$("totp-confirm-code").focus();
+			})
+			.catch(function (err) {
+				if (!handleAuthFailure(err, "totp")) { ui.notice(totpNotice, "err", ui.describeError(err, "totp")); }
+			})
+			.finally(function () {
+				passEl.value = "";
+				ui.setBusy(enrollForm, false);
+				password = null;
+			});
+	});
+
+	$("totp-setup-cancel").addEventListener("click", function () {
+		// The pending secret on the server is harmless (not a factor) and is replaced by the next setup.
+		$("totp-setup-secret").textContent = "";
+		$("totp-setup-uri").textContent = "";
+		setupEl.hidden = true;
+		loadTotpStatus();
+	});
+
+	confirmForm.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		var codeInput = $("totp-confirm-code");
+		var code = codeInput.value.trim();
+		if (!/^[0-9]{6,8}$/.test(code)) {
+			ui.notice(totpNotice, "err", "Enter the code your authenticator app shows (6 digits).");
+			return;
+		}
+		ui.notice(totpNotice, "ok", "");
+		ui.setBusy(confirmForm, true);
+		api.totpConfirm(code)
+			.then(function (codes) {
+				$("totp-setup-secret").textContent = "";
+				$("totp-setup-uri").textContent = "";
+				setupEl.hidden = true;
+				ui.notice(totpNotice, "ok", "Two-factor authentication is enabled. From now on, signing in needs a code as well.");
+				showRecoveryCodes(codes);
+				return api.totpStatus().then(function (status) {
+					renderTotpStatus(status);
+					codesEl.hidden = false; // keep the codes on screen until acknowledged
+				});
+			})
+			.catch(function (err) {
+				if (!handleAuthFailure(err, "totp")) { ui.notice(totpNotice, "err", ui.describeError(err, "totp")); }
+			})
+			.finally(function () {
+				codeInput.value = "";
+				ui.setBusy(confirmForm, false);
+			});
+	});
+
+	$("totp-codes-done").addEventListener("click", function () {
+		ui.clear(codesList);
+		codesEl.hidden = true;
+	});
+
+	$("totp-codes-copy").addEventListener("click", function () {
+		var text = codesList.textContent;
+		if (!text || !navigator.clipboard) { return; }
+		navigator.clipboard.writeText(text).then(function () {
+			ui.notice(totpNotice, "ok", "Recovery codes copied. The clipboard is cleared again after " + Math.round(cfg.clipboardClearMs / 1000) + " seconds.");
+			if (totpClipboardTimer) { clearTimeout(totpClipboardTimer); }
+			totpClipboardTimer = setTimeout(function () {
+				navigator.clipboard.readText().then(function (current) {
+					if (current === text) { return navigator.clipboard.writeText(""); }
+				}).catch(function () { /* reading the clipboard may be refused; nothing to clear then */ });
+			}, cfg.clipboardClearMs);
+		}).catch(function () { ui.notice(totpNotice, "err", "The browser did not allow copying. Select the codes and copy them by hand."); });
+	});
+
+	function manage(action, successMessage) {
+		var passEl = $("totp-manage-password");
+		var codeInput = $("totp-manage-code");
+		var password = passEl.value;
+		var code = codeInput.value.trim();
+		if (!ui.validPassword(password) || !looksLikeCode(code)) {
+			ui.notice(totpNotice, "err", "Enter your account password and a current code (6 digits from the app, or a recovery code).");
+			return;
+		}
+		ui.notice(totpNotice, "ok", "");
+		ui.setBusy(manageForm, true);
+		action(password, code)
+			.then(function (result) {
+				ui.notice(totpNotice, "ok", successMessage);
+				if (Array.isArray(result)) { showRecoveryCodes(result); }
+				return api.totpStatus().then(function (status) {
+					renderTotpStatus(status);
+					if (Array.isArray(result)) { codesEl.hidden = false; }
+				});
+			})
+			.catch(function (err) {
+				if (!handleAuthFailure(err, "totp")) { ui.notice(totpNotice, "err", ui.describeError(err, "totp")); }
+			})
+			.finally(function () {
+				passEl.value = "";
+				codeInput.value = "";
+				ui.setBusy(manageForm, false);
+				password = null;
+			});
+	}
+
+	manageForm.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		manage(api.totpRecoveryCodes, "New recovery codes issued. The old ones no longer work.");
+	});
+
+	$("totp-disable").addEventListener("click", function () {
+		manage(api.totpDisable, "Two-factor authentication is turned off. Signing in needs only the account password again.");
 	});
 
 	// ---- delete account (password-confirmed; the server re-checks it) ----

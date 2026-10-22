@@ -29,9 +29,11 @@ function createMockApi(options = {}) {
 	const accessTokens = new Map(); // accessToken -> sessionId
 	const calls = []; // { method, path, body, headers }
 	const envelopes = new Map(); // accountId -> { bytes, revision, updatedAt, fingerprintOverride }
+	const totp = new Map(); // accountId -> { secret (Buffer), confirmed, lastUsedStep, recoveryCodes: Map(code -> used) }
+	const mfaChallenges = new Map(); // mfaToken -> { accountId, expiresAt, attempts, consumed, password }
 
 	const accessLifetimeMs = options.accessLifetimeMs ?? 15 * 60 * 1000;
-	const flags = { emailDelivery: true, rateLimitLogin: false, rateLimitForgot: false, failHealth: false };
+	const flags = { emailDelivery: true, rateLimitLogin: false, rateLimitForgot: false, failHealth: false, totpCapability: true };
 
 	function seedAccount(email, password) {
 		const id = crypto.randomUUID();
@@ -45,6 +47,45 @@ function createMockApi(options = {}) {
 			accounts.set(email.toLowerCase(), { id: crypto.randomUUID(), email, password: null, verified: false, createdAt: new Date().toISOString() });
 		}
 		return token;
+	}
+	// Gives an account a confirmed TOTP secret (as the real enrollment would). Returns the raw secret.
+	function seedTotp(accountId, recoveryCodes = ["abcde-fghjk", "mnpqr-stuvw"]) {
+		const secret = crypto.randomBytes(20);
+		totp.set(accountId, { secret, confirmed: true, lastUsedStep: null, recoveryCodes: new Map(recoveryCodes.map(c => [c, false])) });
+		return secret;
+	}
+	function totpStatusOf(accountId) {
+		const t = totp.get(accountId);
+		if (!t) { return { enabled: false, confirmedAt: null, recoveryCodesRemaining: 0, pendingEnrollment: false }; }
+		const remaining = [...t.recoveryCodes.values()].filter(used => !used).length;
+		return { enabled: t.confirmed, confirmedAt: t.confirmed ? new Date(now() - 60000).toISOString() : null, recoveryCodesRemaining: t.confirmed ? remaining : 0, pendingEnrollment: !t.confirmed };
+	}
+	function newRecoveryCodes() {
+		const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+		const codes = [];
+		while (codes.length < 10) {
+			let c = "";
+			for (let i = 0; i < 10; i++) { c += alphabet[crypto.randomInt(alphabet.length)]; }
+			codes.push(c.slice(0, 5) + "-" + c.slice(5));
+		}
+		return codes;
+	}
+	// Verifies and consumes a TOTP code (±1 step, replay guard) or a recovery code. Mirrors the server.
+	function consumeCode(t, code) {
+		const trimmed = String(code).trim();
+		if (/^[0-9]{6}$/.test(trimmed)) {
+			const step = totpStep(now());
+			for (const candidate of [step - 1, step, step + 1]) {
+				if (t.lastUsedStep !== null && candidate <= t.lastUsedStep) { continue; }
+				if (totpCode(t.secret, candidate) === trimmed) { t.lastUsedStep = candidate; return true; }
+			}
+			return false;
+		}
+		const canonical = trimmed.toLowerCase().replace(/[- ]/g, "");
+		for (const [c, used] of t.recoveryCodes) {
+			if (!used && c.replace("-", "") === canonical) { t.recoveryCodes.set(c, true); return true; }
+		}
+		return false;
 	}
 	function seedResetToken(email) {
 		const token = crypto.randomBytes(32).toString("base64url");
@@ -184,6 +225,31 @@ function createMockApi(options = {}) {
 			if (!acct || !acct.verified || acct.password === null || acct.password !== body.password) {
 				return problem(401, "Unauthorized", "Invalid email or password.");
 			}
+			const t = totp.get(acct.id);
+			if (t && t.confirmed) {
+				if (!flags.totpCapability) { return problem(503, "Service unavailable", "Two-factor sign-in is temporarily unavailable."); }
+				const token = crypto.randomBytes(32).toString("base64url");
+				mfaChallenges.set(token, { accountId: acct.id, expiresAt: now() + 5 * 60000, attempts: 0, consumed: false, password: acct.password, userAgent: headers["user-agent"] });
+				return json(202, { mfaToken: token, mfaTokenExpiresAt: new Date(now() + 5 * 60000).toISOString(), method: "totp" });
+			}
+			const sid = seedSession(acct.id, 0);
+			return json(200, issueTokens(sid));
+		}
+
+		if (method === "POST" && path === "/v1/auth/login/totp") {
+			if (!flags.totpCapability) { return problem(503, "Service unavailable", "Two-factor sign-in is temporarily unavailable."); }
+			const generic = () => problem(401, "Unauthorized", "Invalid or expired sign-in code.");
+			const ch = typeof body.mfaToken === "string" ? mfaChallenges.get(body.mfaToken) : undefined;
+			if (!ch || ch.consumed || ch.expiresAt <= now()) { return generic(); }
+			const acct = [...accounts.values()].find(a => a.id === ch.accountId);
+			const t = totp.get(ch.accountId);
+			if (!acct || acct.password !== ch.password || !t || !t.confirmed) { ch.consumed = true; return generic(); }
+			if (typeof body.code !== "string" || !consumeCode(t, body.code)) {
+				ch.attempts++;
+				if (ch.attempts >= 5) { ch.consumed = true; }
+				return generic();
+			}
+			ch.consumed = true;
 			const sid = seedSession(acct.id, 0);
 			return json(200, issueTokens(sid));
 		}
@@ -209,6 +275,46 @@ function createMockApi(options = {}) {
 		if (method === "POST" && path === "/v1/auth/logout-all") {
 			for (const s of sessions.values()) { if (s.accountId === auth.session.accountId) { s.revoked = true; } }
 			return noContent();
+		}
+		if (path === "/v1/account/totp" || path.startsWith("/v1/account/totp/")) {
+			if (!flags.totpCapability) { return problem(503, "Service unavailable", "Two-factor authentication is temporarily unavailable."); }
+			const acct = [...accounts.values()].find(a => a.id === auth.session.accountId);
+			const t = totp.get(acct.id);
+			const forbidden = () => problem(403, "Forbidden", "Password confirmation failed.");
+			if (method === "GET" && path === "/v1/account/totp") { return json(200, totpStatusOf(acct.id)); }
+			if (method === "POST" && path === "/v1/account/totp/enroll") {
+				if (typeof body.password !== "string" || body.password !== acct.password) { return forbidden(); }
+				if (t && t.confirmed) { return problem(409, "Conflict", "Two-factor authentication is already enabled. Disable it first."); }
+				const secret = crypto.randomBytes(20);
+				totp.set(acct.id, { secret, confirmed: false, lastUsedStep: null, recoveryCodes: new Map() });
+				const b32 = base32(secret);
+				return json(200, { secret: b32, otpauthUri: `otpauth://totp/BitosX:${encodeURIComponent(acct.email)}?secret=${b32}&issuer=BitosX&algorithm=SHA1&digits=6&period=30`, issuer: "BitosX", label: acct.email, digits: 6, periodSeconds: 30 });
+			}
+			if (method === "POST" && path === "/v1/account/totp/confirm") {
+				if (!t || t.confirmed) { return problem(409, "Conflict", "There is no enrollment to confirm. Start enrollment first."); }
+				const step = totpStep(now());
+				const ok = typeof body.code === "string" && [step - 1, step, step + 1].some(s => totpCode(t.secret, s) === body.code.trim());
+				if (!ok) { return problem(400, "Invalid request", "The code is not valid. Check the time on your device and try the next code."); }
+				t.confirmed = true;
+				t.lastUsedStep = step;
+				const codes = newRecoveryCodes();
+				t.recoveryCodes = new Map(codes.map(c => [c, false]));
+				return json(200, { recoveryCodes: codes });
+			}
+			if (method === "POST" && (path === "/v1/account/totp/disable" || path === "/v1/account/totp/recovery-codes")) {
+				if (!t || !t.confirmed) { return problem(409, "Conflict", "Two-factor authentication is not enabled."); }
+				if (typeof body.password !== "string" || body.password !== acct.password) { return forbidden(); }
+				if (typeof body.code !== "string" || !consumeCode(t, body.code)) { return forbidden(); }
+				if (path === "/v1/account/totp/disable") {
+					totp.delete(acct.id);
+					for (const [k, ch] of mfaChallenges) { if (ch.accountId === acct.id) { mfaChallenges.delete(k); } }
+					return noContent();
+				}
+				const codes = newRecoveryCodes();
+				t.recoveryCodes = new Map(codes.map(c => [c, false]));
+				return json(200, { recoveryCodes: codes });
+			}
+			return problem(404, "Not Found", "Not found.");
 		}
 		if (method === "POST" && path === "/v1/account/delete") {
 			const acct = [...accounts.values()].find(a => a.id === auth.session.accountId);
@@ -280,7 +386,40 @@ function createMockApi(options = {}) {
 		return problem(404, "Not Found", "Not found.");
 	}
 
-	return { handle, calls, flags, seedAccount, seedVerificationToken, seedResetToken, seedSession, seedEnvelope, sessions, accounts, envelopes, resetTokens };
+	return { handle, calls, flags, seedAccount, seedVerificationToken, seedResetToken, seedSession, seedEnvelope, seedTotp, sessions, accounts, envelopes, resetTokens, totp, mfaChallenges };
 }
 
-module.exports = { createMockApi };
+// ---- RFC 6238 (HMAC-SHA1, 6 digits, 30 s) and RFC 4648 Base32, for the mock and the tests ----
+function totpStep(unixMs) { return Math.floor(unixMs / 1000 / 30); }
+function totpCode(secret, step) {
+	const counter = Buffer.alloc(8);
+	counter.writeBigUInt64BE(BigInt(step));
+	const mac = crypto.createHmac("sha1", secret).update(counter).digest();
+	const offset = mac[19] & 0x0f;
+	const binary = ((mac[offset] & 0x7f) << 24) | (mac[offset + 1] << 16) | (mac[offset + 2] << 8) | mac[offset + 3];
+	return String(binary % 1000000).padStart(6, "0");
+}
+function base32(buf) {
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+	let bits = 0, value = 0, out = "";
+	for (const b of buf) {
+		value = (value << 8) | b; bits += 8;
+		while (bits >= 5) { bits -= 5; out += alphabet[(value >>> bits) & 31]; }
+	}
+	if (bits > 0) { out += alphabet[(value << (5 - bits)) & 31]; }
+	return out;
+}
+function base32Decode(text) {
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+	let bits = 0, value = 0;
+	const out = [];
+	for (const ch of text.toUpperCase().replace(/=+$/, "")) {
+		const v = alphabet.indexOf(ch);
+		if (v < 0) { throw new Error("not base32"); }
+		value = (value << 5) | v; bits += 5;
+		if (bits >= 8) { bits -= 8; out.push((value >>> bits) & 255); }
+	}
+	return Buffer.from(out);
+}
+
+module.exports = { createMockApi, totpStep, totpCode, base32, base32Decode };

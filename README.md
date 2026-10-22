@@ -8,7 +8,7 @@ WebAssembly build the web vault needs (`vault/public/assets/vendor/hash-wasm/`, 
 | Hostname | Directory | Purpose | Talks to |
 |---|---|---|---|
 | `bitosx.se` | `www/public/` | Public product page: what BitosX is, how the vault is protected, what works today, live API status, roadmap | `api.bitosx.se` (`GET /health`, `GET /version` only) |
-| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
+| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
 | `api.bitosx.se` | — | The account API. Lives in [`networkluki/bitosx-api`](https://github.com/networkluki/bitosx-api) and is operated alongside the desktop app; nothing here | — |
 
 The desktop app lives in [`networkluki/bitosx`](https://github.com/networkluki/bitosx).
@@ -114,6 +114,26 @@ Two more pages and one more panel, all against the phase-6 API endpoints:
 
 The e2e suite covers each path against the mock API, including that a verification token is not
 accepted as a reset token and that the delete call carries nothing but the password.
+
+## Two-factor authentication (phase 7)
+
+- **Sign-in in two steps.** When the account has TOTP, `POST /v1/auth/login` answers **202** with a
+  one-step challenge token instead of a session. `api.login()` resolves to `{ signedIn: false,
+  mfaToken }` (the status decides; a 202 that carries tokens or a 200 that carries a challenge is
+  refused), the sign-in page swaps the credentials for a **code** box, and `POST /v1/auth/login/totp`
+  with the token and a 6-digit code or a recovery code returns the session. The challenge token
+  lives in a closure, never in the DOM or storage; a refused code keeps the step for another try;
+  *Start over* drops it. Obvious non-codes are caught before a round trip; the code never stays on
+  the page. A server without the capability (503) is told apart from a wrong password.
+- **Setup on the account page.** Password → the secret (Base32) and the `otpauth://` link, shown
+  once in text (no QR code: that would need a third-party encoder, and the page has no CDN and a
+  strict CSP; typing the secret or pasting the link works with every authenticator app) → a first
+  code confirms → **10 recovery codes**, shown once with *Copy codes* (clipboard cleared after 30 s,
+  like vault secrets) and wiped from the page on *I have saved them*. The secret is wiped the moment
+  the code is accepted.
+- **Manage.** Status (enabled since, recovery codes left), *New recovery codes* and *Turn off*, each
+  behind the account password plus a current code; a refusal is one generic message.
+- Nothing here touches the vault: the master password and the envelope are unchanged.
 
 ## What phase 1 was
 
@@ -255,7 +275,7 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 ## Versioning
 
-`web v0.4.0` (phase 6, account recovery and deletion; `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
+`web v0.5.0` (phase 7, two-factor sign-in and setup; `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
 the `?v=` cache-busting query on the stylesheet links together. The desktop app (`0.9.0` on its phase 3
 branch) and the API (`0.1.0`) have their own version numbers, shown in the footer of the product page
 for orientation only.

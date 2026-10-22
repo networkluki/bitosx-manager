@@ -13,7 +13,7 @@
     <title>BitosX — Your Security</title>
     <link rel="canonical" href="https://bitosx.se/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.4.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.5.0" />
     <meta name="theme-color" content="#26292E" />
     <!-- Theme applied before first paint (avoids a flash of the wrong theme) -->
     <script src="/assets/js/theme-init.js"></script>
@@ -198,8 +198,12 @@ encrypted vault — the only thing written to disk</pre>
             <div><p><strong>Editing in the browser.</strong> Add, change and remove logins on vault.bitosx.se. Changes are encrypted in the browser under the same vault key and uploaded with the same compare-and-set rule the desktop uses: if another device changed the vault first, nothing is overwritten and you choose. The desktop app syncs the result like any other revision.</p></div>
           </li>
           <li>
-            <div class="phase">Phase 6<small>in review</small></div>
+            <div class="phase">Phase 6<small>built</small></div>
             <div><p><strong>Account recovery and deletion.</strong> Reset a forgotten <em>account</em> password through an emailed, single-use link that signs out every device. The vault master password is deliberately out of reach: it was never on the server, so nothing can reset it. Delete the account, its sessions and the stored encrypted vault for good, behind a password confirmation.</p></div>
+          </li>
+          <li>
+            <div class="phase">Phase 7<small>in review</small></div>
+            <div><p><strong>Two-factor sign-in.</strong> A code from an authenticator app (TOTP, RFC 6238) as a second step at sign-in, set up on vault.bitosx.se with single-use recovery codes. The server stores the secret encrypted and refuses to sign in without the code; it never bypasses the step, not even when its own key for the second factor is missing. The desktop app asks for the code too. The second factor protects the account only; the vault master password stays what it always was: yours, and never on the server.</p></div>
           </li>
         </ol>
       </div>
@@ -207,7 +211,7 @@ encrypted vault — the only thing written to disk</pre>
   </main>
 
   <footer>
-    <div class="footer-version">web v0.4.0 · app v0.9.0 · api v0.1.0</div>
+    <div class="footer-version">web v0.5.0 · app v0.9.0 · api v0.1.0</div>
     <div class="footer-links">
       <a href="https://github.com/networkluki/bitosx" target="_blank" rel="noopener noreferrer">bitosx</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">bitosx-api</a>
