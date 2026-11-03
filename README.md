@@ -8,7 +8,7 @@ WebAssembly build the web vault needs (`vault/public/assets/vendor/hash-wasm/`, 
 | Hostname | Directory | Purpose | Talks to |
 |---|---|---|---|
 | `bitosx.se` | `www/public/` | Public product page: what BitosX is, how the vault is protected, what works today, live API status, roadmap | `api.bitosx.se` (`GET /health`, `GET /version` only) |
-| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
+| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code; since phase 8 change the account password while signed in) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set; since phase 8 with the desktop's generator, favorites and sorting, and a download of the encrypted backup | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*` including `POST /v1/account/password`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
 | `api.bitosx.se` | — | The account API. Lives in [`networkluki/bitosx-api`](https://github.com/networkluki/bitosx-api) and is operated alongside the desktop app; nothing here | — |
 
 The desktop app lives in [`networkluki/bitosx`](https://github.com/networkluki/bitosx).
@@ -36,10 +36,13 @@ revision, size, when stored) and asks for the vault's **master password**. On *O
 
 Nothing decrypted is ever sent anywhere; since phase 5 (below) edits are encrypted in the browser
 before they are uploaded. The master password and the items live only in the page's memory while unlocked. The vault locks after 5
-minutes without input, when the tab is hidden, on sign-out, and on reload/close. A copied value is
-cleared from the clipboard after 30 seconds — only if it is still what was copied, and only when the
-browser lets the page read the clipboard back; otherwise it is left alone. JavaScript strings cannot
-be wiped, so "dropped" means unreferenced, as in the desktop app.
+minutes without input (checked against the wall clock too, since phase 8), when the tab is hidden, on
+sign-out, and on reload/close. A copied value is cleared from the clipboard after 30 seconds — only if
+it is still what was copied, and only when the browser lets the page read the clipboard back, which
+browsers allow only while the page is focused (and some only after asking). If the page is not
+focused when the time is up it tries again when it is; if the browser refuses, the page says so. A
+clipboard history kept by the operating system is out of reach for any web page, and the page says
+that too. JavaScript strings cannot be wiped, so "dropped" means unreferenced, as in the desktop app.
 
 **What the server can and cannot do.** It can withhold the vault, serve an old revision, or serve
 bytes that are not the vault; the fingerprint check and the parser refuse the last, and the first two
@@ -78,9 +81,8 @@ until *Save to server*:
 
 While there are unsaved changes the page says so, the browser warns before the tab is closed, and
 hiding the tab does **not** lock (a lock would discard the changes); the idle lock after 5 minutes,
-sign-out and unload still do. A delete is asked for and then confirmed, as in the desktop app. The
-generator makes 24-character passwords from a fixed alphabet with rejection sampling, from
-`crypto.getRandomValues`.
+sign-out and unload still do. A delete is asked for and then confirmed (or cancelled), as in the
+desktop app. The generator follows the desktop's rules (phase 8, below).
 
 The vault key lives in the page's memory while unlocked, exactly as it lives in the desktop
 process; it is zeroed on lock. The master password is still never kept.
@@ -121,19 +123,91 @@ accepted as a reset token and that the delete call carries nothing but the passw
   one-step challenge token instead of a session. `api.login()` resolves to `{ signedIn: false,
   mfaToken }` (the status decides; a 202 that carries tokens or a 200 that carries a challenge is
   refused), the sign-in page swaps the credentials for a **code** box, and `POST /v1/auth/login/totp`
-  with the token and a 6-digit code or a recovery code returns the session. The challenge token
+  with the token and a code from the app (the server's digit count, 6–8) or a recovery code returns
+  the session. The challenge token
   lives in a closure, never in the DOM or storage; a refused code keeps the step for another try;
   *Start over* drops it. Obvious non-codes are caught before a round trip; the code never stays on
   the page. A server without the capability (503) is told apart from a wrong password.
-- **Setup on the account page.** Password → the secret (Base32) and the `otpauth://` link, shown
-  once in text (no QR code: that would need a third-party encoder, and the page has no CDN and a
-  strict CSP; typing the secret or pasting the link works with every authenticator app) → a first
-  code confirms → **10 recovery codes**, shown once with *Copy codes* (clipboard cleared after 30 s,
-  like vault secrets) and wiped from the page on *I have saved them*. The secret is wiped the moment
-  the code is accepted.
+- **Setup on the account page.** Password → the secret (Base32, in groups of four) and the
+  `otpauth://` link, shown once, with *Copy* buttons and, since phase 8, a tappable *Open in an
+  authenticator app* link (on a phone it opens the app). No QR code: that would need a third-party
+  encoder, and the page has no CDN and a strict CSP → a first code confirms → **10 recovery codes**,
+  shown once with *Copy codes* (cleared from the clipboard like vault secrets) and wiped from the page
+  on *I have saved them*. The secret is wiped the moment the code is accepted.
 - **Manage.** Status (enabled since, recovery codes left), *New recovery codes* and *Turn off*, each
-  behind the account password plus a current code; a refusal is one generic message.
+  behind the account password plus a current code; a refusal is one generic message. Since phase 8
+  Enter in that form chooses neither action, and *Turn off* needs a confirmation tick first.
 - Nothing here touches the vault: the master password and the envelope are unchanged.
+
+## Fine-tuning and account controls (phase 8)
+
+Web `0.6.0`, against the phase-8 API contract (CORS with `PUT`, UTC timestamps, shared limits,
+`POST /v1/account/password`, a code for account deletion with two-factor, revisions that never
+restart after a delete).
+
+**New features**
+
+- **Change the account password** on the account page: current password, the new one twice, and a
+  code when the account has two-factor (`POST /v1/account/password`). The server signs out every
+  other session; this one stays. The page says that the vault master password is not affected — it
+  was never on the server.
+- **Account deletion with two-factor** asks for a code as well (`{ password, code }`).
+- **Password generator options** in the vault editor: length 4–256 (default 20), lower case, upper
+  case, digits, symbols, leave out look-alikes — the desktop's `PasswordGenerator` rule for rule (one of
+  every selected class, its symbol set, Fisher–Yates, uniform draws). The options, never a password,
+  are remembered in this browser (`localStorage` key `bitosx.generator`, the only stored value besides
+  the theme). A generated password is shown, as on the desktop.
+- **Strength rating** under the password while typing: the desktop's `PasswordStrength` heuristic,
+  ported rule for rule and checked against the desktop's own results
+  (`tests/fixtures/password-strength-vectors.json`, computed by `BitosX.Core`). It is an estimate from
+  length and patterns and says so.
+- **Favorites only** and a **sort** (favorites first by name, or recently updated) in the vault list.
+- **Download encrypted backup**: the envelope exactly as the server stores it (the same bytes the
+  desktop uploaded, checked against the server's SHA-256 first), saved as
+  `BitosX-backup-YYYY-MM-DD.bitosx-backup` through a `Blob` download. It works while the vault is
+  locked and opens only with the master password; the desktop restores it under Settings, Backup &
+  Restore.
+
+**Sessions**
+
+- A **401** on an authenticated call gets exactly one refresh (still single-flight) and one retry; a
+  client clock behind the server's no longer signs the user out. If the refresh fails too, the
+  session is over: `api.js` dispatches `bitosx:session-ended`, the account page signs out, and an open
+  vault is locked and wiped, with a message that says so (and that unsaved changes were discarded).
+- Every session has a **generation**; any answer that arrives after its session ended (an enrollment
+  secret, an unlock, a refresh) is dropped instead of landing in the next user's session.
+- **Leaving the page** (reload, close, navigation, the back/forward cache) wipes the account view —
+  details, sessions, a pending two-factor secret, recovery codes — and revokes the session on the
+  server best effort (`keepalive` sign-out). A page restored from the back/forward cache shows the
+  sign-in. The idle sign-out (15 min) and the vault lock (5 min) also check the wall clock, so a
+  computer that slept does not resume with a live session.
+- The second sign-in step ends on its own when the challenge expires or after the server's number of
+  wrong codes, and says why. A failure *after* a successful sign-in is reported as such, and the
+  half-made session is revoked.
+- Sign-out buttons are busy while they run; *Sign out everywhere* that does not reach the server
+  keeps this session and says the other devices are still signed in; the own row's *Sign out* is a
+  plain sign-out; a session that ended by itself is removed from the list.
+
+**Saving safely**
+
+- Edits made while an upload runs stay unsaved and are uploaded next time.
+- An item the web cannot write is named, nothing is uploaded, and the page is not left busy.
+- **Replace** (after a conflict) is refused when the server's vault has a different key-wrap header
+  — its master password was changed, or its key rotated, on another device: re-encrypting under the
+  old header would bring the old master password back. The page offers *Reload* only.
+- A save the server completed is never reported as "nothing uploaded": an upload that got no answer
+  is recognised by its fingerprint at the next save.
+- Unsaved changes, including text typed into the open editor, are asked about before signing out
+  and before another item replaces the editor; the idle lock warns a minute ahead and its message
+  says when changes were discarded.
+- Dates of untouched items are written back exactly as the desktop wrote them, in the stored order.
+
+**Smaller things:** 503 texts no longer claim it is always two-factor; time limits of 120 s for the
+envelope transfers (15 s otherwise) with their own message; the email limit is the server's 320;
+timestamps without an offset are read as UTC; recovery-code fields no longer bring up a digit keypad;
+live checks in the editor; notices stay in the accessibility tree while empty so screen readers
+announce them; password-manager extensions are asked to keep out of the master password and the
+editor; `[hidden]` always hides.
 
 ## What phase 1 was
 
@@ -157,22 +231,25 @@ Phases as presented on the product page, and where each stands:
 4. **Phase 4:** the web vault above — this repository, merged. It needs phase 3 on both sides to be
    deployed: until `/v1/sync/*` exists on `api.bitosx.se` and a desktop has synced, the page says the
    server holds no vault.
-5. **Phase 5:** editing in the browser, above — this repository.
+5. **Phase 5:** editing in the browser, above — this repository, merged.
+6. **Phase 6:** account recovery and deletion — merged.
+7. **Phase 7:** two-factor sign-in and setup — merged.
+8. **Phase 8:** fine-tuning and account controls, above — this repository.
 
-## Blockers outside this repository (must be done before vault.bitosx.se works)
+## Deployment prerequisites outside this repository
 
-1. **CORS on the API.** `bitosx-api/docs/SECURITY_MODEL.md` states: "No CORS is configured … none
-   will be added without a concrete consumer requirement." The web app is that requirement. Without
-   it every browser request from `https://vault.bitosx.se` fails at the preflight and the app shows
-   "The API could not be reached from this browser". Suggested policy, to be added in `bitosx-api`
-   (ASP.NET Core CORS middleware, placed before authentication):
-   - `Access-Control-Allow-Origin`: exactly `https://vault.bitosx.se` and `https://bitosx.se` (the
-     product page only needs it for `/health` and `/version`). No wildcard.
-   - `Access-Control-Allow-Methods`: `GET, POST, DELETE, OPTIONS`
-   - `Access-Control-Allow-Headers`: `Authorization, Content-Type, Accept`
-   - `Access-Control-Expose-Headers`: `Retry-After, X-Correlation-ID`
-   - **No** `Access-Control-Allow-Credentials` — the app uses bearer tokens, never cookies.
-   - `Vary: Origin`.
+1. **CORS on the API** (`bitosx-api`, `Security:Cors`, phase-8 contract §1). The API ships the
+   policy; it must be configured as follows, or the browser refuses the calls and the app shows "The
+   API could not be reached from this browser":
+   - For `https://vault.bitosx.se`: methods **`GET, POST, PUT, DELETE`** (`PUT` is the vault upload,
+     `PUT /v1/sync/envelope`; the phase-7 policy lacked it, so *Save to server* could not work in any
+     browser), headers `Authorization, Content-Type, Accept`, exposed `Retry-After, X-Correlation-ID`.
+   - For `https://bitosx.se`: `GET /health` and `GET /version` only, a separate, narrower policy (the
+     product page's status badge; both are simple requests without a preflight).
+   - No wildcard origin, **no** `Access-Control-Allow-Credentials` (bearer tokens, never cookies),
+     `Vary: Origin`.
+   The e2e harness applies exactly this policy (see Verification), so a method missing from it fails
+   a test.
 2. **Public exposure of the API.** Kestrel is loopback-only and Apache does not proxy to it yet. The
    `[host]` checklist in `bitosx-api/docs/DEPLOYMENT.md` gates that; nothing here changes it.
 3. **Verification email base URL.** Set `Email:PublicBaseUrl = https://vault.bitosx.se` and keep
@@ -183,12 +260,14 @@ Phases as presented on the product page, and where each stands:
 ## Security properties of the web app
 
 - **Tokens in memory only.** Access and refresh tokens are held in a closure in `api.js`. Nothing is
-  written to `localStorage`, `sessionStorage`, cookies or IndexedDB (the theme preference is the only
-  stored value). A reload or closed tab means signing in again. This is deliberate for phase 1: it
+  written to `localStorage`, `sessionStorage`, cookies or IndexedDB (the theme preference and the
+  password generator's options are the only stored values; neither is secret). A reload or closed tab
+  means signing in again. This is deliberate for phase 1: it
   removes token theft via storage from the threat model at the cost of convenience.
 - **Single-flight refresh.** The API revokes the whole session when a refresh token is presented
-  twice. `api.js` guarantees at most one refresh is in flight; the e2e test asserts exactly one refresh
-  when `/me` and `/sessions` run in parallel against an expired access token.
+  twice. `api.js` guarantees at most one refresh is in flight; the e2e tests assert exactly one refresh
+  when `/me` and `/sessions` run in parallel against an access token that is expired, either by the
+  client's clock or only by the server's (a 401 the client did not expect: one refresh, one retry).
 - **Strict CSP, no inline anything.** `default-src 'none'; script-src 'self'; style-src 'self';
   img-src 'self'; connect-src https://api.bitosx.se; base-uri 'none'; form-action 'none'` — plus
   `'wasm-unsafe-eval'` in `script-src` on the vault page only, for the Argon2 WebAssembly (above). Forms are
@@ -205,14 +284,20 @@ Phases as presented on the product page, and where each stands:
 - **Generic errors.** Failures collapse to a fixed set of client-side messages; the server's
   anti-enumeration behaviour (identical 202/401 regardless of account existence) is preserved by
   showing the same text for the same status.
-- **Idle sign-out.** After 15 minutes without input the tokens are dropped and `/logout` is called
-  best-effort. Passwords are cleared from the fields after every submit, success or failure.
+- **Idle sign-out.** After 15 minutes without input (timer and wall clock) the tokens are dropped and
+  `/logout` is called best-effort; leaving the page revokes the session best effort too. Passwords
+  are cleared from the fields after every submit, success or failure.
 - **No third-party code.** No CDN, fonts, analytics or trackers on either site.
 
 Known limitations: an XSS on `vault.bitosx.se` would still be able to call the API with the in-memory
 token while the tab is open, and, while the vault is unlocked, to read the decrypted items — the CSP,
 the no-inline rule, text-only rendering and the short vault lock are the controls against that; the
-desktop app remains the place for anything that must not depend on a browser. The
+desktop app remains the place for anything that must not depend on a browser. Whether a browser's
+own password manager offers to save the master password or an item's password after the form
+disappears is up to the browser: the fields carry `autocomplete="off"` and the ignore hints the common
+extensions read, which is all a page can do (not verified per browser). The back/forward-cache test
+dispatches the real `pagehide`/`pageshow` events with `persisted: true`, because the Chromium under test
+does not cache pages. The
 `Strict-Transport-Security` header in `_headers` is set without `includeSubDomains`; whether to
 enable HSTS zone-wide (with subdomains) is a Cloudflare decision that affects `api.bitosx.se` too.
 
@@ -258,8 +343,18 @@ node tests/e2e.js
 
 The e2e run serves both sites locally, intercepts `https://api.bitosx.se/**` inside the browser with
 `tests/mock-api.js` (so the real `config.js` origin and CSP `connect-src` are exercised), and fails on
-any console error, page error, CSP violation, inline script/style attribute, or a drift between the two
-copies of `bitosx.css`.
+any console error, page error, CSP violation, inline script/style attribute, a drift between the two
+copies of `bitosx.css`, or a page whose version is not the one in this README.
+
+**CORS is enforced by the harness.** Playwright answers every CORS preflight of an intercepted
+request itself and allows everything, so the browser's own check never sees a policy. The route
+handler therefore applies the API's policy (above): a request that needs a preflight the policy would
+refuse fails as a network error, as in a browser, and a response carries `Access-Control-Allow-Origin`
+only for the origin and path the policy covers. One test removes `PUT` and shows the save failing. The
+mock server's clock can be moved or stopped (`mock.clock`), so TOTP codes and expiries are computed
+from a time the test controls and a 30-second boundary can never fall inside a test; the page's clock
+is Playwright's `page.clock` where idle timers and time limits are tested. `BITOSX_E2E_ONLY=<text>`
+runs only the tests whose name contains the text.
 
 After deployment, the live checks are:
 
@@ -275,7 +370,7 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 ## Versioning
 
-`web v0.5.0` (phase 7, two-factor sign-in and setup; `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
-the `?v=` cache-busting query on the stylesheet links together. The desktop app (`0.9.0` on its phase 3
-branch) and the API (`0.1.0`) have their own version numbers, shown in the footer of the product page
-for orientation only.
+`web v0.6.0` (phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
+the `?v=` cache-busting query on the stylesheet links together (the e2e hygiene test checks it). The
+desktop app (`0.10.0`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
+product page for orientation only.
