@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Sign in — BitosX vault</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.5.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.6.0" />
     <meta name="theme-color" content="#26292E" />
     <script src="/assets/js/theme-init.js"></script>
 </head>
@@ -28,8 +28,8 @@
         <span>BitosX<small>Web account &amp; vault</small></span>
       </a>
       <nav class="site-nav" aria-label="Site">
-        <a href="/">Sign in</a>
-        <a href="/register">Register</a>
+        <a href="/" id="nav-signin">Sign in</a>
+        <a href="/register" id="nav-register">Register</a>
         <a href="https://bitosx.se/" rel="noopener noreferrer">About BitosX</a>
       </nav>
     </div>
@@ -45,7 +45,7 @@
         <form id="login-form" novalidate>
           <div class="field">
             <label for="login-email">Email</label>
-            <input id="login-email" name="email" type="email" autocomplete="username" inputmode="email" spellcheck="false" maxlength="254" required />
+            <input id="login-email" name="email" type="email" autocomplete="username" inputmode="email" spellcheck="false" maxlength="320" required />
           </div>
           <div class="field">
             <label for="login-password">Account password</label>
@@ -57,10 +57,10 @@
           </div>
         </form>
         <form id="code-form" novalidate hidden>
-          <p class="help">This account has two-factor authentication. Enter the 6-digit code from your authenticator app, or one of your recovery codes. The code goes only to the BitosX server, together with the one-time token it issued for this sign-in.</p>
+          <p class="help">This account has two-factor authentication. Enter the code from your authenticator app, or one of your recovery codes. The code goes only to the BitosX server, together with the one-time token it issued for this sign-in, which is valid for a few minutes.</p>
           <div class="field">
             <label for="login-code">Sign-in code</label>
-            <input id="login-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="12" placeholder="123456 or xxxxx-xxxxx" required />
+            <input id="login-code" name="code" type="text" inputmode="text" autocapitalize="none" autocomplete="one-time-code" spellcheck="false" maxlength="12" placeholder="123456 or xxxxx-xxxxx" required />
           </div>
           <div class="form-actions">
             <button class="btn" type="submit" id="code-submit">Continue</button>
@@ -71,7 +71,7 @@
       </section>
 
       <section class="panel wide" id="account-panel" hidden>
-        <h1>Your account</h1>
+        <h1 id="account-title" tabindex="-1">Your account</h1>
         <div class="notice" id="account-notice" role="status"></div>
         <dl class="kv">
           <dt>Email</dt><dd id="acct-email"></dd>
@@ -80,7 +80,7 @@
           <dt>Account id</dt><dd><code id="acct-id"></code></dd>
         </dl>
 
-        <h2 class="panel-subhead">Active sessions</h2>
+        <h2 class="panel-subhead" id="sessions-title" tabindex="-1">Active sessions</h2>
         <p class="help">Every device or browser that is currently signed in. Revoking a session signs it out immediately.</p>
         <table class="sessions-table" aria-describedby="sessions-caption">
           <caption id="sessions-caption" class="visually-hidden">Sessions for this account</caption>
@@ -96,7 +96,34 @@
           <button class="btn ghost small" type="button" id="logout">Sign out</button>
           <button class="btn danger small" type="button" id="logout-all">Sign out everywhere</button>
         </div>
-        <p class="inline-note">You are signed out automatically after 15 minutes without activity, and whenever this tab is closed or reloaded.</p>
+        <p class="inline-note">You are signed out automatically after <span id="note-idle-minutes">15</span> minutes without activity, and whenever you leave, reload or close this page; the session is then revoked on the server too, when the browser lets the page say so.</p>
+
+        <h2 class="panel-subhead">Change the account password</h2>
+        <p class="help">The account password signs you in here and in the desktop app. Changing it signs out every other device and browser; this one stays signed in. Your <strong>vault master password is not changed</strong>: it was never on the server.</p>
+        <div class="notice" id="pw-notice" role="alert"></div>
+        <form id="pw-form" novalidate>
+          <div class="field">
+            <label for="pw-current">Current account password</label>
+            <input id="pw-current" name="currentPassword" type="password" autocomplete="current-password" minlength="12" maxlength="128" required />
+          </div>
+          <div class="field">
+            <label for="pw-new">New account password</label>
+            <input id="pw-new" name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required aria-describedby="pw-new-hint" />
+            <span class="hint" id="pw-new-hint">12–128 characters, used exactly as typed.</span>
+          </div>
+          <div class="field">
+            <label for="pw-new2">Repeat the new password</label>
+            <input id="pw-new2" name="newPassword2" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+          </div>
+          <div class="field" id="pw-code-field">
+            <label for="pw-code">Two-factor code</label>
+            <input id="pw-code" name="code" type="text" inputmode="text" autocapitalize="none" autocomplete="one-time-code" spellcheck="false" maxlength="12" aria-describedby="pw-code-hint" />
+            <span class="hint" id="pw-code-hint"></span>
+          </div>
+          <div class="form-actions">
+            <button class="btn" type="submit" id="pw-submit">Change password</button>
+          </div>
+        </form>
 
         <h2 class="panel-subhead">Two-factor authentication</h2>
         <p class="help">A code from an authenticator app (TOTP) in addition to your account password when you sign in. It protects the account sign-in only; the vault master password is a separate thing and stays as it is.</p>
@@ -114,11 +141,11 @@
         </form>
 
         <div id="totp-setup" hidden>
-          <p class="help">Add this secret to your authenticator app (type it, or paste the full link into an app that accepts one), then enter the code the app shows to confirm. The secret is shown once and is not kept by this page.</p>
+          <p class="help">Add this secret to your authenticator app: on a phone, tap <em>Open in an authenticator app</em>; elsewhere, type or paste the secret (spaces do not matter) or the full link. Then enter the code the app shows to confirm. The secret is shown once and is not kept by this page.</p>
           <dl class="kv">
             <dt>Account</dt><dd id="totp-setup-label"></dd>
-            <dt>Secret</dt><dd><code id="totp-setup-secret"></code></dd>
-            <dt>Link</dt><dd><code id="totp-setup-uri"></code></dd>
+            <dt>Secret</dt><dd class="totp-secret"><code id="totp-setup-secret"></code> <button class="btn ghost small" type="button" id="totp-secret-copy">Copy secret</button></dd>
+            <dt>Link</dt><dd class="totp-secret"><a id="totp-setup-link" class="btn small" hidden>Open in an authenticator app</a> <button class="btn ghost small" type="button" id="totp-uri-copy">Copy link</button> <code id="totp-setup-uri"></code></dd>
             <dt>Settings</dt><dd id="totp-setup-params"></dd>
           </dl>
           <form id="totp-confirm-form" novalidate>
@@ -144,19 +171,22 @@
         </div>
 
         <form id="totp-manage-form" novalidate hidden>
-          <p class="help">To turn two-factor authentication off, or to replace your recovery codes, confirm with your account password and a current code (from the app, or a recovery code).</p>
+          <p class="help">To replace your recovery codes, or to turn two-factor authentication off, confirm with your account password and a current code (from the app, or a recovery code).</p>
           <div class="field">
             <label for="totp-manage-password">Account password</label>
             <input id="totp-manage-password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required />
           </div>
           <div class="field">
             <label for="totp-manage-code">Code</label>
-            <input id="totp-manage-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="12" required />
+            <input id="totp-manage-code" name="code" type="text" inputmode="text" autocapitalize="none" autocomplete="one-time-code" spellcheck="false" maxlength="12" required />
+          </div>
+          <div class="field">
+            <label class="vault-editor__check"><input id="totp-disable-ack" type="checkbox" /> I want to turn two-factor authentication off (signing in then needs only the account password)</label>
           </div>
           <div class="form-actions">
-            <button class="btn ghost small" type="submit" id="totp-regenerate">New recovery codes</button>
+            <button class="btn ghost small" type="button" id="totp-regenerate">New recovery codes</button>
             <span class="spacer"></span>
-            <button class="btn danger small" type="button" id="totp-disable">Turn off</button>
+            <button class="btn danger small" type="button" id="totp-disable" disabled>Turn off</button>
           </div>
         </form>
 
@@ -167,6 +197,11 @@
           <div class="field">
             <label for="delete-password">Account password</label>
             <input id="delete-password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required />
+          </div>
+          <div class="field" id="delete-code-field">
+            <label for="delete-code">Two-factor code</label>
+            <input id="delete-code" name="code" type="text" inputmode="text" autocapitalize="none" autocomplete="one-time-code" spellcheck="false" maxlength="12" aria-describedby="delete-code-hint" />
+            <span class="hint" id="delete-code-hint"></span>
           </div>
           <div class="field">
             <label class="vault-editor__check"><input id="delete-ack" type="checkbox" /> I understand that the account and the vault stored on the server are deleted for good</label>
@@ -182,11 +217,12 @@
         <p class="help">The server stores your vault exactly as the desktop app encrypted it and cannot open it. It is opened <strong>in this browser</strong> with the vault's <strong>master password</strong>, which is never sent anywhere. Changes you make here are encrypted in the browser with the same vault key and uploaded only when you press <strong>Save to server</strong>.</p>
         <div class="notice" id="vault-notice" role="status"></div>
         <p class="vault-status" id="vault-status-text"></p>
+        <p class="vault-backup-row"><button class="btn ghost small" type="button" id="vault-backup" hidden>Download encrypted backup</button></p>
 
         <form id="vault-unlock-form" novalidate hidden>
           <div class="field">
             <label for="vault-master-password">Master password of the vault</label>
-            <input id="vault-master-password" name="masterPassword" type="password" autocomplete="off" spellcheck="false" maxlength="1024" required />
+            <input id="vault-master-password" name="masterPassword" type="password" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" spellcheck="false" maxlength="1024" required />
             <span class="hint">Not your account password. Derived into the key here, with Argon2id, exactly as on the desktop.</span>
           </div>
           <div class="form-actions">
@@ -200,38 +236,64 @@
           <div class="vault-toolbar">
             <label class="visually-hidden" for="vault-search">Search items</label>
             <input id="vault-search" type="search" placeholder="Search by name, username or URL" autocomplete="off" spellcheck="false" maxlength="256" />
-            <span class="vault-count" id="vault-count"></span>
+            <label class="vault-editor__check vault-filter"><input id="vault-favorites" type="checkbox" /> Favorites only</label>
+            <label class="visually-hidden" for="vault-sort">Sort items</label>
+            <select id="vault-sort" class="vault-sort">
+              <option value="name">Favorites first, by name</option>
+              <option value="updated">Recently updated</option>
+            </select>
+            <span class="vault-count" id="vault-count" aria-live="polite"></span>
             <button class="btn ghost small" type="button" id="vault-add">Add login</button>
             <button class="btn small" type="button" id="vault-save" disabled>Save to server</button>
             <button class="btn ghost small" type="button" id="vault-lock">Lock</button>
           </div>
           <p class="vault-dirty" id="vault-dirty" role="status" hidden>Unsaved changes. They exist only in this browser until you press Save to server; locking or reloading discards them.</p>
 
-          <form id="vault-editor" class="vault-editor" novalidate hidden>
+          <form id="vault-editor" class="vault-editor" novalidate hidden data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
             <h2 class="panel-subhead" id="vault-editor-title">New login</h2>
             <div class="field">
               <label for="edit-name">Name</label>
               <input id="edit-name" type="text" autocomplete="off" spellcheck="false" maxlength="200" required />
+              <span class="field-error" id="edit-name-error" hidden></span>
             </div>
             <div class="field">
               <label for="edit-username">Username</label>
-              <input id="edit-username" type="text" autocomplete="off" spellcheck="false" maxlength="320" />
+              <input id="edit-username" type="text" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore spellcheck="false" maxlength="320" />
+              <span class="field-error" id="edit-username-error" hidden></span>
             </div>
             <div class="field">
               <label for="edit-password">Password</label>
               <div class="vault-editor__password">
-                <input id="edit-password" type="password" autocomplete="off" spellcheck="false" maxlength="4096" />
+                <input id="edit-password" type="password" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore spellcheck="false" maxlength="4096" aria-describedby="edit-password-strength" />
                 <button class="btn ghost small" type="button" id="edit-password-toggle" aria-pressed="false">Show</button>
                 <button class="btn ghost small" type="button" id="edit-password-generate">Generate</button>
               </div>
+              <span class="field-error" id="edit-password-error" hidden></span>
+              <span class="hint" id="edit-password-strength" aria-live="polite"></span>
+              <details class="vault-generator">
+                <summary>Generator options</summary>
+                <div class="vault-generator__options">
+                  <label for="gen-length">Length</label>
+                  <input id="gen-length" type="number" inputmode="numeric" min="4" max="256" step="1" value="20" />
+                  <label class="vault-editor__check"><input id="gen-lowercase" type="checkbox" checked /> a–z</label>
+                  <label class="vault-editor__check"><input id="gen-uppercase" type="checkbox" checked /> A–Z</label>
+                  <label class="vault-editor__check"><input id="gen-digits" type="checkbox" checked /> 0–9</label>
+                  <label class="vault-editor__check"><input id="gen-symbols" type="checkbox" checked /> Symbols</label>
+                  <label class="vault-editor__check"><input id="gen-ambiguous" type="checkbox" /> Leave out look-alikes (I l 1 O 0 o)</label>
+                </div>
+                <p class="hint">The same rules as the desktop app's generator. These options (not passwords) are remembered in this browser.</p>
+              </details>
             </div>
             <div class="field">
               <label for="edit-urls">URLs (one per line, http or https)</label>
               <textarea id="edit-urls" rows="2" autocomplete="off" spellcheck="false"></textarea>
+              <span class="field-error" id="edit-urls-error" hidden></span>
             </div>
             <div class="field">
               <label for="edit-notes">Notes</label>
-              <textarea id="edit-notes" rows="3" autocomplete="off"></textarea>
+              <textarea id="edit-notes" rows="3" autocomplete="off" maxlength="16384" aria-describedby="edit-notes-count"></textarea>
+              <span class="field-error" id="edit-notes-error" hidden></span>
+              <span class="hint" id="edit-notes-count"></span>
             </div>
             <div class="field">
               <label class="vault-editor__check"><input id="edit-favorite" type="checkbox" /> Favorite</label>
@@ -244,16 +306,20 @@
           </form>
 
           <div class="vault-conflict" id="vault-conflict" hidden>
-            <p><strong>Another device changed the vault on the server after you opened it here.</strong> Nothing was uploaded. Choose: reload the server's vault (your changes here are discarded), or replace the server's vault with this browser's version (the other device's changes are lost there).</p>
-            <label class="vault-editor__check"><input id="vault-overwrite-ack" type="checkbox" /> I understand that this replaces the vault on the server for every device</label>
+            <p id="vault-conflict-text"></p>
             <div class="form-actions">
               <button class="btn ghost small" type="button" id="vault-reload">Reload the server's vault</button>
-              <button class="btn danger small" type="button" id="vault-overwrite" disabled>Replace the server's vault with this version</button>
+            </div>
+            <div id="vault-overwrite-row">
+              <label class="vault-editor__check"><input id="vault-overwrite-ack" type="checkbox" /> I understand that this replaces the vault on the server for every device</label>
+              <div class="form-actions">
+                <button class="btn danger small" type="button" id="vault-overwrite" disabled>Replace the server's vault with this version</button>
+              </div>
             </div>
           </div>
 
           <ul class="vault-items" id="vault-items"></ul>
-          <p class="inline-note">Passwords are hidden until you press Show. A copied value is cleared from the clipboard after 30 seconds if it is still there. The vault locks after 5 minutes without activity, when you sign out, and when the tab is closed or reloaded; it also locks when this tab is hidden, unless you have unsaved changes. Edits are uploaded only when you press Save to server, and only if nobody else changed the vault on the server meanwhile.</p>
+          <p class="inline-note">Passwords are hidden until you press Show. After <span id="note-clipboard-seconds">30</span> seconds the page clears a copied value from the clipboard if it is still there and the browser lets the page check it (browsers allow that only while this tab is in front; the page tries again when you come back, and says so if it could not). A clipboard history kept by your system is out of reach for any web page. The vault locks after <span id="note-vault-minutes">5</span> minutes without activity, when you sign out, and when the tab is closed or reloaded; it also locks when this tab is hidden, unless you have unsaved changes. Edits are uploaded only when you press Save to server, and only if nobody else changed the vault on the server meanwhile.</p>
         </div>
       </section>
 
@@ -261,7 +327,7 @@
   </main>
 
   <footer>
-    <div class="footer-version">web v0.5.0</div>
+    <div class="footer-version">web v0.6.0</div>
     <div class="footer-links">
       <a href="https://bitosx.se/#security" rel="noopener noreferrer">How your data is protected</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">API source</a>
