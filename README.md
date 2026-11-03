@@ -8,7 +8,7 @@ WebAssembly build the web vault needs (`vault/public/assets/vendor/hash-wasm/`, 
 | Hostname | Directory | Purpose | Talks to |
 |---|---|---|---|
 | `bitosx.se` | `www/public/` | Public product page: what BitosX is, how the vault is protected, what works today, live API status, roadmap | `api.bitosx.se` (`GET /health`, `GET /version` only) |
-| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code; since phase 8 change the account password while signed in) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set; since phase 8 with the desktop's generator, favorites and sorting, and a download of the encrypted backup | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*` including `POST /v1/account/password`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
+| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code; since phase 8 change the account password while signed in; since phase 10 add, rename and remove passkeys and sign in with one) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set; since phase 8 with the desktop's generator, favorites and sorting, and a download of the encrypted backup | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*` including `POST /v1/account/password` and `/v1/account/passkeys*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
 | `api.bitosx.se` | — | The account API. Lives in [`networkluki/bitosx-api`](https://github.com/networkluki/bitosx-api) and is operated alongside the desktop app; nothing here | — |
 
 The desktop app lives in [`networkluki/bitosx`](https://github.com/networkluki/bitosx).
@@ -210,6 +210,55 @@ live checks in the editor; notices stay in the accessibility tree while empty so
 announce them; password-manager extensions are asked to keep out of the master password and the
 editor; `[hidden]` always hides.
 
+## Passkeys (phase 10)
+
+Web `0.7.0`, against the phase-10 API (`bitosx-api` `docs/API.md`, "Passkeys (WebAuthn, phase 10)").
+A passkey signs in to the **account** with the device's screen lock, a password manager or a security
+key (WebAuthn). It never opens the vault: the vault master password stays what it was, and the page
+says so wherever a passkey is offered.
+
+- **On top of two-factor, never instead of it.** The *Passkeys* section of the account page lists the
+  account's passkeys (name, added, last used, a *Synced* / *Not synced* badge from the authenticator's
+  backup state) and offers *Add a passkey* only while TOTP is on; without it the section says to turn
+  TOTP on first. While passkeys exist, *Turn off* two-factor is refused by the server (409), and the
+  page says why (remove the passkeys first) and that nothing was used up. The desktop app keeps
+  signing in with the authenticator code.
+- **Add**: a name (1–64 characters, the server's rule), the account password and a code →
+  `POST /v1/account/passkeys/registration/options` → `navigator.credentials.create()` with the server's
+  options → `POST /v1/account/passkeys/registration` with the name and the credential. The name is asked
+  first, so the passkey the browser creates is stored on the server right after the prompt; the
+  password and the code are wiped from the page as soon as the server has checked them. A device that
+  already holds one of the account's passkeys is refused by the browser (`excludeCredentials`).
+- **Rename** (`POST /v1/account/passkeys/{id}/rename`; the API's CORS policy allows no `PATCH`) and
+  **Remove** (`POST /v1/account/passkeys/{id}/delete` with the password and a code).
+- **Sign in, second step**: when the 202 of `POST /v1/auth/login` lists `passkey` in `methods` (only
+  for an account that has one; unknown values are ignored, a missing list means code only), the code
+  step shows *Use a passkey* next to the code field (`/v1/auth/login/passkey/options` →
+  `navigator.credentials.get()` → `/v1/auth/login/passkey`). A refused passkey uses up one of the
+  step's attempts like a wrong code; a cancelled prompt does not.
+- **Sign in with a passkey** (no email, no password): a discoverable passkey with user verification
+  counts as both factors (`/v1/auth/passkey/options` → `get()` with the browser's default mediation →
+  `/v1/auth/passkey`).
+- **The JSON.** The API speaks the standard WebAuthn JSON. `assets/js/webauthn.js` uses the browser's
+  `PublicKeyCredential.parseCreationOptionsFromJSON` / `parseRequestOptionsFromJSON` and
+  `credential.toJSON()` when they exist, and otherwise its own strict base64url conversion of the same
+  members (unit-tested in `tests/webauthn.test.js`, and run in Chromium with the browser's helpers
+  removed, against the mock and against the real API).
+- **Feature detection.** Without `window.PublicKeyCredential` (or outside a secure context) no passkey
+  button is shown anywhere; the account page says the browser cannot use passkeys and still lets the
+  person rename and remove them.
+- **The same protections as everything else.** The browser prompt is cancelled (an `AbortController`)
+  when the step is left, the person signs out, the session ends or the page goes away; an answer that
+  arrives after its session ended is dropped (session generation), and a sign-in that completes after
+  the page cancelled it is revoked at once. Every passkey form is wiped with the account view.
+- **`_headers`**: `Permissions-Policy` gains `publickey-credentials-create=(self),
+  publickey-credentials-get=(self)` — the feature tokens of WebAuthn Level 3, §5.9 "Permissions Policy
+  integration" (default allowlist `'self'` for both); the live suite checks that Chromium knows both
+  (`document.featurePolicy.features()`) and reports no unrecognised feature. The CSP is unchanged: WebAuthn needs no CSP source.
+- **What the deployment needs.** The API's `Security:WebAuthn` section with RP ID `vault.bitosx.se` and
+  origin `https://vault.bitosx.se` (the shipped API configuration). A passkey is bound to that RP ID:
+  one made on the local devstack (`localhost`) does not work in production, and the other way round.
+
 ## What phase 1 was
 
 Phase 1 used **only endpoints the API already implemented** (`bitosx-api/docs/API.md`):
@@ -256,7 +305,12 @@ Phases as presented on the product page, and where each stands:
    a test.
 2. **Public exposure of the API.** Kestrel is loopback-only and Apache does not proxy to it yet. The
    `[host]` checklist in `bitosx-api/docs/DEPLOYMENT.md` gates that; nothing here changes it.
-3. **Verification email base URL.** Set `Email:PublicBaseUrl = https://vault.bitosx.se` and keep
+3. **Passkeys** (phase 10): the API's `Security:WebAuthn` must name RP ID `vault.bitosx.se`, RP name
+   `BitosX` and the origin `https://vault.bitosx.se` (the shipped values). Without it the passkey
+   routes answer 404: the account page then says passkeys are not available, the second sign-in step
+   does not offer one, and the CORS policy above needs no change for them (every passkey call is a `GET`
+   or `POST`).
+4. **Verification email base URL.** Set `Email:PublicBaseUrl = https://vault.bitosx.se` and keep
    `Email:VerificationPath = /verify-email` (the default). The link then reads
    `https://vault.bitosx.se/verify-email#token=<base64url>`; the token is in the fragment, which the
    browser never sends to any server, so it stays out of access logs.
@@ -291,6 +345,11 @@ Phases as presented on the product page, and where each stands:
 - **Idle sign-out.** After 15 minutes without input (timer and wall clock) the tokens are dropped and
   `/logout` is called best-effort; leaving the page revokes the session best effort too. Passwords
   are cleared from the fields after every submit, success or failure.
+- **Passkeys authenticate the account only.** The WebAuthn private key never leaves the authenticator;
+  the page passes the server's options to the browser and the browser's signed answer back, and keeps
+  nothing (no credential id, no challenge) beyond the ceremony. `Permissions-Policy` limits
+  `publickey-credentials-create` / `-get` to this origin; `frame-ancestors 'none'` and `X-Frame-Options:
+  DENY` keep the page out of frames.
 - **No third-party code.** No CDN, fonts, analytics or trackers on either site.
 
 Known limitations: an XSS on `vault.bitosx.se` would still be able to call the API with the in-memory
@@ -338,6 +397,9 @@ for f in www/public/assets/js/*.js vault/public/assets/js/*.js; do node --check 
 # desktop-written fixtures open, every malformed envelope and document is refused, Argon2id vectors
 # computed by the desktop's KDF match. BITOSX_TEST_SLOW=1 adds the 256 MiB cases.
 node --test tests/vault-crypto.test.js
+# The passkey JSON conversion (the fallback for browsers without parse*FromJSON / toJSON) and the
+# mapping of the browser's WebAuthn errors.
+node --test tests/webauthn.test.js
 
 # End-to-end in headless Chromium against the in-process mock API (needs the `playwright` package
 # and a Chromium it can find; PLAYWRIGHT_BROWSERS_PATH if it is not the default location).
@@ -360,7 +422,17 @@ from a time the test controls and a 30-second boundary can never fall inside a t
 is Playwright's `page.clock` where idle timers and time limits are tested. `BITOSX_E2E_ONLY=<text>`
 runs only the tests whose name contains the text.
 
-### Against the real API (live suite, phase 9)
+**Passkeys in the mocked suite.** The vault is served on `http://localhost:<port>` (a WebAuthn RP ID
+must be a domain name, so `127.0.0.1` cannot have passkeys), and the passkey tests give each page
+Chromium's **virtual authenticator** over CDP (`WebAuthn.enable`, `WebAuthn.addVirtualAuthenticator`
+with `protocol: "ctap2"`, `transport: "internal"`, `hasResidentKey`, `hasUserVerification`,
+`isUserVerified`; the parameter names are those of the installed Chromium's protocol). The mock server
+checks what a WebAuthn server checks that a browser could get wrong — client data type, challenge and
+origin, the RP ID hash, the user-presence/verification flags, the ES256 signature with the public key
+from the registration, the counter — so the browser's own JSON helpers and the page's fallback are both
+proven against it.
+
+### Against the real API (live suite, phases 9 and 10)
 
 `tests/e2e-live.js` runs the unchanged `vault/public` in Chromium against a real API and database: the
 local stack of `networkluki/bitosx-api` (`tools/devstack/up.sh`, MariaDB + the API in its Testing
@@ -385,7 +457,21 @@ vault) → opened with its master password → an item edited and saved (a real 
 re-open, the edit is there, and the server's copy opens under Node → the encrypted backup is byte for
 byte `GET /v1/sync/envelope` → account password changed with a code (the other session is signed out,
 this one stays) → forgot + reset with the mailed token → sign-in with a recovery code → account
-deleted with a code → sign-in fails. It runs in about a minute, mostly waiting for TOTP steps.
+deleted with a code → sign-in fails. Since phase 10, before the account controls: a passkey added on the
+account page with Chromium's virtual authenticator (real attestation checked by the API) → turning
+TOTP off refused while it exists (nothing used up) → sign-in with the password and the passkey → sign-in
+with the passkey alone (the vault still asks for its master password) → a second passkey added and
+used from a page whose browser JSON helpers are removed (the page's own conversion, accepted by the
+API) → a passkey of another authenticator, never registered, refused → rename (a real preflight for
+`POST .../rename`; no `PATCH` is ever sent) → both removed with the password and a code → the removed
+passkey refused, and the second step no longer offers one. It runs in a few minutes, mostly waiting for
+TOTP steps.
+
+**The page origin is `http://localhost:8788`** (the devstack's default since phase 10: `localhost` is a
+valid WebAuthn RP ID, an IP address is not, so the API's RP ID there is `localhost`). The browser's
+`--host-resolver-rules` leave the two page hosts — the web origin's and `127.0.0.1` for the second,
+disallowed origin — to Chromium's own loopback handling (`localhost` never goes to DNS) and make every
+other name fail, which the first test checks.
 
 **How the page reaches the live API, with the site unchanged.** `config.js` and every CSP name
 `https://api.bitosx.se`, and they stay that way: nothing in `vault/public` knows about tests, so what is
@@ -417,7 +503,7 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 ## Versioning
 
-`web v0.6.0` (phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
+`web v0.7.0` (phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
 the `?v=` cache-busting query on the stylesheet links together (the e2e hygiene test checks it). The
 desktop app (`0.11.0`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
 product page for orientation only.

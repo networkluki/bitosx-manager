@@ -32,6 +32,12 @@
 //   with a code -> the vault (the page cannot create one: a desktop-written fixture envelope is uploaded
 //   through the API) opens with the master password -> edit an item -> Save (real PUT, real CORS) ->
 //   reload, sign in, re-open, the edit is there -> encrypted backup == GET /v1/sync/envelope ->
+//   passkeys (phase 10, Chromium's virtual authenticator over CDP, the page origin is the API's WebAuthn
+//   origin): add one with the password + a code -> TOTP cannot be turned off while it exists -> sign in
+//   with the password and the passkey -> sign in with the passkey alone (the vault still needs its
+//   master password) -> a second passkey through the page's own JSON conversion, used alone -> another
+//   authenticator's passkey is refused -> rename -> remove both; a removed passkey is refused and the
+//   second step no longer offers one ->
 //   change the account password (other session revoked, this one kept) -> forgot + reset via the mail
 //   token -> recovery-code sign-in -> delete the account with a code -> sign-in fails.
 //
@@ -224,7 +230,10 @@ async function check(name, fn) {
 		.catch((err) => die(`cannot serve the vault on ${WEB.origin}: ${err.message}`));
 	assert.equal(site.origin, WEB.origin);
 	// A second origin the API does not allow, to show the browser's CORS check is the real one.
-	const stranger = await serveStatic(VAULT_DIR, { host: "127.0.0.1", headers: siteHeaders });
+	// It listens on 127.0.0.1 with another port: another origin whether the web origin's host is
+	// localhost (the devstack default since passkeys) or 127.0.0.1.
+	const STRANGER_HOST = "127.0.0.1";
+	const stranger = await serveStatic(VAULT_DIR, { host: STRANGER_HOST, headers: siteHeaders });
 
 	// No proxy for this browser (a proxy would resolve api.bitosx.se itself, i.e. reach production).
 	const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/proxy/i.test(k)));
@@ -232,7 +241,9 @@ async function check(name, fn) {
 		env,
 		args: [
 			"--no-proxy-server",
-			`--host-resolver-rules=MAP api.bitosx.se 127.0.0.1:${relay.port}, MAP * ~NOTFOUND, EXCLUDE ${WEB.host}`,
+			// The two page hosts are left to the browser's own loopback handling (localhost never goes to
+			// DNS in Chromium); every other name, an IP literal included, fails.
+			`--host-resolver-rules=MAP api.bitosx.se 127.0.0.1:${relay.port}, MAP * ~NOTFOUND, ${[...new Set([WEB.host, STRANGER_HOST])].map((h) => `EXCLUDE ${h}`).join(", ")}`,
 			`--ignore-certificate-errors-spki-list=${tls.spkiHash}`
 		]
 	});
@@ -241,6 +252,24 @@ async function check(name, fn) {
 	const page = await context.newPage();
 	page.setDefaultTimeout(30000);
 	watchConsole(page, errors);
+	// Chromium reports a Permissions-Policy it cannot read as a console warning, not an error.
+	const policyWarnings = [];
+	const watchPolicy = (p) => p.on("console", (msg) => { if (/Permissions-Policy/i.test(msg.text())) { policyWarnings.push(msg.text()); } });
+	watchPolicy(page);
+
+	// Chromium's virtual authenticator (CDP WebAuthn domain, checked against the installed browser's
+	// protocol): a platform authenticator with discoverable credentials and user verification that
+	// answers at once, as a person would. One per page.
+	async function virtualAuthenticator(p) {
+		const cdp = await context.newCDPSession(p);
+		await cdp.send("WebAuthn.enable", { enableUI: false });
+		const { authenticatorId } = await cdp.send("WebAuthn.addVirtualAuthenticator", {
+			options: { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal", hasResidentKey: true,
+				hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true }
+		});
+		return { cdp, id: authenticatorId, credentials: async () => (await cdp.send("WebAuthn.getCredentials", { authenticatorId })).credentials };
+	}
+	const authenticator = await virtualAuthenticator(page);
 
 	const email = `e2e-${rand(8)}@example.test`;
 	const password = `live-${rand(10)}`;
@@ -308,12 +337,29 @@ async function check(name, fn) {
 		const seen = relayed.filter((e) => e.origin === stranger.origin);
 		assert.ok(seen.length >= 1, "the request did reach the API");
 		assert.ok(seen.every((e) => !("access-control-allow-origin" in e.headers)), "the API sent no Access-Control-Allow-Origin to it");
+		// Every name but api.bitosx.se and the two page hosts fails in this browser.
+		const elsewhere = await p.goto("http://bitosx-live-check.example/").then(() => "loaded", (e) => e.message);
+		assert.match(elsewhere, /ERR_NAME_NOT_RESOLVED/);
 		await p.close();
 		await page.goto(`${WEB.origin}/`);
 		const ok = await page.evaluate(() => fetch("https://api.bitosx.se/health", { credentials: "omit", cache: "no-store" }).then((r) => r.status));
 		assert.equal(ok, 200);
 		const mine = relayed.filter((e) => e.origin === WEB.origin);
 		assert.equal(mine[mine.length - 1].headers["access-control-allow-origin"], WEB.origin);
+	});
+
+	await step("the vault is served with the site's headers: WebAuthn only for this origin (Permissions-Policy), and Chromium knows both features", async () => {
+		assert.match(siteHeaders["Permissions-Policy"], /publickey-credentials-create=\(self\), publickey-credentials-get=\(self\)/);
+		const policy = await page.evaluate(() => ({
+			known: document.featurePolicy.features().filter((f) => f.startsWith("publickey-credentials-")).sort(),
+			create: document.featurePolicy.allowsFeature("publickey-credentials-create"),
+			get: document.featurePolicy.allowsFeature("publickey-credentials-get"),
+			camera: document.featurePolicy.allowsFeature("camera"),
+			secure: window.isSecureContext,
+			passkeyButton: !document.getElementById("passkey-signin").hidden
+		}));
+		assert.deepEqual(policy, { known: ["publickey-credentials-create", "publickey-credentials-get"], create: true, get: true, camera: false, secure: true, passkeyButton: true });
+		assert.deepEqual(policyWarnings, [], "Chromium read every Permissions-Policy feature");
 	});
 
 	console.log("register and verify");
@@ -466,6 +512,183 @@ async function check(name, fn) {
 		await page.click("#vault-lock");
 	});
 
+	console.log("passkeys");
+	const passkeyNames = () => page.locator("#passkey-list .passkey-item__name").allTextContents();
+	const passkeysOnServer = async () => {
+		const r = await api("GET", "/v1/account/passkeys", undefined, other.accessToken);
+		assert.equal(r.status, 200, "GET /v1/account/passkeys");
+		return r.body;
+	};
+	const lastRelayed = (method, p) => relayed.filter((e) => e.method === method && e.path === p).pop();
+	let laptop = null; // the first passkey, as the API lists it
+	await step("add a passkey on the Account page: password + TOTP code -> the virtual authenticator -> named; the real API verified the attestation", async () => {
+		await page.waitForSelector("#passkey-add-form:not([hidden])");
+		assert.equal(await page.textContent("#passkey-status"), "No passkeys yet.");
+		await page.fill("#passkey-add-name", "Live laptop");
+		await page.fill("#passkey-add-password", password);
+		await page.fill("#passkey-add-code", await nextTotp());
+		await page.click("#passkey-add-submit");
+		await page.waitForFunction(() => document.querySelectorAll("#passkey-list li").length === 1);
+		assert.match(await page.textContent("#passkey-notice"), /Passkey “Live laptop” added/);
+		assert.deepEqual(await passkeyNames(), ["Live laptop Not synced"]);
+		assert.equal(await page.inputValue("#passkey-add-password"), "");
+		const listed = await passkeysOnServer();
+		assert.equal(listed.max, 10);
+		assert.equal(listed.passkeys.length, 1);
+		laptop = listed.passkeys[0];
+		assert.equal(laptop.name, "Live laptop");
+		assert.equal(laptop.backedUp, false);
+		assert.equal(laptop.lastUsedAt, undefined);
+		assert.deepEqual(Object.keys(laptop).sort(), ["backedUp", "createdAt", "id", "name"], "no key material, no credential id");
+		const creds = await authenticator.credentials();
+		assert.equal(creds.length, 1);
+		assert.equal(creds[0].isResidentCredential, true, "a discoverable credential");
+		assert.equal(creds[0].rpId, "localhost", "the API's RP ID: the page's host");
+		const handle = Buffer.from(creds[0].userHandle, "base64");
+		assert.equal(handle.length, 32, "user.id is the API's 32-byte handle");
+		const me = await api("GET", "/v1/account/me", undefined, other.accessToken);
+		assert.ok(!handle.toString("latin1").includes(email) && !handle.toString("hex").includes(me.body.accountId.replace(/-/g, "")), "neither the email nor the account id");
+		const preflight = lastRelayed("OPTIONS", "/v1/account/passkeys/registration/options");
+		assert.equal(preflight && preflight.status, 204, "a real preflight");
+		assert.equal(lastRelayed("POST", "/v1/account/passkeys/registration/options").status, 200);
+		assert.equal(lastRelayed("POST", "/v1/account/passkeys/registration").status, 201);
+	});
+	await step("two-factor cannot be turned off while a passkey exists: the API's 409 is explained, and nothing was used up", async () => {
+		assert.equal(await page.isVisible("#totp-passkeys-hint"), true);
+		await page.fill("#totp-manage-password", password);
+		await page.fill("#totp-manage-code", recoveryCodes[0]); // used for real later: it must survive this
+		await page.check("#totp-disable-ack");
+		await page.click("#totp-disable");
+		await page.waitForSelector("#totp-notice.err");
+		assert.match(await page.textContent("#totp-notice"), /stays on: your account has passkeys/);
+		assert.equal(lastRelayed("POST", "/v1/account/totp/disable").status, 409);
+		const status = await api("GET", "/v1/account/totp", undefined, other.accessToken);
+		assert.equal(status.body.enabled, true);
+		assert.equal(status.body.recoveryCodesRemaining, recoveryCodes.length, "the recovery code was not used");
+	});
+	await step("sign out; sign in with the password and the passkey as the second step (real CORS, real signature check)", async () => {
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		await passwordStep(password);
+		await page.waitForSelector("#code-form:not([hidden])");
+		assert.equal(await page.isVisible("#code-passkey"), true, "the API lists the passkey for this account");
+		await page.click("#code-passkey");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		assert.equal(await page.textContent("#acct-email"), email);
+		assert.equal(lastRelayed("POST", "/v1/auth/login/passkey/options").status, 200);
+		assert.equal(lastRelayed("POST", "/v1/auth/login/passkey").status, 200);
+		await page.waitForFunction(() => /last used/.test(document.getElementById("passkey-list").textContent));
+	});
+	await step("sign out; sign in with the passkey alone (no email, no password); the vault still needs its master password", async () => {
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		const loginsBefore = relayed.filter((e) => e.method === "POST" && e.path === "/v1/auth/login").length;
+		await page.click("#passkey-signin-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		assert.equal(await page.textContent("#acct-email"), email);
+		assert.equal(relayed.filter((e) => e.method === "POST" && e.path === "/v1/auth/login").length, loginsBefore, "no password step");
+		assert.equal(lastRelayed("POST", "/v1/auth/passkey").status, 200);
+		await vaultStatusLoaded();
+		assert.equal(await page.isVisible("#vault-unlock-form"), true, "the vault is closed");
+		await unlock();
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 3);
+		await page.click("#vault-lock");
+	});
+	await step("a second passkey through the page's own JSON conversion (no parseCreationOptionsFromJSON / toJSON), accepted by the real API and used alone", async () => {
+		const fb = await context.newPage();
+		fb.setDefaultTimeout(30000);
+		watchConsole(fb, errors);
+		watchPolicy(fb);
+		await fb.addInitScript(() => {
+			delete PublicKeyCredential.parseCreationOptionsFromJSON;
+			delete PublicKeyCredential.parseRequestOptionsFromJSON;
+			delete PublicKeyCredential.prototype.toJSON;
+		});
+		const fbAuth = await virtualAuthenticator(fb);
+		await fb.goto(`${WEB.origin}/`);
+		assert.equal(await fb.evaluate(() => [typeof PublicKeyCredential.parseCreationOptionsFromJSON, typeof PublicKeyCredential.parseRequestOptionsFromJSON, typeof PublicKeyCredential.prototype.toJSON].join()), "undefined,undefined,undefined");
+		await fb.fill("#login-email", email);
+		await fb.fill("#login-password", password);
+		await fb.click("#login-submit");
+		await fb.waitForSelector("#code-form:not([hidden])");
+		await fb.fill("#login-code", recoveryCodes.pop());
+		await fb.click("#code-submit");
+		await fb.waitForSelector("#passkey-add-form:not([hidden])");
+		await fb.fill("#passkey-add-name", "Live fallback");
+		await fb.fill("#passkey-add-password", password);
+		await fb.fill("#passkey-add-code", recoveryCodes.pop());
+		await fb.click("#passkey-add-submit");
+		await fb.waitForFunction(() => document.querySelectorAll("#passkey-list li").length === 2);
+		assert.equal((await fbAuth.credentials()).length, 1);
+		await fb.click("#logout");
+		await fb.waitForSelector("#login-panel:not([hidden])");
+		await fb.click("#passkey-signin-submit");
+		await fb.waitForSelector("#account-panel:not([hidden])");
+		assert.equal(await fb.textContent("#acct-email"), email);
+		await fb.close();
+		const names = (await passkeysOnServer()).passkeys.map((p) => p.name);
+		assert.deepEqual(names, ["Live laptop", "Live fallback"]);
+	});
+	await step("another authenticator's passkey (one the API never registered) is refused: no session", async () => {
+		const st = await context.newPage();
+		st.setDefaultTimeout(30000);
+		watchConsole(st, errors);
+		const stAuth = await virtualAuthenticator(st);
+		const { privateKey } = crypto.generateKeyPairSync("ec", { namedCurve: "P-256" });
+		await stAuth.cdp.send("WebAuthn.addCredential", { authenticatorId: stAuth.id, credential: {
+			credentialId: crypto.randomBytes(32).toString("base64"), isResidentCredential: true, rpId: "localhost",
+			privateKey: privateKey.export({ type: "pkcs8", format: "der" }).toString("base64"),
+			userHandle: crypto.randomBytes(32).toString("base64"), signCount: 0
+		} });
+		await st.goto(`${WEB.origin}/`);
+		await st.click("#passkey-signin-submit");
+		await st.waitForSelector("#login-notice.err");
+		assert.match(await st.textContent("#login-notice"), /passkey was not accepted/);
+		assert.equal(await st.isHidden("#account-panel"), true);
+		assert.equal(lastRelayed("POST", "/v1/auth/passkey").status, 401);
+		await st.close();
+	});
+	await step("rename the passkey: POST .../rename through a real preflight (the API's CORS allows no PATCH)", async () => {
+		await page.click(`button[data-passkey-rename="${laptop.id}"]`);
+		await page.fill("#passkey-rename-name", "Live laptop (renamed)");
+		await page.click("#passkey-rename-submit");
+		await page.waitForFunction(() => document.getElementById("passkey-notice").textContent === "Passkey renamed.");
+		assert.deepEqual(await passkeyNames(), ["Live laptop (renamed) Not synced", "Live fallback Not synced"]);
+		const path = `/v1/account/passkeys/${laptop.id}/rename`;
+		assert.equal(lastRelayed("OPTIONS", path).status, 204);
+		assert.equal(lastRelayed("POST", path).status, 204);
+		assert.ok(!relayed.some((e) => e.method === "PATCH"), "no PATCH was ever sent");
+		assert.equal((await passkeysOnServer()).passkeys[0].name, "Live laptop (renamed)");
+	});
+	await step("remove both passkeys with the password and a code; a removed passkey no longer signs in, and the second step no longer offers one", async () => {
+		const ids = (await passkeysOnServer()).passkeys.map((p) => p.id);
+		const codes = [recoveryCodes.pop(), await nextTotp()];
+		for (let i = 0; i < ids.length; i++) {
+			await page.click(`button[data-passkey-delete="${ids[i]}"]`);
+			await page.fill("#passkey-delete-password", password);
+			await page.fill("#passkey-delete-code", codes[i]);
+			await page.click("#passkey-delete-submit");
+			await page.waitForFunction((n) => document.querySelectorAll("#passkey-list li").length === n, ids.length - i - 1);
+			assert.equal(lastRelayed("POST", `/v1/account/passkeys/${ids[i]}/delete`).status, 204);
+		}
+		assert.match(await page.textContent("#passkey-notice"), /removed: it no longer signs in/);
+		assert.deepEqual((await passkeysOnServer()).passkeys, []);
+		assert.equal(await page.isHidden("#totp-passkeys-hint"), true);
+		// The authenticator still holds the removed passkey; the API refuses it.
+		assert.equal((await authenticator.credentials()).length, 1);
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		await page.click("#passkey-signin-submit");
+		await page.waitForSelector("#login-notice.err");
+		assert.match(await page.textContent("#login-notice"), /removed from the account no longer signs in/);
+		assert.equal(lastRelayed("POST", "/v1/auth/passkey").status, 401);
+		await passwordStep(password);
+		await page.waitForSelector("#code-form:not([hidden])");
+		assert.equal(await page.isHidden("#code-passkey"), true);
+		await codeStep(await nextTotp());
+		await page.waitForFunction(() => document.getElementById("passkey-status").textContent === "No passkeys yet.");
+	});
+
 	console.log("account controls");
 	await step("change the account password with a code: the other session is revoked, this one stays", async () => {
 		assert.equal((await api("GET", "/v1/account/me", undefined, other.accessToken)).status, 200, "the other session works before");
@@ -505,7 +728,7 @@ async function check(name, fn) {
 		await page.goto(`${WEB.origin}/`);
 		await passwordStep(resetPassword);
 		await codeStep(recoveryCodes.shift().toUpperCase().replace("-", " ")); // as a person might type it
-		await page.waitForFunction(() => /Recovery codes left: 8/.test(document.getElementById("totp-status").textContent));
+		await page.waitForFunction((n) => document.getElementById("totp-status").textContent.includes(`Recovery codes left: ${n}.`), recoveryCodes.length);
 	});
 	await step("delete the account with the password and a TOTP code; signing in fails afterwards", async () => {
 		await page.fill("#delete-password", resetPassword);

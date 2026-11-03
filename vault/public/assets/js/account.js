@@ -1,5 +1,5 @@
-// Sign-in page (with the second-factor step) + account/session management, account password change,
-// two-factor setup and account deletion (vault.bitosx.se).
+// Sign-in page (with the second-factor step and passkeys) + account/session management, account
+// password change, two-factor setup, passkeys and account deletion (vault.bitosx.se).
 //
 // Every asynchronous step remembers the session generation it started in (api.generation()) and
 // drops its result if the session ended or another one started meanwhile, so a late answer never
@@ -20,7 +20,14 @@
 	var sessionsBody = $("sessions-body");
 	if (!loginForm || !accountPanel) { return; }
 
+	var webauthn = window.bitosxWebAuthn;
+	// Feature detection: without WebAuthn in this browser, no passkey button is shown anywhere.
+	var passkeysSupported = !!(webauthn && webauthn.supported());
+
 	var codeForm = $("code-form");
+	var codePasskeyBtn = $("code-passkey");
+	var passkeySignin = $("passkey-signin");
+	var passkeySigninBtn = $("passkey-signin-submit");
 	var codeEl = $("login-code");
 	var emailEl = $("login-email");
 	var passEl = $("login-password");
@@ -32,6 +39,36 @@
 	var signingOut = false;
 	// What the server said about two-factor: "on", "off", or "unknown" (not loaded, or unavailable).
 	var totpState = "unknown";
+
+	// The browser's passkey prompt that is open (one at a time): its AbortController. Leaving the
+	// step, signing out, a session that ends and the page going away all cancel it.
+	var ceremony = null;
+	function startCeremony() { abortCeremony(); ceremony = new AbortController(); return ceremony; }
+	function abortCeremony() { if (ceremony) { var c = ceremony; ceremony = null; c.abort(); } }
+	function endCeremony(c) { if (ceremony === c) { ceremony = null; } }
+	function isWebAuthnError(err) { return !!(webauthn && err instanceof webauthn.WebAuthnError); }
+	function cancelledByPage(err, c) { return c.signal.aborted || (isWebAuthnError(err) && err.kind === webauthn.KINDS.ABORTED); }
+
+	// What a failed browser prompt means, in words. context: "login", "mfa" or "add".
+	function describeWebAuthnError(err, context) {
+		var K = webauthn.KINDS;
+		switch (err.kind) {
+			case K.CANCELLED:
+				if (context === "add") { return "No passkey was created: the browser's prompt was cancelled or timed out. Nothing was added; start again (with a new code)."; }
+				return "No passkey was used: the browser's prompt was cancelled or timed out, or no passkey for this site was found." +
+					(context === "mfa" ? " Try again, or enter a code." : "");
+			case K.EXISTS:
+				return "This device or password manager already holds a passkey for this account. Nothing was added.";
+			case K.SECURITY:
+				return "The browser refused to use a passkey on this page: the address does not match the passkey's site.";
+			case K.UNSUPPORTED:
+				return "This browser does not support passkeys.";
+			case K.INVALID:
+				return "This browser could not read the server's passkey request. Nothing was changed.";
+			default:
+				return "The browser's passkey prompt failed. Nothing was changed.";
+		}
+	}
 
 	function generation() { return api.generation(); }
 	function signedInOnScreen() { return !accountPanel.hidden; }
@@ -57,21 +94,30 @@
 		// The server's clock decides; a client clock that disagrees must not end the step at once or never.
 		ttl = Math.min(Math.max(ttl, 60 * 1000), 10 * 60 * 1000);
 		challenge = { token: result.mfaToken, deadline: Date.now() + ttl, failures: 0, timer: setTimeout(expireChallenge, ttl) };
+		// The server offers a passkey only when the account has one; this browser must support them too.
+		var offerPasskey = passkeysSupported && Array.isArray(result.methods) && result.methods.indexOf("passkey") >= 0;
 		loginForm.hidden = true;
+		passkeySignin.hidden = true;
 		codeForm.hidden = false;
 		codeEl.value = "";
 		ui.markField(codeEl, false);
 		ui.setBusy(codeForm, false);
-		ui.notice(loginNotice, "ok", "Enter the code from your authenticator app, or one of your recovery codes.");
+		codePasskeyBtn.hidden = !offerPasskey;
+		ui.notice(loginNotice, "ok", offerPasskey
+			? "Enter the code from your authenticator app or one of your recovery codes, or use a passkey."
+			: "Enter the code from your authenticator app, or one of your recovery codes.");
 		codeEl.focus();
 	}
 
 	function leaveCodeStep() {
 		if (challenge && challenge.timer) { clearTimeout(challenge.timer); }
 		challenge = null;
+		abortCeremony();
 		codeEl.value = "";
 		codeForm.hidden = true;
+		codePasskeyBtn.hidden = true;
 		loginForm.hidden = false;
+		passkeySignin.hidden = !passkeysSupported;
 		ui.setBusy(codeForm, false);
 	}
 
@@ -102,6 +148,7 @@
 	// list, a pending two-factor secret, recovery codes, and every typed field.
 	function wipeAccountView() {
 		resetTotpSection();
+		resetPasskeySection();
 		accountPanel.hidden = true;
 		setNavSignedIn(false);
 		["acct-email", "acct-verified", "acct-created", "acct-id"].forEach(function (id) { $(id).textContent = ""; });
@@ -180,6 +227,7 @@
 	// the server. The screen is wiped too, because a page kept in the back/forward cache comes back
 	// exactly as it was left.
 	window.addEventListener("pagehide", function () {
+		abortCeremony();
 		api.revokeOnUnload();
 		leaveCodeStep();
 		wipeAccountView();
@@ -233,6 +281,7 @@
 	function loadAccount() {
 		var g = generation();
 		resetTotpSection();
+		resetPasskeySection();
 		return Promise.all([api.me(), api.sessions()]).then(function (r) {
 			if (g !== generation()) { return; }
 			renderAccount(r[0]);
@@ -347,6 +396,92 @@
 		leaveCodeStep();
 		ui.notice(loginNotice, "ok", "");
 		passEl.focus();
+	});
+
+	// A sign-in whose prompt the page cancelled (it is going away) but whose answer still arrived:
+	// the new session is revoked at once instead of being shown.
+	function dropLateSession() { api.revokeOnUnload(); }
+
+	// ---- the second step with a passkey (the password was the first factor) ----
+	codePasskeyBtn.addEventListener("click", function () {
+		if (!challenge) { backToPassword("Start over with your password."); return; }
+		if (Date.now() >= challenge.deadline) { expireChallenge(); return; }
+		var current = challenge;
+		var c = startCeremony();
+		// Only the completion uses up one of the step's attempts; asking for the options does not.
+		var counted = false;
+		codeEl.value = "";
+		ui.markField(codeEl, false);
+		ui.notice(loginNotice, "ok", "Follow your browser's prompt to use your passkey.");
+		ui.setBusy(codeForm, true);
+		signingIn = true;
+		api.loginPasskeyOptions(current.token)
+			.then(function (options) {
+				if (challenge !== current || c.signal.aborted) { throw new webauthn.WebAuthnError(webauthn.KINDS.ABORTED); }
+				return webauthn.get(options, c.signal);
+			})
+			.then(function (credential) {
+				if (challenge !== current || c.signal.aborted) { throw new webauthn.WebAuthnError(webauthn.KINDS.ABORTED); }
+				counted = true;
+				return api.loginPasskey(current.token, credential);
+			})
+			.then(function () {
+				endCeremony(c);
+				if (c.signal.aborted || challenge !== current) { dropLateSession(); return undefined; }
+				leaveCodeStep();
+				return afterSignIn();
+			}, function (err) {
+				endCeremony(c);
+				if (challenge !== current) { return; } // started over meanwhile
+				ui.setBusy(codeForm, false);
+				if (cancelledByPage(err, c)) { ui.notice(loginNotice, "ok", ""); return; }
+				if (counted && err && err.kind === api.KINDS.UNAUTHENTICATED) {
+					current.failures++;
+					if (current.failures >= cfg.mfaMaxAttempts || Date.now() >= current.deadline) {
+						backToPassword("Too many failed attempts, or the sign-in step expired. Enter your password again.");
+						return;
+					}
+				}
+				ui.notice(loginNotice, "err", isWebAuthnError(err) ? describeWebAuthnError(err, "mfa") : ui.describeError(err, "passkey-mfa"));
+				codePasskeyBtn.focus();
+			})
+			.finally(function () { signingIn = false; });
+	});
+
+	// ---- sign-in without email and password (a discoverable passkey: both factors) ----
+	passkeySigninBtn.addEventListener("click", function () {
+		if (signingIn) { return; }
+		var c = startCeremony();
+		ui.notice(loginNotice, "ok", "Follow your browser's prompt to choose your passkey.");
+		ui.markField(emailEl, false);
+		ui.markField(passEl, false);
+		passEl.value = "";
+		ui.setBusy(loginForm, true);
+		passkeySigninBtn.disabled = true;
+		signingIn = true;
+		api.passkeySignInOptions()
+			.then(function (start) {
+				if (c.signal.aborted) { throw new webauthn.WebAuthnError(webauthn.KINDS.ABORTED); }
+				return webauthn.get(start.options, c.signal).then(function (credential) {
+					if (c.signal.aborted) { throw new webauthn.WebAuthnError(webauthn.KINDS.ABORTED); }
+					return api.passkeySignIn(start.assertionId, credential);
+				});
+			})
+			.then(function () {
+				endCeremony(c);
+				if (c.signal.aborted) { dropLateSession(); return undefined; }
+				return afterSignIn();
+			}, function (err) {
+				endCeremony(c);
+				if (cancelledByPage(err, c)) { ui.notice(loginNotice, "ok", ""); return; }
+				ui.notice(loginNotice, "err", isWebAuthnError(err) ? describeWebAuthnError(err, "login") : ui.describeError(err, "passkey-login"));
+				passkeySigninBtn.focus();
+			})
+			.finally(function () {
+				ui.setBusy(loginForm, false);
+				passkeySigninBtn.disabled = false;
+				signingIn = false;
+			});
 	});
 
 	// ---- session actions ----
@@ -498,13 +633,15 @@
 			manageForm.hidden = true;
 		}
 		renderCodeFields();
+		renderPasskeys();
 	}
 
 	function loadTotpStatus() {
 		var g = generation();
 		return api.totpStatus().then(function (status) {
-			if (g !== generation()) { return; }
+			if (g !== generation()) { return undefined; }
 			renderTotpStatus(status);
+			return loadPasskeys("");
 		}).catch(function (err) {
 			if (g !== generation()) { return; }
 			if (err && err.kind === api.KINDS.UNAVAILABLE) {
@@ -514,6 +651,7 @@
 				manageForm.hidden = true;
 				clearSetup();
 				renderCodeFields();
+				renderPasskeys();
 				return;
 			}
 			reportError(err, "totp", totpNotice);
@@ -668,6 +806,12 @@
 			})
 			.catch(function (err) {
 				if (g !== generation()) { return; }
+				if (isDisable && err && err.kind === api.KINDS.CONFLICT && passkeyState.list.length > 0) {
+					// The server refuses before it looks at the password or the code: nothing was used up.
+					ui.notice(totpNotice, "err", "Two-factor authentication stays on: your account has passkeys, and they need it. Remove the passkeys below first; nothing was used up.");
+					$("passkeys-title").focus();
+					return;
+				}
 				reportError(err, "totp", totpNotice);
 				if (err && err.kind === api.KINDS.FORBIDDEN) { passInput.focus(); }
 			})
@@ -693,6 +837,268 @@
 	disableBtn.addEventListener("click", function () {
 		if (!disableAck.checked) { return; }
 		manage(api.totpDisable, "Two-factor authentication is turned off. Signing in needs only the account password again.", true);
+	});
+
+	// ---- passkeys of the account (on top of two-factor; WebAuthn in this browser) ----
+	var passkeyNotice = $("passkey-notice");
+	var passkeyStatusEl = $("passkey-status");
+	var passkeyList = $("passkey-list");
+	var addForm = $("passkey-add-form");
+	var renameForm = $("passkey-rename-form");
+	var removeForm = $("passkey-delete-form");
+	// available: false when the server has no passkeys (404). target: the passkey being renamed or removed.
+	var passkeyState = { loaded: false, available: true, list: [], max: 10, target: null };
+
+	function closePasskeyForms() {
+		passkeyState.target = null;
+		renameForm.hidden = true;
+		removeForm.hidden = true;
+		["passkey-rename-name", "passkey-delete-password", "passkey-delete-code"].forEach(function (id) { $(id).value = ""; ui.markField($(id), false); });
+		$("passkey-rename-current").textContent = "";
+		$("passkey-delete-current").textContent = "";
+		ui.setBusy(renameForm, false);
+		ui.setBusy(removeForm, false);
+	}
+
+	function resetPasskeySection() {
+		abortCeremony();
+		passkeyState = { loaded: false, available: true, list: [], max: 10, target: null };
+		closePasskeyForms();
+		ui.clear(passkeyList);
+		passkeyStatusEl.textContent = "";
+		ui.notice(passkeyNotice, "ok", "");
+		addForm.hidden = true;
+		["passkey-add-name", "passkey-add-password", "passkey-add-code"].forEach(function (id) { $(id).value = ""; ui.markField($(id), false); });
+		ui.setBusy(addForm, false);
+		$("totp-passkeys-hint").hidden = true;
+	}
+
+	function passkeyFor(id) {
+		for (var i = 0; i < passkeyState.list.length; i++) { if (passkeyState.list[i].id === id) { return passkeyState.list[i]; } }
+		return null;
+	}
+
+	function renderPasskeys() {
+		var hadFocus = passkeyList.contains(document.activeElement);
+		ui.clear(passkeyList);
+		var n = passkeyState.list.length;
+		$("totp-passkeys-hint").hidden = n === 0;
+		if (!passkeyState.loaded && totpState !== "unknown") { addForm.hidden = true; return; }
+		if (!passkeyState.available) {
+			passkeyStatusEl.textContent = "Passkeys are not available on this server.";
+			addForm.hidden = true;
+			closePasskeyForms();
+			return;
+		}
+		var text;
+		if (totpState === "unknown") { text = "Passkeys need two-factor authentication, and its state could not be loaded."; }
+		else if (n === 0) { text = totpState === "on" ? "No passkeys yet." : "Turn on two-factor authentication above first: passkeys are added on top of it."; }
+		else { text = n + " of at most " + passkeyState.max + " passkeys."; }
+		if (totpState === "on" && n >= passkeyState.max) { text += " That is the most an account can hold; remove one to add another."; }
+		if (!passkeysSupported) { text += " This browser does not support passkeys, so none can be added or used here" + (n > 0 ? "; you can still rename or remove them." : "."); }
+		passkeyStatusEl.textContent = text;
+		passkeyState.list.forEach(function (p) {
+			var li = ui.el("li", { class: "passkey-item", "data-passkey-id": p.id });
+			var info = ui.el("div");
+			var name = ui.el("p", { class: "passkey-item__name" }, p.name + " ");
+			name.appendChild(p.backedUp
+				? ui.el("span", { class: "badge ok", title: "Backed up by a password manager or the platform: usable on your other devices too" }, "Synced")
+				: ui.el("span", { class: "badge neutral", title: "Kept on one device or security key only" }, "Not synced"));
+			info.appendChild(name);
+			info.appendChild(ui.el("p", { class: "passkey-item__meta" }, "Added " + ui.formatDate(p.createdAt) + " · " +
+				(p.lastUsedAt ? "last used " + ui.formatDate(p.lastUsedAt) : "not used yet")));
+			li.appendChild(info);
+			var actions = ui.el("div", { class: "passkey-item__actions" });
+			actions.appendChild(ui.el("button", { type: "button", class: "btn ghost small", "data-passkey-rename": p.id, "aria-label": "Rename the passkey " + p.name }, "Rename"));
+			actions.appendChild(ui.el("button", { type: "button", class: "btn danger small", "data-passkey-delete": p.id, "aria-label": "Remove the passkey " + p.name }, "Remove"));
+			li.appendChild(actions);
+			passkeyList.appendChild(li);
+		});
+		if (passkeyState.target && !passkeyFor(passkeyState.target)) { closePasskeyForms(); }
+		// An add in progress keeps its form; otherwise it is offered when it can work.
+		if (addForm.getAttribute("aria-busy") !== "true") {
+			addForm.hidden = !(totpState === "on" && passkeysSupported && n < passkeyState.max);
+		}
+		if (hadFocus) { $("passkeys-title").focus(); }
+	}
+
+	function loadPasskeys(message) {
+		var g = generation();
+		return api.passkeys().then(function (r) {
+			if (g !== generation()) { return; }
+			passkeyState.loaded = true;
+			passkeyState.available = true;
+			passkeyState.list = r.passkeys;
+			passkeyState.max = r.max;
+			renderPasskeys();
+			if (message) { ui.notice(passkeyNotice, "ok", message); }
+		}).catch(function (err) {
+			if (g !== generation()) { return; }
+			if (err && err.kind === api.KINDS.NOT_FOUND) {
+				passkeyState.loaded = true;
+				passkeyState.available = false;
+				passkeyState.list = [];
+				renderPasskeys();
+				return;
+			}
+			reportError(err, "passkey", passkeyNotice);
+		});
+	}
+
+	passkeyList.addEventListener("click", function (ev) {
+		var renameBtn = ev.target.closest("button[data-passkey-rename]");
+		var deleteBtn = ev.target.closest("button[data-passkey-delete]");
+		var btn = renameBtn || deleteBtn;
+		if (!btn) { return; }
+		var p = passkeyFor(btn.getAttribute(renameBtn ? "data-passkey-rename" : "data-passkey-delete"));
+		if (!p) { return; }
+		closePasskeyForms();
+		ui.notice(passkeyNotice, "ok", "");
+		passkeyState.target = p.id;
+		if (renameBtn) {
+			$("passkey-rename-current").textContent = p.name;
+			$("passkey-rename-name").value = p.name;
+			renameForm.hidden = false;
+			$("passkey-rename-name").focus();
+			$("passkey-rename-name").select();
+		} else {
+			$("passkey-delete-current").textContent = p.name;
+			removeForm.hidden = false;
+			$("passkey-delete-password").focus();
+		}
+	});
+	$("passkey-rename-cancel").addEventListener("click", function () { closePasskeyForms(); $("passkeys-title").focus(); });
+	$("passkey-delete-cancel").addEventListener("click", function () { closePasskeyForms(); $("passkeys-title").focus(); });
+
+	var NAME_RULE = "A name of 1–64 characters, without control characters.";
+
+	renameForm.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		var id = passkeyState.target;
+		var input = $("passkey-rename-name");
+		if (!id) { closePasskeyForms(); return; }
+		var bad = !api.validPasskeyName(input.value);
+		ui.markField(input, bad, passkeyNotice);
+		if (bad) { ui.notice(passkeyNotice, "err", NAME_RULE); input.focus(); return; }
+		var g = generation();
+		ui.notice(passkeyNotice, "ok", "");
+		ui.setBusy(renameForm, true);
+		api.passkeyRename(id, input.value)
+			.then(function () {
+				if (g !== generation()) { return undefined; }
+				closePasskeyForms();
+				return loadPasskeys("Passkey renamed.");
+			})
+			.catch(function (err) {
+				if (g !== generation()) { return; }
+				ui.setBusy(renameForm, false);
+				if (err && err.kind === api.KINDS.NOT_FOUND) { closePasskeyForms(); ui.notice(passkeyNotice, "err", ui.describeError(err, "passkey-name")); loadPasskeys(""); return; }
+				reportError(err, "passkey-name", passkeyNotice);
+				if (err && err.kind === api.KINDS.INVALID) { ui.markField(input, true, passkeyNotice); input.focus(); }
+			});
+	});
+
+	removeForm.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		var id = passkeyState.target;
+		var passInput = $("passkey-delete-password");
+		var codeInput = $("passkey-delete-code");
+		if (!id) { closePasskeyForms(); return; }
+		var password = passInput.value;
+		var code = codeInput.value.trim();
+		var badPassword = !ui.validPassword(password);
+		var badCode = !looksLikeCode(code);
+		ui.markField(passInput, badPassword, passkeyNotice);
+		ui.markField(codeInput, badCode, passkeyNotice);
+		if (badPassword || badCode) {
+			ui.notice(passkeyNotice, "err", "Enter your account password and a current code (from the app, or a recovery code).");
+			(badPassword ? passInput : codeInput).focus();
+			return;
+		}
+		var p = passkeyFor(id);
+		var g = generation();
+		ui.notice(passkeyNotice, "ok", "");
+		ui.setBusy(removeForm, true);
+		api.passkeyDelete(id, password, code)
+			.then(function () {
+				if (g !== generation()) { return undefined; }
+				closePasskeyForms();
+				return loadPasskeys("Passkey " + (p ? "“" + p.name + "” " : "") + "removed: it no longer signs in to this account. Your device or password manager may still list it; you can delete it there.");
+			})
+			.catch(function (err) {
+				if (g !== generation()) { return; }
+				ui.setBusy(removeForm, false);
+				if (err && err.kind === api.KINDS.NOT_FOUND) { closePasskeyForms(); ui.notice(passkeyNotice, "err", ui.describeError(err, "passkey")); loadPasskeys(""); return; }
+				reportError(err, "passkey", passkeyNotice);
+				if (err && err.kind === api.KINDS.FORBIDDEN) { passInput.focus(); }
+			})
+			.finally(function () {
+				passInput.value = "";
+				codeInput.value = "";
+				password = null;
+			});
+	});
+
+	addForm.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		var nameInput = $("passkey-add-name");
+		var passInput = $("passkey-add-password");
+		var codeInput = $("passkey-add-code");
+		var name = nameInput.value;
+		var password = passInput.value;
+		var code = codeInput.value.trim();
+		var badName = !api.validPasskeyName(name);
+		var badPassword = !ui.validPassword(password);
+		var badCode = !looksLikeCode(code);
+		ui.markField(nameInput, badName, passkeyNotice);
+		ui.markField(passInput, badPassword, passkeyNotice);
+		ui.markField(codeInput, badCode, passkeyNotice);
+		if (badName || badPassword || badCode) {
+			ui.notice(passkeyNotice, "err", badName ? NAME_RULE : "Enter your account password and a current code (from the app, or a recovery code).");
+			(badName ? nameInput : badPassword ? passInput : codeInput).focus();
+			return;
+		}
+		if (!passkeysSupported) { ui.notice(passkeyNotice, "err", "This browser does not support passkeys."); return; }
+		var g = generation();
+		var c = startCeremony();
+		ui.notice(passkeyNotice, "ok", "");
+		ui.setBusy(addForm, true);
+		api.passkeyRegistrationOptions(password, code)
+			.then(function (start) {
+				// The password and the code have done their job; they do not wait on the page.
+				passInput.value = "";
+				codeInput.value = "";
+				password = null;
+				if (g !== generation() || c.signal.aborted) { throw new webauthn.WebAuthnError(webauthn.KINDS.ABORTED); }
+				ui.notice(passkeyNotice, "ok", "Follow your browser's prompt to create the passkey.");
+				return webauthn.create(start.options, c.signal).then(function (credential) {
+					if (g !== generation() || c.signal.aborted) { throw new webauthn.WebAuthnError(webauthn.KINDS.ABORTED); }
+					return api.passkeyRegister(start.registrationId, name, credential);
+				});
+			})
+			.then(function (created) {
+				endCeremony(c);
+				if (g !== generation()) { return undefined; }
+				nameInput.value = "";
+				ui.setBusy(addForm, false);
+				return loadPasskeys("Passkey “" + created.name + "” added. You can now use it to sign in to this web vault; the vault itself still opens only with your vault master password.");
+			})
+			.catch(function (err) {
+				endCeremony(c);
+				if (g !== generation()) { return; }
+				ui.setBusy(addForm, false);
+				if (cancelledByPage(err, c)) { ui.notice(passkeyNotice, "ok", ""); renderPasskeys(); return; }
+				if (isWebAuthnError(err)) { ui.notice(passkeyNotice, "err", describeWebAuthnError(err, "add")); renderPasskeys(); return; }
+				reportError(err, "passkey", passkeyNotice);
+				if (err && err.kind === api.KINDS.FORBIDDEN) { ui.markField(passInput, true, passkeyNotice); passInput.focus(); }
+				if (err && err.kind === api.KINDS.CONFLICT) { loadTotpStatus(); }
+				else { renderPasskeys(); }
+			})
+			.finally(function () {
+				passInput.value = "";
+				codeInput.value = "";
+				password = null;
+			});
 	});
 
 	// ---- the second factor where a password confirmation asks for it ----
@@ -800,5 +1206,6 @@
 	// Fresh page load: nothing is persisted, so we always start signed out.
 	$("note-idle-minutes").textContent = String(Math.round(cfg.idleTimeoutMs / 60000));
 	renderCodeFields();
+	passkeySignin.hidden = !passkeysSupported;
 	showLogin("", "ok");
 })();

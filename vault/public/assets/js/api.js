@@ -54,7 +54,8 @@
 		TOO_LARGE: "too_large",         // 413
 		RATE_LIMITED: "rate_limited",   // 429
 		UNAVAILABLE: "unavailable",     // 503
-		CONFLICT: "conflict",           // 409: the server holds a newer revision than the upload was based on
+		CONFLICT: "conflict",           // 409: the server holds a newer revision than the upload was based on (or a state conflict)
+		GONE: "gone",                   // 410: a single-use ceremony (passkey registration) expired or was used
 		UNEXPECTED: "unexpected"        // anything else, incl. malformed bodies
 	});
 
@@ -95,6 +96,7 @@
 			case 403: return KINDS.FORBIDDEN;
 			case 404: return KINDS.NOT_FOUND;
 			case 409: return KINDS.CONFLICT;
+			case 410: return KINDS.GONE;
 			case 413: return KINDS.TOO_LARGE;
 			case 429: return KINDS.RATE_LIMITED;
 			case 503: return KINDS.UNAVAILABLE;
@@ -202,8 +204,22 @@
 	// 43 unpadded Base64URL characters, as the refresh token is.
 	var MFA_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
 
+	// How the second step can be completed. Read tolerantly: unknown values are ignored (a newer
+	// server may offer more), and an absent or unreadable list means what every server since phase 7
+	// accepts — a TOTP or recovery code. Nothing here can skip the step; it only decides whether the
+	// page also offers a passkey.
+	var MFA_METHODS = ["totp", "recovery", "passkey"];
+	function parseMethods(list) {
+		if (!Array.isArray(list) || list.length > 16) { return ["totp", "recovery"]; }
+		var out = [];
+		list.forEach(function (m) {
+			if (typeof m === "string" && MFA_METHODS.indexOf(m) >= 0 && out.indexOf(m) < 0) { out.push(m); }
+		});
+		return out;
+	}
+
 	// Resolves to { signedIn: true } when the password alone signs in, or
-	// { signedIn: false, mfaToken, mfaTokenExpiresAt } when the account has a second factor
+	// { signedIn: false, mfaToken, mfaTokenExpiresAt, methods } when the account has a second factor
 	// (HTTP 202: the password was accepted, no session exists yet). The status decides; a 202 that
 	// carries session tokens, or a 200 that carries a challenge, is refused.
 	function login(email, password) {
@@ -218,7 +234,7 @@
 						(b.method !== undefined && b.method !== "totp")) {
 						throw new ApiError(KINDS.UNEXPECTED, 202);
 					}
-					return { signedIn: false, mfaToken: b.mfaToken, mfaTokenExpiresAt: new Date(exp) };
+					return { signedIn: false, mfaToken: b.mfaToken, mfaTokenExpiresAt: new Date(exp), methods: parseMethods(b.methods) };
 				}
 				if (b && b.mfaToken !== undefined) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
 				adoptTokens(b);
@@ -235,6 +251,61 @@
 		}
 		clearSession();
 		return request("POST", "/v1/auth/login/totp", { body: { mfaToken: mfaToken, code: code } })
+			.then(function (r) { adoptTokens(r.body); generation++; return true; })
+			.catch(function (err) { clearSession(); throw err; });
+	}
+
+	// ---- passkeys at sign-in (WebAuthn; the options and credentials are the standard JSON) ----
+	// The ceremony objects are checked for their shape only; the browser and the server check the rest.
+	var CEREMONY_ID_RE = /^[A-Za-z0-9_-]{43}$/;
+	var MAX_CREDENTIAL_JSON = 15 * 1024; // the server takes 16 KiB for the whole body
+	function parseOptions(options, status) {
+		if (!options || typeof options !== "object" || Array.isArray(options) || typeof options.challenge !== "string" ||
+			options.challenge.length < 16 || options.challenge.length > 1024) {
+			throw new ApiError(KINDS.UNEXPECTED, status);
+		}
+		return options;
+	}
+	function credentialOk(credential) {
+		if (!credential || typeof credential !== "object" || typeof credential.id !== "string") { return false; }
+		try { return JSON.stringify(credential).length <= MAX_CREDENTIAL_JSON; } catch (e) { return false; }
+	}
+
+	// Second step with a passkey: the request options for the challenge token from login().
+	function loginPasskeyOptions(mfaToken) {
+		if (typeof mfaToken !== "string" || !MFA_TOKEN_RE.test(mfaToken)) { return Promise.reject(new ApiError(KINDS.UNAUTHENTICATED, 401)); }
+		return request("POST", "/v1/auth/login/passkey/options", { body: { mfaToken: mfaToken } })
+			.then(function (r) { return parseOptions(r.body && r.body.options, r.status); });
+	}
+
+	// Second step with a passkey: the assertion signs in (the same session as loginTotp).
+	function loginPasskey(mfaToken, credential) {
+		if (typeof mfaToken !== "string" || !MFA_TOKEN_RE.test(mfaToken) || !credentialOk(credential)) {
+			return Promise.reject(new ApiError(KINDS.UNAUTHENTICATED, 401));
+		}
+		clearSession();
+		return request("POST", "/v1/auth/login/passkey", { body: { mfaToken: mfaToken, credential: credential } })
+			.then(function (r) { adoptTokens(r.body); generation++; return true; })
+			.catch(function (err) { clearSession(); throw err; });
+	}
+
+	// Sign-in without email and password: a ceremony for a discoverable passkey. Nothing about
+	// any account is asked or told.
+	function passkeySignInOptions() {
+		return request("POST", "/v1/auth/passkey/options").then(function (r) {
+			var b = r.body;
+			if (!b || typeof b.assertionId !== "string" || !CEREMONY_ID_RE.test(b.assertionId)) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
+			return { assertionId: b.assertionId, options: parseOptions(b.options, r.status) };
+		});
+	}
+
+	// The passkey counts as both factors: the answer is a session.
+	function passkeySignIn(assertionId, credential) {
+		if (typeof assertionId !== "string" || !CEREMONY_ID_RE.test(assertionId) || !credentialOk(credential)) {
+			return Promise.reject(new ApiError(KINDS.UNAUTHENTICATED, 401));
+		}
+		clearSession();
+		return request("POST", "/v1/auth/passkey", { body: { assertionId: assertionId, credential: credential } })
 			.then(function (r) { adoptTokens(r.body); generation++; return true; })
 			.catch(function (err) { clearSession(); throw err; });
 	}
@@ -457,6 +528,78 @@
 		return authed("POST", "/v1/account/totp/recovery-codes", { body: { password: password, code: code } }).then(parseRecoveryCodes);
 	}
 
+	// ---- passkeys of the signed-in account ----
+	// Mirrors the server's name rule (WebAuthnOptions.NormalizeName): trimmed, 1-64 characters
+	// (Unicode scalar values), no lone surrogates, no control characters, no line or paragraph
+	// separators, no bidirectional marks, overrides or isolates. The server decides.
+	var PASSKEY_NAME_MAX = 64;
+	var PASSKEY_NAME_BAD_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069\u200e\u200f\u061c]/;
+	var LONE_SURROGATE_RE = /[\ud800-\udbff](?![\udc00-\udfff])|(?:^|[^\ud800-\udbff])[\udc00-\udfff]/;
+	function validPasskeyName(name) {
+		if (typeof name !== "string") { return false; }
+		var t = name.trim();
+		return t.length >= 1 && Array.from(t).length <= PASSKEY_NAME_MAX && !PASSKEY_NAME_BAD_RE.test(t) && !LONE_SURROGATE_RE.test(t);
+	}
+	function parsePasskey(p, status) {
+		var createdAt = parseUtc(p && p.createdAt);
+		var lastUsed = !p || p.lastUsedAt === undefined || p.lastUsedAt === null ? null : parseUtc(p.lastUsedAt);
+		if (!p || typeof p !== "object" || !UUID_RE.test(String(p.id)) || !isNonEmptyString(p.name, 256) || !Number.isFinite(createdAt) ||
+			typeof p.backedUp !== "boolean" || (lastUsed !== null && !Number.isFinite(lastUsed))) {
+			throw new ApiError(KINDS.UNEXPECTED, status);
+		}
+		return { id: p.id, name: p.name, createdAt: new Date(createdAt), lastUsedAt: lastUsed === null ? null : new Date(lastUsed), backedUp: p.backedUp };
+	}
+
+	// { passkeys: [...oldest first], max }. NOT_FOUND: the server has no passkeys at all.
+	function passkeys() {
+		return authed("GET", "/v1/account/passkeys").then(function (r) {
+			var b = r.body;
+			if (!b || !Array.isArray(b.passkeys) || b.passkeys.length > 100 || !Number.isInteger(b.max) || b.max < 0 || b.max > 100) {
+				throw new ApiError(KINDS.UNEXPECTED, r.status);
+			}
+			return { passkeys: b.passkeys.map(function (p) { return parsePasskey(p, r.status); }), max: b.max };
+		});
+	}
+
+	function confirmation(password, code) {
+		return typeof password === "string" && password.length > 0 && password.length <= cfg.passwordMaxLength &&
+			typeof code === "string" && code.length > 0 && code.length <= 32;
+	}
+
+	// Starts a registration (password + TOTP or recovery code): { registrationId, options }.
+	function passkeyRegistrationOptions(password, code) {
+		if (!confirmation(password, code)) { return Promise.reject(new ApiError(KINDS.FORBIDDEN, 403)); }
+		return authed("POST", "/v1/account/passkeys/registration/options", { body: { password: password, code: code } }).then(function (r) {
+			var b = r.body;
+			if (!b || typeof b.registrationId !== "string" || !CEREMONY_ID_RE.test(b.registrationId)) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
+			return { registrationId: b.registrationId, options: parseOptions(b.options, r.status) };
+		});
+	}
+
+	// Completes it with the new credential and a name: the stored passkey.
+	function passkeyRegister(registrationId, name, credential) {
+		if (typeof registrationId !== "string" || !CEREMONY_ID_RE.test(registrationId)) { return Promise.reject(new ApiError(KINDS.GONE, 410)); }
+		if (!validPasskeyName(name) || !credentialOk(credential)) { return Promise.reject(new ApiError(KINDS.INVALID, 400)); }
+		return authed("POST", "/v1/account/passkeys/registration", { body: { registrationId: registrationId, name: name.trim(), credential: credential } })
+			.then(function (r) {
+				if (r.status !== 201) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
+				return parsePasskey(r.body, r.status);
+			});
+	}
+
+	// POST .../rename, not PATCH: the API's CORS policy allows no PATCH from a browser.
+	function passkeyRename(id, name) {
+		if (!UUID_RE.test(String(id))) { return Promise.reject(new ApiError(KINDS.NOT_FOUND, 404)); }
+		if (!validPasskeyName(name)) { return Promise.reject(new ApiError(KINDS.INVALID, 400)); }
+		return authed("POST", "/v1/account/passkeys/" + encodeURIComponent(id) + "/rename", { body: { name: name.trim() } }).then(function () { return true; });
+	}
+
+	function passkeyDelete(id, password, code) {
+		if (!UUID_RE.test(String(id))) { return Promise.reject(new ApiError(KINDS.NOT_FOUND, 404)); }
+		if (!confirmation(password, code)) { return Promise.reject(new ApiError(KINDS.FORBIDDEN, 403)); }
+		return authed("POST", "/v1/account/passkeys/" + encodeURIComponent(id) + "/delete", { body: { password: password, code: code } }).then(function () { return true; });
+	}
+
 	function optionalCode(code) {
 		return code === undefined || code === null || code === "" ? null : code;
 	}
@@ -533,6 +676,16 @@
 		verifyEmail: verifyEmail,
 		login: login,
 		loginTotp: loginTotp,
+		loginPasskeyOptions: loginPasskeyOptions,
+		loginPasskey: loginPasskey,
+		passkeySignInOptions: passkeySignInOptions,
+		passkeySignIn: passkeySignIn,
+		passkeys: passkeys,
+		passkeyRegistrationOptions: passkeyRegistrationOptions,
+		passkeyRegister: passkeyRegister,
+		passkeyRename: passkeyRename,
+		passkeyDelete: passkeyDelete,
+		validPasskeyName: validPasskeyName,
 		totpStatus: totpStatus,
 		totpEnroll: totpEnroll,
 		totpConfirm: totpConfirm,

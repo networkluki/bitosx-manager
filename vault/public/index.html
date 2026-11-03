@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Sign in — BitosX vault</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.6.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.7.0" />
     <meta name="theme-color" content="#26292E" />
     <script src="/assets/js/theme-init.js"></script>
 </head>
@@ -56,6 +56,13 @@
             <span class="spacer"></span>
           </div>
         </form>
+        <div class="passkey-signin" id="passkey-signin" hidden>
+          <p class="passkey-signin__or">or</p>
+          <div class="form-actions">
+            <button class="btn ghost" type="button" id="passkey-signin-submit">Sign in with a passkey</button>
+          </div>
+          <p class="hint">Without email and password, with a passkey you added on your account page. It signs in to the account only: opening the vault still needs your vault master password.</p>
+        </div>
         <form id="code-form" novalidate hidden>
           <p class="help">This account has two-factor authentication. Enter the code from your authenticator app, or one of your recovery codes. The code goes only to the BitosX server, together with the one-time token it issued for this sign-in, which is valid for a few minutes.</p>
           <div class="field">
@@ -64,6 +71,7 @@
           </div>
           <div class="form-actions">
             <button class="btn" type="submit" id="code-submit">Continue</button>
+            <button class="btn ghost" type="button" id="code-passkey" hidden>Use a passkey</button>
             <button class="btn ghost" type="button" id="code-cancel">Start over</button>
           </div>
         </form>
@@ -182,11 +190,64 @@
           </div>
           <div class="field">
             <label class="vault-editor__check"><input id="totp-disable-ack" type="checkbox" /> I want to turn two-factor authentication off (signing in then needs only the account password)</label>
+            <span class="hint" id="totp-passkeys-hint" hidden>Your account has passkeys, and they need two-factor authentication: remove them below before turning it off.</span>
           </div>
           <div class="form-actions">
             <button class="btn ghost small" type="button" id="totp-regenerate">New recovery codes</button>
             <span class="spacer"></span>
             <button class="btn danger small" type="button" id="totp-disable" disabled>Turn off</button>
+          </div>
+        </form>
+
+        <h2 class="panel-subhead" id="passkeys-title" tabindex="-1">Passkeys</h2>
+        <p class="help">A passkey signs you in to this web vault with your device's screen lock, a password manager or a security key: as the second step after your account password, or on its own without email and password. Passkeys come <strong>on top of two-factor authentication</strong>: they need it to be on, it cannot be turned off while you have passkeys, and the desktop app keeps signing in with your authenticator code. A passkey signs in to the <strong>account only</strong>; opening the vault still needs your <strong>vault master password</strong>.</p>
+        <div class="notice" id="passkey-notice" role="status"></div>
+        <p class="vault-status" id="passkey-status"></p>
+        <ul class="passkey-list" id="passkey-list"></ul>
+
+        <form id="passkey-rename-form" novalidate hidden>
+          <div class="field">
+            <label for="passkey-rename-name">New name for <span id="passkey-rename-current"></span></label>
+            <input id="passkey-rename-name" name="name" type="text" autocomplete="off" spellcheck="false" maxlength="64" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn small" type="submit" id="passkey-rename-submit">Save name</button>
+            <button class="btn ghost small" type="button" id="passkey-rename-cancel">Cancel</button>
+          </div>
+        </form>
+
+        <form id="passkey-delete-form" novalidate hidden>
+          <p class="help">Remove <strong id="passkey-delete-current"></strong> from your account: confirm with your account password and a current code (from the app, or a recovery code). It then no longer signs in; your device or password manager may keep a copy you can delete there.</p>
+          <div class="field">
+            <label for="passkey-delete-password">Account password</label>
+            <input id="passkey-delete-password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required />
+          </div>
+          <div class="field">
+            <label for="passkey-delete-code">Code</label>
+            <input id="passkey-delete-code" name="code" type="text" inputmode="text" autocapitalize="none" autocomplete="one-time-code" spellcheck="false" maxlength="12" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn danger small" type="submit" id="passkey-delete-submit">Remove passkey</button>
+            <button class="btn ghost small" type="button" id="passkey-delete-cancel">Cancel</button>
+          </div>
+        </form>
+
+        <form id="passkey-add-form" novalidate hidden>
+          <p class="help">Add a passkey: give it a name you will recognise, confirm with your account password and a current code, then follow your browser's prompt.</p>
+          <div class="field">
+            <label for="passkey-add-name">Name</label>
+            <input id="passkey-add-name" name="name" type="text" autocomplete="off" spellcheck="false" maxlength="64" placeholder="Laptop, Phone, Security key" required />
+          </div>
+          <div class="field">
+            <label for="passkey-add-password">Account password</label>
+            <input id="passkey-add-password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required />
+          </div>
+          <div class="field">
+            <label for="passkey-add-code">Code</label>
+            <input id="passkey-add-code" name="code" type="text" inputmode="text" autocapitalize="none" autocomplete="one-time-code" spellcheck="false" maxlength="12" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn" type="submit" id="passkey-add-submit">Add a passkey</button>
           </div>
         </form>
 
@@ -327,7 +388,7 @@
   </main>
 
   <footer>
-    <div class="footer-version">web v0.6.0</div>
+    <div class="footer-version">web v0.7.0</div>
     <div class="footer-links">
       <a href="https://bitosx.se/#security" rel="noopener noreferrer">How your data is protected</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">API source</a>
@@ -340,6 +401,7 @@
   <script src="/assets/js/config.js"></script>
   <script src="/assets/js/api.js"></script>
   <script src="/assets/js/ui.js"></script>
+  <script src="/assets/js/webauthn.js"></script>
   <script src="/assets/vendor/hash-wasm/argon2.umd.min.js"></script>
   <script src="/assets/js/vault-crypto.js"></script>
   <script src="/assets/js/account.js" defer></script>
