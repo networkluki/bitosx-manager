@@ -35,6 +35,15 @@ function createMockApi(options = {}) {
 	const totp = new Map(); // accountId -> { secret (Buffer), confirmed, lastUsedStep, recoveryCodes: Map(code -> used) }
 	const mfaChallenges = new Map(); // mfaToken -> { accountId, expiresAt, attempts, consumed, password }
 	const lastRevisions = new Map(); // accountId -> the last revision ever stored (revisions never restart)
+	// Passkeys (phase 10). The mock checks what a WebAuthn server checks that a browser could get
+	// wrong: the client data (type, challenge, origin), the RP ID hash, the flags, and the ES256
+	// signature against the public key the registration delivered (toJSON's response.publicKey).
+	const passkeys = new Map(); // accountId -> [{ id, credentialId, publicKey (DER SPKI), name, createdAt, lastUsedAt, backedUp, signCount }]
+	const userHandles = new Map(); // accountId -> base64url of 32 random bytes
+	const ceremonies = new Map(); // registrationId / assertionId -> { purpose, accountId, challenge, expiresAt, used }
+	const passkeyMax = 10;
+	const rpId = options.rpId ?? "localhost";
+	const webauthn = { origin: options.webOrigin ?? null }; // the page origin the client data must name (a test sets it)
 
 	const accessLifetimeMs = options.accessLifetimeMs ?? 15 * 60 * 1000;
 	// JwtOptions.ClockSkew: the server still accepts an access token this long after its expiry.
@@ -42,7 +51,7 @@ function createMockApi(options = {}) {
 	// TotpOptions: the digit count is configurable (6..8, default 6); a challenge allows 5 wrong codes.
 	const totpDigits = options.totpDigits ?? 6;
 	const mfaMaxAttempts = 5;
-	const flags = { emailDelivery: true, rateLimitLogin: false, rateLimitForgot: false, failHealth: false, totpCapability: true, capacity503: false };
+	const flags = { emailDelivery: true, rateLimitLogin: false, rateLimitForgot: false, failHealth: false, totpCapability: true, capacity503: false, passkeyCapability: true };
 
 	function seedAccount(email, password) {
 		const id = crypto.randomUUID();
@@ -167,21 +176,85 @@ function createMockApi(options = {}) {
 		return { sessionId: sid, session: s };
 	}
 
-	// The real server caps the bodies of these endpoints at 4 KiB (RejectOversizedBody); the rest are
-	// bounded by Kestrel's 64 KiB, and only the envelope upload may be ~22 MiB.
+	// The real server caps the bodies of these endpoints at 4 KiB (RejectOversizedBody), the three
+	// that carry a WebAuthn credential at 16 KiB; the rest are bounded by Kestrel's 64 KiB, and only
+	// the envelope upload may be ~22 MiB.
 	const SMALL_BODY = new Set(["/v1/auth/forgot-password", "/v1/auth/reset-password", "/v1/auth/login", "/v1/auth/login/totp",
 		"/v1/auth/refresh", "/v1/account/delete", "/v1/account/password", "/v1/account/totp/enroll", "/v1/account/totp/confirm",
-		"/v1/account/totp/disable", "/v1/account/totp/recovery-codes"]);
+		"/v1/account/totp/disable", "/v1/account/totp/recovery-codes", "/v1/auth/login/passkey/options", "/v1/auth/passkey/options",
+		"/v1/account/passkeys/registration/options"]);
+	const CREDENTIAL_BODY = new Set(["/v1/auth/login/passkey", "/v1/auth/passkey", "/v1/account/passkeys/registration"]);
+	const bodyLimit = (path) => SMALL_BODY.has(path) || /^\/v1\/account\/passkeys\/[^/]+\/(rename|delete)$/.test(path) ? 4096 : CREDENTIAL_BODY.has(path) ? 16384 : 64 * 1024;
 	function parseBody(raw, limit) {
 		if (!raw) { return {}; }
 		if (Buffer.byteLength(raw) > limit) { return { __tooLarge: true }; }
 		try { return JSON.parse(raw); } catch { return { __malformed: true }; }
 	}
 
+	// ---- WebAuthn, as far as a mock server needs it ----
+	function requestOptions(challenge, list, userVerification) {
+		return { challenge, timeout: 300000, rpId, allowCredentials: list.map(p => ({ type: "public-key", id: p.credentialId })), userVerification, hints: [] };
+	}
+	function publicPasskey(p) {
+		const out = { id: p.id, name: p.name, createdAt: p.createdAt, backedUp: p.backedUp };
+		if (p.lastUsedAt) { out.lastUsedAt = p.lastUsedAt; }
+		return out;
+	}
+	function fromB64u(text) {
+		if (typeof text !== "string" || !/^[A-Za-z0-9_-]*$/.test(text)) { return null; }
+		return Buffer.from(text, "base64url");
+	}
+	// The client data must be this ceremony's: type, challenge and the page origin.
+	function clientDataOk(response, type, challenge) {
+		const raw = fromB64u(response && response.clientDataJSON);
+		if (!raw) { return false; }
+		let cd;
+		try { cd = JSON.parse(raw.toString("utf8")); } catch { return false; }
+		return cd.type === type && cd.challenge === challenge && (webauthn.origin === null || cd.origin === webauthn.origin);
+	}
+	// authenticatorData: rpIdHash(32) flags(1) signCount(4) ...
+	function authDataOk(authData, requireUv) {
+		if (!authData || authData.length < 37) { return null; }
+		if (!authData.subarray(0, 32).equals(crypto.createHash("sha256").update(rpId).digest())) { return null; }
+		const flags = authData[32];
+		if (!(flags & 0x01) || (requireUv && !(flags & 0x04))) { return null; }
+		return { flags, signCount: authData.readUInt32BE(33) };
+	}
+	function verifyRegistration(credential, challenge) {
+		if (!credential || credential.type !== "public-key" || typeof credential.id !== "string" || credential.rawId !== credential.id) { return null; }
+		const r = credential.response || {};
+		if (!clientDataOk(r, "webauthn.create", challenge) || typeof r.attestationObject !== "string") { return null; }
+		const authData = fromB64u(r.authenticatorData);
+		const ad = authDataOk(authData, true);
+		const spki = fromB64u(r.publicKey);
+		if (!ad || !spki || r.publicKeyAlgorithm !== -7) { return null; }
+		try { crypto.createPublicKey({ key: spki, format: "der", type: "spki" }); } catch { return null; }
+		return { credentialId: credential.id, publicKey: spki, backedUp: !!(ad.flags & 0x10), signCount: ad.signCount };
+	}
+	function verifyAssertion(credential, challenge, list, requireUv) {
+		if (!credential || credential.type !== "public-key" || typeof credential.id !== "string" || credential.rawId !== credential.id) { return null; }
+		const pk = list.find(p => p.credentialId === credential.id);
+		const r = credential.response || {};
+		if (!pk || !clientDataOk(r, "webauthn.get", challenge)) { return null; }
+		const authData = fromB64u(r.authenticatorData);
+		const ad = authDataOk(authData, requireUv);
+		const sig = fromB64u(r.signature);
+		if (!ad || !sig) { return null; }
+		const signed = Buffer.concat([authData, crypto.createHash("sha256").update(fromB64u(r.clientDataJSON)).digest()]);
+		let ok = false;
+		try { ok = crypto.verify("sha256", signed, crypto.createPublicKey({ key: pk.publicKey, format: "der", type: "spki" }), sig); } catch { ok = false; }
+		if (!ok) { return null; }
+		if ((ad.signCount !== 0 || pk.signCount !== 0) && ad.signCount <= pk.signCount) { return null; } // a possible clone
+		pk.signCount = ad.signCount;
+		pk.backedUp = !!(ad.flags & 0x10);
+		pk.lastUsedAt = new Date(now()).toISOString();
+		return pk;
+	}
+
 	// Returns { status, contentType, body, headers? }
 	function handle(method, path, headers, rawBody) {
 		const isUpload = method === "PUT" && path === "/v1/sync/envelope";
-		const body = parseBody(rawBody, isUpload ? 23 * 1024 * 1024 : SMALL_BODY.has(path) ? 4096 : 64 * 1024);
+		const body = parseBody(rawBody, isUpload ? 23 * 1024 * 1024 : bodyLimit(path));
 		calls.push({ method, path, body, headers });
 		if (body.__tooLarge) { return problem(413, "Payload Too Large", "Request body too large."); }
 		if (body.__malformed) { return problem(400, "Bad Request", "Malformed JSON."); }
@@ -262,8 +335,13 @@ function createMockApi(options = {}) {
 				if (!flags.totpCapability) { return problem(503, "Service unavailable", "Two-factor sign-in is temporarily unavailable."); }
 				const token = crypto.randomBytes(32).toString("base64url");
 				mfaChallenges.set(token, { accountId: acct.id, expiresAt: now() + 5 * 60000, attempts: 0, consumed: false, password: acct.password, userAgent: headers["user-agent"] });
-				// (The response states the same expiry.)
-				return json(202, { mfaToken: token, mfaTokenExpiresAt: new Date(now() + 5 * 60000).toISOString(), method: "totp" });
+				// (The response states the same expiry.) `methods` lists the passkey only when the account has one.
+				const methods = ["totp", "recovery"];
+				if (flags.passkeyCapability && (passkeys.get(acct.id) || []).length > 0) { methods.push("passkey"); }
+				const answer = { mfaToken: token, mfaTokenExpiresAt: new Date(now() + 5 * 60000).toISOString(), method: "totp" };
+				if (!options.legacyLogin) { answer.methods = methods; }
+				if (flags.methodsOverride !== undefined) { answer.methods = flags.methodsOverride; } // a test's malformed or future list
+				return json(202, answer);
 			}
 			const sid = seedSession(acct.id, 0);
 			return json(200, issueTokens(sid));
@@ -285,6 +363,58 @@ function createMockApi(options = {}) {
 			ch.consumed = true;
 			const sid = seedSession(acct.id, 0);
 			return json(200, issueTokens(sid));
+		}
+
+		const passkeyRoute = path.startsWith("/v1/auth/login/passkey") || path.startsWith("/v1/auth/passkey") || path.startsWith("/v1/account/passkeys");
+		if (passkeyRoute && !flags.passkeyCapability) { return problem(404, "Not Found", "Not found."); }
+		if (method === "POST" && path === "/v1/auth/login/passkey/options") {
+			const generic = () => problem(401, "Unauthorized", "Passkey sign-in failed.");
+			const ch = typeof body.mfaToken === "string" ? mfaChallenges.get(body.mfaToken) : undefined;
+			if (!ch || ch.consumed || ch.expiresAt <= now()) { return generic(); }
+			const list = passkeys.get(ch.accountId) || [];
+			if (list.length === 0) { return generic(); }
+			ch.passkeyChallenge = b64u(crypto.randomBytes(32)); // replaces the previous one of this token
+			return json(200, { options: requestOptions(ch.passkeyChallenge, list, "preferred") });
+		}
+		if (method === "POST" && path === "/v1/auth/login/passkey") {
+			const generic = () => problem(401, "Unauthorized", "Passkey sign-in failed.");
+			const ch = typeof body.mfaToken === "string" ? mfaChallenges.get(body.mfaToken) : undefined;
+			if (!ch || ch.consumed || ch.expiresAt <= now()) { return generic(); }
+			// The attempt is reserved before anything is verified, exactly like a code.
+			ch.attempts++;
+			if (ch.attempts >= mfaMaxAttempts) { ch.consumed = true; }
+			const challenge = ch.passkeyChallenge;
+			ch.passkeyChallenge = null; // single use, whatever the outcome
+			const acct = [...accounts.values()].find(a => a.id === ch.accountId);
+			if (!challenge || !acct || acct.password !== ch.password) { return generic(); }
+			const pk = verifyAssertion(body.credential, challenge, passkeys.get(acct.id) || [], false);
+			if (!pk) { return generic(); }
+			ch.consumed = true;
+			return json(200, issueTokens(seedSession(acct.id, 0)));
+		}
+		if (method === "POST" && path === "/v1/auth/passkey/options") {
+			const id = b64u(crypto.randomBytes(32));
+			const challenge = b64u(crypto.randomBytes(32));
+			ceremonies.set(id, { purpose: "passwordless", accountId: null, challenge, expiresAt: now() + 5 * 60000, used: false });
+			return json(200, { assertionId: id, options: requestOptions(challenge, [], "required") });
+		}
+		if (method === "POST" && path === "/v1/auth/passkey") {
+			const generic = () => problem(401, "Unauthorized", "Passkey sign-in failed.");
+			const c = typeof body.assertionId === "string" ? ceremonies.get(body.assertionId) : undefined;
+			if (!c || c.purpose !== "passwordless" || c.used || c.expiresAt <= now()) { return generic(); }
+			c.used = true;
+			const owner = body.credential && typeof body.credential.id === "string"
+				? [...passkeys.entries()].find(([, list]) => list.some(p => p.credentialId === body.credential.id)) : undefined;
+			if (!owner) { return generic(); }
+			const [accountId, list] = owner;
+			const acct = [...accounts.values()].find(a => a.id === accountId);
+			const t = totp.get(accountId);
+			if (!acct || !acct.verified || !t || !t.confirmed) { return generic(); }
+			const response = body.credential.response || {};
+			if (response.userHandle !== userHandles.get(accountId)) { return generic(); }
+			const pk = verifyAssertion(body.credential, c.challenge, list, true);
+			if (!pk) { return generic(); }
+			return json(200, issueTokens(seedSession(accountId, 0)));
 		}
 
 		if (method === "POST" && path === "/v1/auth/refresh") {
@@ -336,6 +466,9 @@ function createMockApi(options = {}) {
 			}
 			if (method === "POST" && (path === "/v1/account/totp/disable" || path === "/v1/account/totp/recovery-codes")) {
 				if (!t || !t.confirmed) { return problem(409, "Conflict", "Two-factor authentication is not enabled."); }
+				if (path === "/v1/account/totp/disable" && (passkeys.get(acct.id) || []).length > 0) {
+					return problem(409, "Conflict", "The account has passkeys. Remove the passkeys first.");
+				}
 				if (typeof body.password !== "string" || body.password !== acct.password) { return forbidden(); }
 				if (typeof body.code !== "string" || !consumeCode(t, body.code)) { return forbidden(); }
 				if (path === "/v1/account/totp/disable") {
@@ -346,6 +479,69 @@ function createMockApi(options = {}) {
 				const codes = newRecoveryCodes();
 				t.recoveryCodes = new Map(codes.map(c => [c, false]));
 				return json(200, { recoveryCodes: codes });
+			}
+			return problem(404, "Not Found", "Not found.");
+		}
+		if (path.startsWith("/v1/account/passkeys")) {
+			const acct = [...accounts.values()].find(a => a.id === auth.session.accountId);
+			const list = passkeys.get(acct.id) || [];
+			const t = totp.get(acct.id);
+			const forbidden = () => problem(403, "Forbidden", "Password confirmation failed.");
+			const notFound = () => problem(404, "Not found", "Passkey not found.");
+			const checkFactors = () => typeof body.password === "string" && body.password === acct.password && typeof body.code === "string" && consumeCode(t, body.code);
+			if (method === "GET" && path === "/v1/account/passkeys") {
+				return json(200, { passkeys: list.map(publicPasskey), max: passkeyMax });
+			}
+			if (method === "POST" && path === "/v1/account/passkeys/registration/options") {
+				if (!t || !t.confirmed) { return problem(409, "Conflict", "Two-factor authentication is required before a passkey can be added."); }
+				if (list.length >= passkeyMax) { return problem(409, "Conflict", "The account already has the most passkeys allowed."); }
+				if (!checkFactors()) { return forbidden(); }
+				if (!userHandles.has(acct.id)) { userHandles.set(acct.id, b64u(crypto.randomBytes(32))); }
+				const id = b64u(crypto.randomBytes(32));
+				const challenge = b64u(crypto.randomBytes(32));
+				ceremonies.set(id, { purpose: "register", accountId: acct.id, challenge, expiresAt: now() + 5 * 60000, used: false });
+				return json(200, { registrationId: id, options: {
+					rp: { id: rpId, name: "BitosX" },
+					user: { name: acct.email, id: userHandles.get(acct.id), displayName: acct.email },
+					challenge,
+					pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -8 }, { type: "public-key", alg: -257 }],
+					timeout: 300000, attestation: "none", attestationFormats: [],
+					authenticatorSelection: { residentKey: "required", requireResidentKey: true, userVerification: "required" },
+					hints: [],
+					excludeCredentials: list.map(p => ({ type: "public-key", id: p.credentialId }))
+				} });
+			}
+			if (method === "POST" && path === "/v1/account/passkeys/registration") {
+				const c = typeof body.registrationId === "string" ? ceremonies.get(body.registrationId) : undefined;
+				if (!c || c.purpose !== "register" || c.accountId !== acct.id || c.used || c.expiresAt <= now()) {
+					return problem(410, "Gone", "The passkey registration expired or was already used. Start again.");
+				}
+				const name = normalizePasskeyName(body.name);
+				if (name === null) { return problem(400, "Invalid request", "A passkey name must be 1-64 characters without control characters."); }
+				c.used = true;
+				if (!t || !t.confirmed) { return problem(409, "Conflict", "Two-factor authentication is required before a passkey can be added."); }
+				if (list.length >= passkeyMax) { return problem(409, "Conflict", "The account already has the most passkeys allowed."); }
+				const reg = verifyRegistration(body.credential, c.challenge);
+				if (!reg || [...passkeys.values()].some(l => l.some(p => p.credentialId === reg.credentialId))) {
+					return problem(400, "Invalid request", "The passkey could not be verified.");
+				}
+				const pk = Object.assign(reg, { id: crypto.randomUUID(), name, createdAt: new Date(now()).toISOString(), lastUsedAt: null });
+				passkeys.set(acct.id, list.concat([pk]));
+				return json(201, { id: pk.id, name: pk.name, createdAt: pk.createdAt, backedUp: pk.backedUp });
+			}
+			const pm = /^\/v1\/account\/passkeys\/([0-9a-f-]{36})\/(rename|delete)$/i.exec(path);
+			if (method === "POST" && pm) {
+				const pk = list.find(p => p.id === pm[1]);
+				if (!pk) { return notFound(); }
+				if (pm[2] === "rename") {
+					const name = normalizePasskeyName(body.name);
+					if (name === null) { return problem(400, "Invalid request", "A passkey name must be 1-64 characters without control characters."); }
+					pk.name = name;
+					return noContent();
+				}
+				if (!t || !t.confirmed || !checkFactors()) { return forbidden(); }
+				passkeys.set(acct.id, list.filter(p => p !== pk));
+				return noContent();
 			}
 			return problem(404, "Not Found", "Not found.");
 		}
@@ -386,6 +582,8 @@ function createMockApi(options = {}) {
 			accounts.delete(acct.email.toLowerCase());
 			revokeAllSessions(acct.id);
 			envelopes.delete(acct.id);
+			passkeys.delete(acct.id);
+			userHandles.delete(acct.id);
 			for (const [t, e] of resetTokens) { if (e === acct.email.toLowerCase()) { resetTokens.delete(t); } }
 			return noContent();
 		}
@@ -451,7 +649,18 @@ function createMockApi(options = {}) {
 		return problem(404, "Not Found", "Not found.");
 	}
 
-	return { handle, calls, flags, clock, now, totpDigits, seedAccount, seedVerificationToken, seedResetToken, seedSession, seedEnvelope, seedTotp, sessions, accounts, envelopes, resetTokens, totp, mfaChallenges, accessTokens };
+	return { handle, calls, flags, clock, now, totpDigits, passkeys, userHandles, ceremonies, webauthn, seedAccount, seedVerificationToken, seedResetToken, seedSession, seedEnvelope, seedTotp, sessions, accounts, envelopes, resetTokens, totp, mfaChallenges, accessTokens };
+}
+
+function b64u(buf) { return Buffer.from(buf).toString("base64url"); }
+// The server's passkey name rule (WebAuthnOptions.NormalizeName): trimmed, 1-64 scalar values, no
+// lone surrogates, control characters, line/paragraph separators or bidirectional controls.
+function normalizePasskeyName(name) {
+	if (typeof name !== "string") { return null; }
+	const t = name.trim();
+	if (t.length === 0 || !t.isWellFormed() || [...t].length > 64) { return null; }
+	if (/[\p{Cc}\p{Zl}\p{Zp}\u202a-\u202e\u2066-\u2069\u200e\u200f\u061c]/u.test(t)) { return null; }
+	return t;
 }
 
 // ---- RFC 6238 (HMAC-SHA1, 6-8 digits, 30 s) and RFC 4648 Base32, for the mock and the tests ----

@@ -90,7 +90,9 @@ async function test(name, fn) {
 
 (async () => {
 	const www = await serveStatic(path.join(ROOT, "www", "public"));
-	const vault = await serveStatic(path.join(ROOT, "vault", "public"));
+	// The vault on localhost, as the devstack serves it: a WebAuthn RP ID must be a domain name
+	// (127.0.0.1 is not one), and passkeys are exercised with Chromium's virtual authenticator.
+	const vault = await serveStatic(path.join(ROOT, "vault", "public"), { host: "localhost" });
 	sites.vault = vault.origin;
 	sites.www = www.origin;
 	// A request that escapes interception (one sent while a page is going away, say) must never
@@ -444,6 +446,10 @@ async function test(name, fn) {
 		await page.fill("#login-password", "correct horse battery");
 		await page.click("#login-submit");
 		await page.waitForSelector("#account-panel:not([hidden])");
+		// The calls that follow a sign-in by themselves (two-factor and passkey state, vault status)
+		// are done first, so that the click below is the next action.
+		await page.waitForFunction(() => document.getElementById("passkey-status").textContent !== "" &&
+			!document.getElementById("vault-status-text").textContent.startsWith("Checking"));
 		for (const s of mock.sessions.values()) { s.revoked = true; }
 		await page.click("#refresh-sessions");
 		await page.waitForSelector("#login-panel:not([hidden])");
@@ -2207,6 +2213,449 @@ async function test(name, fn) {
 		await page.close();
 	});
 
+	// ------------------------------------------------------ phase 10: passkeys
+	console.log("vault.bitosx.se — passkeys");
+	const nodeCrypto = require("node:crypto");
+	// Chromium's virtual authenticator (CDP WebAuthn domain): a platform authenticator with resident
+	// keys and user verification that answers at once, as a person would.
+	async function virtualAuthenticator(page, extra = {}) {
+		const cdp = await page.context().newCDPSession(page);
+		await cdp.send("WebAuthn.enable", { enableUI: false });
+		const { authenticatorId } = await cdp.send("WebAuthn.addVirtualAuthenticator", {
+			options: Object.assign({ protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal", hasResidentKey: true,
+				hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true }, extra)
+		});
+		return {
+			cdp, id: authenticatorId,
+			credentials: async () => (await cdp.send("WebAuthn.getCredentials", { authenticatorId })).credentials
+		};
+	}
+	// A passkey that exists in the authenticator and (unless serverKnows is false) on the mock
+	// server: a fresh P-256 key, as if registered earlier.
+	async function seedPasskey(mock, accountId, auth, options = {}) {
+		const { privateKey, publicKey } = nodeCrypto.generateKeyPairSync("ec", { namedCurve: "P-256" });
+		const credentialId = nodeCrypto.randomBytes(32);
+		if (!mock.userHandles.has(accountId)) { mock.userHandles.set(accountId, nodeCrypto.randomBytes(32).toString("base64url")); }
+		const userHandle = options.userHandle || Buffer.from(mock.userHandles.get(accountId), "base64url");
+		await auth.cdp.send("WebAuthn.addCredential", { authenticatorId: auth.id, credential: {
+			credentialId: credentialId.toString("base64"), isResidentCredential: true, rpId: "localhost",
+			privateKey: privateKey.export({ type: "pkcs8", format: "der" }).toString("base64"),
+			userHandle: userHandle.toString("base64"), signCount: 0
+		} });
+		const pk = { id: nodeCrypto.randomUUID(), credentialId: credentialId.toString("base64url"), publicKey: publicKey.export({ type: "spki", format: "der" }),
+			name: options.name || "Seeded laptop", createdAt: new Date(mock.now() - 3600000).toISOString(), lastUsedAt: null, backedUp: !!options.backedUp, signCount: 0 };
+		if (options.serverKnows !== false) { mock.passkeys.set(accountId, (mock.passkeys.get(accountId) || []).concat([pk])); }
+		return pk;
+	}
+	const RECOVERY = ["aaaaa-bbbbb", "ccccc-ddddd", "eeeee-fffff", "ggggg-hhhhh", "jjjjj-kkkkk", "mmmmm-nnnnn"];
+	// An account with two-factor on, a page with a virtual authenticator, the vault on localhost.
+	async function passkeyAccount(options = {}) {
+		const mock = createMockApi(options.mock);
+		mock.webauthn.origin = vault.origin;
+		freezeMidStep(mock);
+		const accountId = mock.seedAccount("user@example.com", PASSWORD);
+		const secret = mock.seedTotp(accountId, RECOVERY.slice());
+		const page = await newPage(mock, { beforeRoute: options.beforeRoute });
+		const auth = await virtualAuthenticator(page, options.authenticator);
+		return { mock, accountId, secret, page, auth };
+	}
+	async function passwordThenCode(page, code) {
+		await page.fill("#login-email", "user@example.com");
+		await page.fill("#login-password", PASSWORD);
+		await page.click("#login-submit");
+		await page.waitForSelector("#code-form:not([hidden])");
+		if (code) {
+			await page.fill("#login-code", code);
+			await page.click("#code-submit");
+			await page.waitForSelector("#account-panel:not([hidden])");
+		}
+	}
+	const passkeyStatus = (page) => page.textContent("#passkey-status");
+	const lastCall = (mock, p) => mock.calls.filter((c) => c.path === p).pop();
+
+	await test("passkeys: without two-factor the account page says it comes first and offers no passkey; the sign-in page offers passkey sign-in", async () => {
+		const mock = createMockApi();
+		mock.seedAccount("user@example.com", PASSWORD);
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/`);
+		assert.equal(await page.isVisible("#passkey-signin-submit"), true, "this browser supports passkeys");
+		assert.match(await page.textContent("#passkey-signin"), /opening the vault still needs your vault master password/);
+		await signIn(page);
+		await page.waitForFunction(() => document.getElementById("passkey-status").textContent !== "");
+		assert.equal(await passkeyStatus(page), "Turn on two-factor authentication above first: passkeys are added on top of it.");
+		assert.equal(await page.isHidden("#passkey-add-form"), true);
+		assert.equal(await page.locator("#passkey-list li").count(), 0);
+		assert.match(await page.textContent("#account-panel"), /opening the vault still needs your vault master password/);
+		await page.close();
+	});
+
+	await test("passkeys: add one with password + code -> the browser's authenticator -> listed with its name, dates and synced badge; a wrong code adds nothing", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount({ authenticator: { defaultBackupEligibility: true, defaultBackupState: true } });
+		await page.goto(`${vault.origin}/`);
+		await passwordThenCode(page, RECOVERY[0]);
+		await page.waitForSelector("#passkey-add-form:not([hidden])");
+		assert.equal(await passkeyStatus(page), "No passkeys yet.");
+		// Client-side checks first: no request without a name, a password and a code.
+		await page.fill("#passkey-add-name", "  ");
+		await page.click("#passkey-add-submit");
+		assert.match(await page.textContent("#passkey-notice"), /name of 1–64 characters/);
+		assert.equal(callsTo(mock, "/v1/account/passkeys/registration/options"), 0);
+		// A wrong code: the server's generic 403, nothing created in the authenticator.
+		await page.fill("#passkey-add-name", "Work laptop");
+		await page.fill("#passkey-add-password", PASSWORD);
+		await page.fill("#passkey-add-code", "000000");
+		await page.click("#passkey-add-submit");
+		await page.waitForSelector("#passkey-notice.err");
+		assert.match(await page.textContent("#passkey-notice"), /password or the code was not accepted/);
+		assert.equal((await auth.credentials()).length, 0);
+		assert.equal(await page.inputValue("#passkey-add-password"), "", "the password never waits on the page");
+		assert.equal(await page.inputValue("#passkey-add-code"), "");
+		// The real thing.
+		await page.fill("#passkey-add-password", PASSWORD);
+		await page.fill("#passkey-add-code", RECOVERY[1]);
+		await page.click("#passkey-add-submit");
+		await page.waitForFunction(() => document.querySelectorAll("#passkey-list li").length === 1);
+		assert.match(await page.textContent("#passkey-notice"), /Passkey “Work laptop” added\. .*vault master password/);
+		assert.equal(await passkeyStatus(page), "1 of at most 10 passkeys.");
+		const item = page.locator("#passkey-list li").first();
+		assert.match(await item.locator(".passkey-item__name").textContent(), /^Work laptop Synced$/);
+		assert.match(await item.locator(".passkey-item__meta").textContent(), /^Added .+ · not used yet$/);
+		assert.equal(await page.inputValue("#passkey-add-name"), "");
+		// What travelled: the options asked with password + code, the completion with the ceremony id,
+		// the trimmed name and the browser's credential JSON (never the password).
+		assert.deepEqual(lastCall(mock, "/v1/account/passkeys/registration/options").body, { password: PASSWORD, code: RECOVERY[1] });
+		const reg = lastCall(mock, "/v1/account/passkeys/registration").body;
+		assert.deepEqual(Object.keys(reg).sort(), ["credential", "name", "registrationId"]);
+		assert.equal(reg.name, "Work laptop");
+		assert.equal(reg.credential.type, "public-key");
+		assert.deepEqual(Object.keys(reg.credential.response).sort(), ["attestationObject", "authenticatorData", "clientDataJSON", "publicKey", "publicKeyAlgorithm", "transports"]);
+		const creds = await auth.credentials();
+		assert.equal(creds.length, 1);
+		assert.equal(creds[0].isResidentCredential, true, "a discoverable credential");
+		assert.equal(creds[0].rpId, "localhost");
+		assert.equal(Buffer.from(creds[0].userHandle, "base64").toString("base64url"), mock.userHandles.get(accountId), "user.id is the server's random handle");
+		assert.equal(mock.passkeys.get(accountId).length, 1);
+		assert.equal(mock.passkeys.get(accountId)[0].backedUp, true);
+		// The same authenticator again: the server excludes its credential, the browser refuses.
+		await page.fill("#passkey-add-name", "Again");
+		await page.fill("#passkey-add-password", PASSWORD);
+		await page.fill("#passkey-add-code", RECOVERY[2]);
+		await page.click("#passkey-add-submit");
+		await page.waitForSelector("#passkey-notice.err");
+		assert.match(await page.textContent("#passkey-notice"), /already holds a passkey for this account. Nothing was added/);
+		assert.equal(mock.passkeys.get(accountId).length, 1);
+		assert.equal(callsTo(mock, "/v1/account/passkeys/registration"), 1, "nothing to complete");
+		assert.equal(await page.isHidden("#passkey-add-form"), false, "another device can still be added");
+		await page.close();
+	});
+
+	await test("passkeys: the second sign-in step offers 'Use a passkey' only when the server lists it; the passkey signs in", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount();
+		await page.goto(`${vault.origin}/`);
+		// No passkey on the account: the server does not list it, the page does not offer it.
+		await passwordThenCode(page);
+		assert.equal(await page.isHidden("#code-passkey"), true);
+		assert.doesNotMatch(await page.textContent("#login-notice"), /passkey/);
+		assert.equal(await page.isHidden("#passkey-signin"), true, "no passwordless button inside the second step");
+		await page.click("#code-cancel");
+		await page.waitForSelector("#passkey-signin:not([hidden])");
+		await seedPasskey(mock, accountId, auth);
+		await passwordThenCode(page);
+		assert.equal(await page.isVisible("#code-passkey"), true);
+		assert.match(await page.textContent("#login-notice"), /or use a passkey/);
+		const token = [...mock.mfaChallenges.keys()].pop();
+		await page.click("#code-passkey");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		assert.deepEqual(lastCall(mock, "/v1/auth/login/passkey/options").body, { mfaToken: token });
+		const done = lastCall(mock, "/v1/auth/login/passkey").body;
+		assert.equal(done.mfaToken, token);
+		assert.equal(typeof done.credential.response.signature, "string");
+		assert.equal(mock.mfaChallenges.get(token).consumed, true);
+		assert.equal(await page.isHidden("#code-form"), true);
+		await page.waitForFunction(() => /not used yet|last used/.test(document.getElementById("passkey-list").textContent));
+		assert.match(await page.textContent("#passkey-list"), /last used/);
+		await page.close();
+	});
+
+	await test("passkeys: an older server without `methods`, an unreadable `methods`, and a server without passkeys: the second step is code-only", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount({ mock: { legacyLogin: true } });
+		await seedPasskey(mock, accountId, auth);
+		await page.goto(`${vault.origin}/`);
+		await passwordThenCode(page);
+		assert.equal(await page.isHidden("#code-passkey"), true);
+		await page.click("#code-cancel");
+		// Read tolerantly: values this page does not know are ignored; a list that is not a list is
+		// read as "code only" (the step itself is never skipped).
+		mock.flags.methodsOverride = ["sms", 7, "passkey", { x: 1 }, "totp"];
+		await passwordThenCode(page);
+		assert.equal(await page.isVisible("#code-passkey"), true);
+		await page.click("#code-cancel");
+		mock.flags.methodsOverride = "passkey";
+		await passwordThenCode(page);
+		assert.equal(await page.isHidden("#code-passkey"), true);
+		assert.equal(await page.isHidden("#account-panel"), true);
+		await page.click("#code-cancel");
+		const off = await passkeyAccount();
+		await seedPasskey(off.mock, off.accountId, off.auth);
+		off.mock.flags.passkeyCapability = false;
+		await off.page.goto(`${vault.origin}/`);
+		await passwordThenCode(off.page, RECOVERY[0]);
+		assert.equal(await off.page.isHidden("#code-passkey"), true);
+		await off.page.waitForFunction(() => document.getElementById("passkey-status").textContent !== "");
+		assert.equal(await off.page.textContent("#passkey-status"), "Passkeys are not available on this server.");
+		assert.equal(await off.page.isHidden("#passkey-add-form"), true);
+		// Passwordless on such a server: a plain answer, no session.
+		await off.page.click("#logout");
+		await off.page.waitForSelector("#login-panel:not([hidden])");
+		await off.page.click("#passkey-signin-submit");
+		await off.page.waitForSelector("#login-notice.err");
+		assert.equal(await off.page.textContent("#login-notice"), "Passkey sign-in is not available on this server.");
+		await page.close();
+		await off.page.close();
+	});
+
+	await test("passkeys: second step — a cancelled prompt keeps the step and uses no attempt; a refused passkey uses one, like a wrong code", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount();
+		await seedPasskey(mock, accountId, auth);
+		await page.goto(`${vault.origin}/`);
+		await passwordThenCode(page);
+		const token = [...mock.mfaChallenges.keys()].pop();
+		// The prompt ends without a passkey (here: the authenticator holds none for this site; the
+		// browser reports NotAllowedError, exactly as when the person cancels).
+		const saved = await auth.credentials();
+		await auth.cdp.send("WebAuthn.clearCredentials", { authenticatorId: auth.id });
+		await page.click("#code-passkey");
+		await page.waitForSelector("#login-notice.err");
+		assert.match(await page.textContent("#login-notice"), /No passkey was used: the browser's prompt was cancelled or timed out.*Try again, or enter a code/);
+		assert.equal(await page.isHidden("#code-form"), false, "the step stays");
+		assert.equal(callsTo(mock, "/v1/auth/login/passkey"), 0, "nothing was sent");
+		assert.equal(mock.mfaChallenges.get(token).attempts, 0);
+		// A passkey the server refuses (here: the page origin is not the one the server expects).
+		await auth.cdp.send("WebAuthn.addCredential", { authenticatorId: auth.id, credential: saved[0] });
+		mock.webauthn.origin = "https://vault.bitosx.se";
+		await page.click("#code-passkey");
+		await page.waitForFunction(() => /passkey was not accepted/.test(document.getElementById("login-notice").textContent));
+		assert.equal(mock.mfaChallenges.get(token).attempts, 1);
+		assert.equal(await page.isHidden("#code-form"), false);
+		// The code still works after both.
+		mock.webauthn.origin = vault.origin;
+		await page.fill("#login-code", RECOVERY[0]);
+		await page.click("#code-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		await page.close();
+	});
+
+	await test("passkeys: sign in without email and password; the account opens, the vault still needs its master password", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount();
+		await seedPasskey(mock, accountId, auth);
+		mock.seedEnvelope(accountId, fs.readFileSync(path.join(__dirname, "fixtures", "small.vault.json")));
+		await page.goto(`${vault.origin}/`);
+		await page.click("#passkey-signin-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		assert.equal(await page.textContent("#acct-email"), "user@example.com");
+		const opts = lastCall(mock, "/v1/auth/passkey/options");
+		assert.deepEqual(opts.body, {}, "the options request carries nothing");
+		assert.equal(opts.headers["content-type"], undefined, "and no JSON content type: a simple request");
+		const done = lastCall(mock, "/v1/auth/passkey").body;
+		assert.equal(done.credential.response.userHandle, mock.userHandles.get(accountId));
+		assert.equal(callsTo(mock, "/v1/auth/login"), 0, "no password step at all");
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.evaluate(() => window.bitosxVault.isUnlocked()), false);
+		assert.equal(await page.inputValue("#vault-master-password"), "");
+		await page.close();
+	});
+
+	await test("passkeys: passwordless sign-in is refused for a passkey the server does not know, and for one removed from the account", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount();
+		// A credential of another authenticator that the server never registered.
+		await seedPasskey(mock, accountId, auth, { serverKnows: false });
+		await page.goto(`${vault.origin}/`);
+		await page.click("#passkey-signin-submit");
+		await page.waitForSelector("#login-notice.err");
+		assert.match(await page.textContent("#login-notice"), /passkey was not accepted/);
+		assert.equal(await page.isHidden("#account-panel"), true);
+		assert.equal(mock.sessions.size, 0);
+		assert.equal(await page.isDisabled("#login-submit"), false, "the password form is usable again");
+		// A registered one, then removed from the account: refused too.
+		await auth.cdp.send("WebAuthn.clearCredentials", { authenticatorId: auth.id });
+		const pk = await seedPasskey(mock, accountId, auth);
+		await page.click("#passkey-signin-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		mock.passkeys.set(accountId, mock.passkeys.get(accountId).filter((p) => p.id !== pk.id));
+		const before = mock.sessions.size;
+		await page.click("#passkey-signin-submit");
+		await page.waitForSelector("#login-notice.err");
+		assert.match(await page.textContent("#login-notice"), /removed from the account no longer signs in/);
+		assert.equal(callsTo(mock, "/v1/auth/passkey"), 3);
+		assert.equal(mock.sessions.size, before, "no new session");
+		await page.close();
+	});
+
+	await test("passkeys: rename (POST .../rename, never PATCH), two-factor cannot be turned off while one exists, remove with password + code", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount();
+		const pk = await seedPasskey(mock, accountId, auth, { name: "Old name" });
+		await page.goto(`${vault.origin}/`);
+		await passwordThenCode(page, RECOVERY[0]);
+		await page.waitForFunction(() => document.querySelectorAll("#passkey-list li").length === 1);
+		assert.match(await page.textContent("#passkey-list"), /Old name Not synced/);
+		assert.equal(await page.isVisible("#totp-passkeys-hint"), true, "the two-factor form says why it cannot be turned off");
+		// Rename.
+		await page.click(`button[data-passkey-rename="${pk.id}"]`);
+		await page.waitForSelector("#passkey-rename-form:not([hidden])");
+		assert.equal(await page.inputValue("#passkey-rename-name"), "Old name");
+		await page.fill("#passkey-rename-name", "bad‮name");
+		await page.click("#passkey-rename-submit");
+		assert.match(await page.textContent("#passkey-notice"), /1–64 characters/);
+		assert.equal(callsTo(mock, `/v1/account/passkeys/${pk.id}/rename`), 0);
+		await page.fill("#passkey-rename-name", "  Phone  ");
+		await page.click("#passkey-rename-submit");
+		await page.waitForFunction(() => document.getElementById("passkey-notice").textContent === "Passkey renamed.");
+		assert.match(await page.textContent("#passkey-list"), /^Phone Not synced/);
+		assert.equal(await page.isHidden("#passkey-rename-form"), true);
+		const rename = lastCall(mock, `/v1/account/passkeys/${pk.id}/rename`);
+		assert.equal(rename.method, "POST");
+		assert.deepEqual(rename.body, { name: "Phone" });
+		assert.ok(mock.calls.every((c) => c.method !== "PATCH"));
+		// Turning two-factor off is refused by the server while the passkey exists; nothing is used up.
+		await page.fill("#totp-manage-password", PASSWORD);
+		await page.fill("#totp-manage-code", RECOVERY[1]);
+		await page.check("#totp-disable-ack");
+		await page.click("#totp-disable");
+		await page.waitForSelector("#totp-notice.err");
+		assert.match(await page.textContent("#totp-notice"), /stays on: your account has passkeys.*Remove the passkeys below first; nothing was used up/);
+		assert.equal(mock.totp.get(accountId).recoveryCodes.get(RECOVERY[1]), false, "the code was not used");
+		assert.equal(await page.inputValue("#totp-manage-password"), "");
+		// Remove: a wrong code changes nothing; the right one removes it.
+		await page.click(`button[data-passkey-delete="${pk.id}"]`);
+		await page.waitForSelector("#passkey-delete-form:not([hidden])");
+		assert.equal(await page.textContent("#passkey-delete-current"), "Phone");
+		await page.fill("#passkey-delete-password", PASSWORD);
+		await page.fill("#passkey-delete-code", "000000");
+		await page.click("#passkey-delete-submit");
+		await page.waitForSelector("#passkey-notice.err");
+		assert.match(await page.textContent("#passkey-notice"), /password or the code was not accepted. Nothing was changed/);
+		assert.equal(mock.passkeys.get(accountId).length, 1);
+		assert.equal(await page.inputValue("#passkey-delete-password"), "");
+		assert.equal(await page.inputValue("#passkey-delete-code"), "");
+		await page.fill("#passkey-delete-password", PASSWORD);
+		await page.fill("#passkey-delete-code", RECOVERY[1]);
+		await page.click("#passkey-delete-submit");
+		await page.waitForFunction(() => document.querySelectorAll("#passkey-list li").length === 0);
+		assert.match(await page.textContent("#passkey-notice"), /Passkey “Phone” removed/);
+		assert.equal(await page.isHidden("#passkey-delete-form"), true);
+		assert.equal(await page.isHidden("#totp-passkeys-hint"), true);
+		assert.deepEqual(lastCall(mock, `/v1/account/passkeys/${pk.id}/delete`).body, { password: PASSWORD, code: RECOVERY[1] });
+		assert.equal(mock.passkeys.get(accountId).length, 0);
+		assert.equal(callsTo(mock, `/v1/account/passkeys/${pk.id}`), 0);
+		await page.close();
+	});
+
+	await test("passkeys: a browser without WebAuthn shows no passkey button anywhere; the account page says so and can still rename and remove", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount({ beforeRoute: (p) => p.addInitScript(() => { delete window.PublicKeyCredential; }) });
+		await seedPasskey(mock, accountId, auth);
+		await page.goto(`${vault.origin}/`);
+		assert.equal(await page.evaluate(() => typeof window.PublicKeyCredential), "undefined");
+		assert.equal(await page.isHidden("#passkey-signin"), true);
+		await passwordThenCode(page);
+		assert.equal(await page.isHidden("#code-passkey"), true, "the server lists a passkey, the browser cannot use it");
+		assert.doesNotMatch(await page.textContent("#login-notice"), /passkey/);
+		await page.fill("#login-code", RECOVERY[0]);
+		await page.click("#code-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		await page.waitForFunction(() => document.querySelectorAll("#passkey-list li").length === 1);
+		assert.match(await passkeyStatus(page), /does not support passkeys, so none can be added or used here; you can still rename or remove them/);
+		assert.equal(await page.isHidden("#passkey-add-form"), true);
+		assert.equal(await page.locator("#passkey-list button[data-passkey-rename]").count(), 1);
+		await page.close();
+	});
+
+	await test("passkeys: without the browser's JSON helpers the page converts the options and the credential itself; the server verifies both ceremonies", async () => {
+		const { mock, accountId, page } = await passkeyAccount({ beforeRoute: (p) => p.addInitScript(() => {
+			delete PublicKeyCredential.parseCreationOptionsFromJSON;
+			delete PublicKeyCredential.parseRequestOptionsFromJSON;
+			delete PublicKeyCredential.prototype.toJSON;
+		}) });
+		await page.goto(`${vault.origin}/`);
+		assert.equal(await page.evaluate(() => typeof PublicKeyCredential.parseCreationOptionsFromJSON + typeof PublicKeyCredential.prototype.toJSON), "undefinedundefined");
+		await passwordThenCode(page, RECOVERY[0]);
+		await page.waitForSelector("#passkey-add-form:not([hidden])");
+		await page.fill("#passkey-add-name", "Fallback key");
+		await page.fill("#passkey-add-password", PASSWORD);
+		await page.fill("#passkey-add-code", RECOVERY[1]);
+		await page.click("#passkey-add-submit");
+		await page.waitForFunction(() => document.querySelectorAll("#passkey-list li").length === 1);
+		const reg = lastCall(mock, "/v1/account/passkeys/registration").body.credential;
+		// The members toJSON() writes, in the same encoding.
+		assert.deepEqual(Object.keys(reg).sort(), ["authenticatorAttachment", "clientExtensionResults", "id", "rawId", "response", "type"]);
+		assert.deepEqual(Object.keys(reg.response).sort(), ["attestationObject", "authenticatorData", "clientDataJSON", "publicKey", "publicKeyAlgorithm", "transports"]);
+		assert.equal(reg.rawId, reg.id);
+		assert.deepEqual(reg.response.transports, ["internal"]);
+		assert.equal(reg.response.publicKeyAlgorithm, -7);
+		for (const k of ["attestationObject", "authenticatorData", "clientDataJSON", "publicKey"]) { assert.match(reg.response[k], /^[A-Za-z0-9_-]+$/, k); }
+		assert.equal(JSON.parse(Buffer.from(reg.response.clientDataJSON, "base64url")).origin, vault.origin);
+		// Passwordless with the fallback: the mock checks the ES256 signature over the converted bytes.
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		await page.click("#passkey-signin-submit");
+		await page.waitForSelector("#account-panel:not([hidden])");
+		const assertion = lastCall(mock, "/v1/auth/passkey").body.credential;
+		assert.deepEqual(Object.keys(assertion.response).sort(), ["authenticatorData", "clientDataJSON", "signature", "userHandle"]);
+		assert.equal(assertion.response.userHandle, mock.userHandles.get(accountId));
+		await page.close();
+	});
+
+	await test("passkeys: signing out while an add waits for the server cancels it: no browser prompt, nothing shown to the next session", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount();
+		await page.goto(`${vault.origin}/`);
+		await passwordThenCode(page, RECOVERY[0]);
+		await page.waitForSelector("#passkey-add-form:not([hidden])");
+		// The server answers (a valid ceremony), but the answer arrives after the sign-out.
+		const h = holdOnce(mock, "POST", "/v1/account/passkeys/registration/options", true);
+		await page.fill("#passkey-add-name", "Late");
+		await page.fill("#passkey-add-password", PASSWORD);
+		await page.fill("#passkey-add-code", RECOVERY[1]);
+		await page.click("#passkey-add-submit");
+		await h.held;
+		assert.equal(await page.inputValue("#passkey-add-name"), "Late");
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		assert.equal(await page.inputValue("#passkey-add-name"), "", "the add form is wiped with the account view");
+		assert.equal(await page.inputValue("#passkey-add-password"), "");
+		h.release();
+		await until(() => callsTo(mock, "/v1/account/passkeys/registration/options") === 1, "the held request");
+		await page.waitForTimeout(300);
+		assert.equal((await auth.credentials()).length, 0, "no passkey was created after the session ended");
+		assert.equal(callsTo(mock, "/v1/account/passkeys/registration"), 0);
+		assert.equal(mock.passkeys.get(accountId), undefined);
+		assert.equal(await page.textContent("#passkey-notice"), "");
+		await page.close();
+	});
+
+	await test("passkeys: leaving the page (also into the back/forward cache) wipes the passkey forms", async () => {
+		const { mock, accountId, page, auth } = await passkeyAccount();
+		const pk = await seedPasskey(mock, accountId, auth);
+		await page.goto(`${vault.origin}/`);
+		await passwordThenCode(page, RECOVERY[0]);
+		await page.waitForFunction(() => document.querySelectorAll("#passkey-list li").length === 1);
+		await page.fill("#passkey-add-name", "Typed");
+		await page.fill("#passkey-add-password", PASSWORD);
+		await page.click(`button[data-passkey-delete="${pk.id}"]`);
+		await page.fill("#passkey-delete-password", PASSWORD);
+		await page.fill("#passkey-delete-code", RECOVERY[1]);
+		await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true })));
+		for (const id of ["passkey-add-name", "passkey-add-password", "passkey-add-code", "passkey-delete-password", "passkey-delete-code", "passkey-rename-name"]) {
+			assert.equal(await page.inputValue("#" + id), "", id);
+		}
+		assert.equal(await page.locator("#passkey-list li").count(), 0);
+		assert.equal(await page.textContent("#passkey-delete-current"), "");
+		assert.equal(await page.isHidden("#passkey-delete-form"), true);
+		await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+		assert.match(await page.textContent("#login-notice"), /You left this page/);
+		await page.close();
+	});
+
 	// ------------------------------------------------------------- hygiene
 	console.log("hygiene");
 	await test("no console errors, page errors or CSP violations in any flow", async () => {
@@ -2238,8 +2687,14 @@ async function test(name, fn) {
 		}
 		const headers = fs.readFileSync(path.join(ROOT, "vault/public/_headers"), "utf8");
 		assert.ok(headers.includes("script-src 'self' 'wasm-unsafe-eval';"), "_headers must carry the same script-src as the page");
+		// Passkeys (WebAuthn L3 §5.9 "Permissions Policy integration": the feature tokens
+		// publickey-credentials-create / publickey-credentials-get, default allowlist 'self') stay
+		// with this origin only; every other powerful feature stays off.
+		const pp = /^\s+Permissions-Policy:\s*(.+)$/m.exec(headers)[1].split(/,\s*/);
+		assert.deepEqual(pp, ["camera=()", "microphone=()", "geolocation=()", "payment=()", "usb=()",
+			"publickey-credentials-create=(self)", "publickey-credentials-get=(self)"]);
 		// One web version everywhere: every footer and every stylesheet link.
-		const WEB_VERSION = "0.6.0";
+		const WEB_VERSION = "0.7.0";
 		for (const f of files) {
 			const html = fs.readFileSync(f, "utf8");
 			for (const m of html.matchAll(/bitosx\.css\?v=([0-9.]+)/g)) { assert.equal(m[1], WEB_VERSION, `stylesheet version in ${f}`); }

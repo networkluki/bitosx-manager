@@ -59,8 +59,8 @@ function watchConsole(page, bucket) {
 	page.on("console", (msg) => {
 		if (msg.type() !== "error") { return; }
 		// Chromium logs every non-2xx response as an error; 400/401/403/413/429/503 from
-		// the API are expected outcomes the app handles, so they are not failures here.
-		if (/^Failed to load resource: the server responded with a status of (400|401|403|404|409|413|429|503)/.test(msg.text())) { return; }
+		// the API are expected outcomes the app handles, so they are not failures here (410: a spent passkey registration).
+		if (/^Failed to load resource: the server responded with a status of (400|401|403|404|409|410|413|429|503)/.test(msg.text())) { return; }
 		// A test that provokes a network failure on purpose says which messages it expects.
 		if (page.expectedConsole && page.expectedConsole.test(msg.text())) { return; }
 		bucket.push(`console.error: ${msg.text()}`);
