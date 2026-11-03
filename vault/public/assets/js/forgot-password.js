@@ -20,7 +20,7 @@
 		ev.preventDefault();
 		var email = emailEl.value;
 		var ok = ui.validEmail(email);
-		emailEl.setAttribute("aria-invalid", ok ? "false" : "true");
+		ui.markField(emailEl, !ok, noticeEl);
 		if (!ok) {
 			ui.notice(noticeEl, "err", "Enter a valid email address.");
 			return;
