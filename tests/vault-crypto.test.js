@@ -318,6 +318,109 @@ test("ids and generated passwords come from the CSPRNG and have the expected sha
 	const pw = vc.generatePassword(24);
 	assert.equal(pw.length, 24);
 	assert.notEqual(pw, vc.generatePassword(24));
-	assert.equal(vc.generatePassword().length, 24);
-	assert.ok(/^[A-Za-z0-9!#$%&()*+,\-./:;<=>?@[\]^_{|}~]+$/.test(vc.generatePassword(200)));
+	assert.equal(vc.generatePassword().length, 20, "the desktop's default length");
+});
+
+// ------------------------------------------------- generator (desktop parity)
+const DESKTOP_SYMBOLS = "!@#$%^&*()-_=+[]{};:,.?/";
+const onlyFrom = (text, alphabet) => [...text].every((c) => alphabet.includes(c));
+
+test("the generator follows the desktop's PasswordGenerator: every selected class present, its symbol set, nothing else", () => {
+	const all = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" + DESKTOP_SYMBOLS;
+	for (let i = 0; i < 2000; i++) {
+		const pw = vc.generatePassword({ length: 4 + (i % 30) });
+		assert.equal(pw.length, 4 + (i % 30));
+		assert.ok(onlyFrom(pw, all), pw);
+		// Coverage is guaranteed, not likely: with four classes even a 4-character password has one of each.
+		assert.match(pw, /[a-z]/); assert.match(pw, /[A-Z]/); assert.match(pw, /[0-9]/);
+		assert.ok([...pw].some((c) => DESKTOP_SYMBOLS.includes(c)), pw);
+	}
+	for (let i = 0; i < 300; i++) {
+		const noSymbols = vc.generatePassword({ length: 16, symbols: false });
+		assert.match(noSymbols, /^[A-Za-z0-9]{16}$/);
+		const digitsOnly = vc.generatePassword({ length: 8, lowercase: false, uppercase: false, symbols: false });
+		assert.match(digitsOnly, /^[0-9]{8}$/);
+		const plain = vc.generatePassword({ length: 40, excludeAmbiguous: true });
+		assert.ok(!/[Il1O0o]/.test(plain), plain);
+	}
+});
+
+test("the generator's options are validated with the desktop's messages", () => {
+	const refused = (o, message) => assert.throws(() => vc.generatePassword(o), (e) => e instanceof vc.VaultError && e.message.includes(message), message);
+	refused({ length: 3 }, "between 4 and 256");
+	refused({ length: 257 }, "between 4 and 256");
+	refused({ length: 12.5 }, "between 4 and 256");
+	refused({ lowercase: false, uppercase: false, digits: false, symbols: false }, "At least one character class");
+	assert.equal(vc.generatePassword({ length: 256 }).length, 256);
+	assert.deepEqual(vc.generatorOptions(null), { length: 20, lowercase: true, uppercase: true, digits: true, symbols: true, excludeAmbiguous: false });
+});
+
+test("every character is drawn uniformly (no modulo bias): a chi-square check on one class", () => {
+	const counts = new Map();
+	const n = 60000;
+	const pw = vc.generatePassword({ length: 256, uppercase: false, lowercase: false, symbols: false }); // warm-up
+	assert.equal(pw.length, 256);
+	for (let i = 0; i < n / 200; i++) {
+		for (const c of vc.generatePassword({ length: 200, uppercase: false, lowercase: false, symbols: false })) { counts.set(c, (counts.get(c) || 0) + 1); }
+	}
+	const expected = n / 10;
+	let chi = 0;
+	for (const d of "0123456789") { chi += ((counts.get(d) || 0) - expected) ** 2 / expected; }
+	assert.ok(chi < 35, `chi-square ${chi.toFixed(1)} with 9 degrees of freedom`); // p < 1e-4
+});
+
+// ------------------------------------------- strength (desktop parity vectors)
+test("the strength estimate is the desktop's PasswordStrength, on the desktop's own results", () => {
+	const { vectors } = JSON.parse(fs.readFileSync(path.join(FIX, "password-strength-vectors.json"), "utf8"));
+	assert.ok(vectors.length >= 60);
+	for (const v of vectors) {
+		assert.ok(Math.abs(vc.estimateEntropyBits(v.password) - v.bits) < 1e-9, `bits for ${JSON.stringify(v.password.slice(0, 40))}: ${vc.estimateEntropyBits(v.password)} != ${v.bits}`);
+		assert.equal(vc.estimateStrength(v.password), v.level, `level for ${JSON.stringify(v.password.slice(0, 40))}`);
+	}
+	assert.equal(vc.STRENGTH_NAMES[vc.estimateStrength("Password123!")], "Very weak");
+	// As on the desktop: generated passwords rate Strong or better.
+	for (let i = 0; i < 300; i++) { assert.ok(vc.estimateStrength(vc.generatePassword(20)) >= 3); }
+});
+
+// ----------------------------------------------- key-wrap header comparison
+test("sameKeyWrap tells a re-keyed or re-passworded envelope from a re-encrypted one", async () => {
+	const { bytes, meta } = readFixture("small");
+	const env = vc.parseEnvelope(bytes);
+	const opened = await vc.unlock(env, meta.typedPassword);
+	const next = await vc.encryptContent(env, opened.vaultKey, opened.plaintext);
+	assert.equal(vc.sameKeyWrap(env, next), true, "new content, same header");
+	const flip = (field) => { const b = Uint8Array.from(env[field]); b[0] ^= 1; return Object.assign({}, env, { [field]: b }); };
+	for (const field of ["salt", "keyWrapNonce", "encryptedVaultKey"]) { assert.equal(vc.sameKeyWrap(env, flip(field)), false, field); }
+	assert.equal(vc.sameKeyWrap(env, Object.assign({}, env, { kdfParameters: Object.assign({}, env.kdfParameters, { iterations: 2 }) })), false);
+});
+
+// ------------------------------------------------- text the desktop refuses
+test("item text with half of a surrogate pair is refused before it is written", () => {
+	const now = new Date("2026-10-22T08:00:00Z");
+	const ok = { id: vc.newId(), name: "x", username: null, password: null, urls: [], notes: null, favorite: false, createdAt: now, updatedAt: now };
+	for (const [patch, what] of [[{ name: "a\uD83D" }, "name"], [{ notes: "\uDD10b" }, "notes"], [{ username: "u\uD83D" }, "username"], [{ password: "p\uDBFF" }, "password"], [{ urls: ["https://x.example/\uD83D"] }, "URL"]]) {
+		assert.throws(() => vc.validateItem(Object.assign({}, ok, patch)), (e) => e.kind === vc.KINDS.CONTENT && /incomplete character/.test(e.message), what);
+	}
+	vc.validateItem(Object.assign({}, ok, { name: "fine 🔐" }));
+	assert.equal(vc.isWellFormed("🔐"), true);
+	assert.equal(vc.isWellFormed("\uD83D"), false);
+});
+
+// ------------------------------------------- untouched items stay untouched
+test("an item nobody changed is written back with its timestamps exactly as read, in the stored order", () => {
+	const items = [
+		{ type: "login", Id: "33333333-3333-4333-8333-333333333333", Name: "Zeta", Favorite: false, CreatedAt: "2026-10-01T09:00:00.1234567+00:00", UpdatedAt: "2026-10-02T10:11:12.9876543+00:00", Urls: [] },
+		{ type: "login", Id: "11111111-1111-4111-8111-111111111111", Name: "Alpha", Favorite: true, CreatedAt: "2026-10-01T09:00:00+00:00", UpdatedAt: "2026-10-01T09:00:00.5+00:00", Urls: [] }
+	];
+	const vault = vc.parseVault(utf8(JSON.stringify({ schemaVersion: 1, items })));
+	const text = Buffer.from(vc.serializeVault(vault)).toString("utf8");
+	assert.ok(text.includes("\"CreatedAt\":\"2026-10-01T09:00:00.1234567+00:00\""), text);
+	assert.ok(text.includes("\"UpdatedAt\":\"2026-10-02T10:11:12.9876543+00:00\""), text);
+	assert.ok(text.indexOf("Zeta") < text.indexOf("Alpha"), "the stored order, not a sorted one");
+	// A changed date is written the way System.Text.Json writes it.
+	const changed = Object.assign({}, vault.items[0], { updatedAt: new Date("2026-11-03T08:00:00.250Z") });
+	assert.ok(Buffer.from(vc.serializeVault({ items: [changed] })).toString("utf8").includes("\"UpdatedAt\":\"2026-11-03T08:00:00.25+00:00\""));
+	// A raw text that does not say the same instant any more is never reused.
+	const lying = Object.assign({}, vault.items[0], { createdAtText: "2020-01-01T00:00:00+00:00" });
+	assert.ok(Buffer.from(vc.serializeVault({ items: [lying] })).toString("utf8").includes("\"CreatedAt\":\"2026-10-01T09:00:00.123+00:00\""));
 });
