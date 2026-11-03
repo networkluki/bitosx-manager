@@ -148,7 +148,7 @@
 	var lastActivity = Date.now();
 	function armIdle() {
 		if (idleTimer) { clearTimeout(idleTimer); }
-		idleTimer = setTimeout(checkIdle, cfg.idleTimeoutMs);
+		idleTimer = setTimeout(checkIdle, Math.max(cfg.idleTimeoutMs - (Date.now() - lastActivity), 0));
 	}
 	function checkIdle() {
 		if (!signedInOnScreen()) { return; }
