@@ -10,37 +10,15 @@
 // Run:  node bitosx/tests/e2e.js        (needs the `playwright` package + Chromium)
 "use strict";
 
-const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert/strict");
 const { chromium } = require("playwright");
 const { createMockApi, totpCode, totpStep, base32Decode } = require("./mock-api.js");
+const { serveStatic, watchConsole } = require("./harness.js");
 
 const ROOT = path.resolve(__dirname, "..");
 const API_ORIGIN = "https://api.bitosx.se";
-
-const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".txt": "text/plain; charset=utf-8", ".xml": "application/xml" };
-
-// Minimal static server: "/" -> index.html, "/verify-email" -> verify-email.html, and so on.
-function serveStatic(dir) {
-	return new Promise((resolve) => {
-		const server = http.createServer((req, res) => {
-			let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
-			if (p.includes("..")) { res.writeHead(400); return res.end(); }
-			if (p.endsWith("/")) { p += "index.html"; }
-			let file = path.join(dir, p);
-			if (!path.extname(file) && fs.existsSync(file + ".html")) { file += ".html"; }
-			if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-				res.writeHead(404, { "Content-Type": "text/html" });
-				return res.end(fs.readFileSync(path.join(dir, "404.html")));
-			}
-			res.writeHead(200, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream" });
-			res.end(fs.readFileSync(file));
-		});
-		server.listen(0, "127.0.0.1", () => resolve({ server, origin: `http://127.0.0.1:${server.address().port}` }));
-	});
-}
 
 // ---- The API's browser (CORS) policy, as the API ships it (phase-8 contract §1) ----
 // The vault site may use every method the web vault needs; the product page may read /health and
@@ -101,19 +79,6 @@ async function routeApi(page, mock, policyOverride) {
 	});
 }
 const sites = { vault: null, www: null };
-
-function watchConsole(page, bucket) {
-	page.on("console", (msg) => {
-		if (msg.type() !== "error") { return; }
-		// Chromium logs every non-2xx response as an error; 400/401/403/413/429/503 from
-		// the API are expected outcomes the app handles, so they are not failures here.
-		if (/^Failed to load resource: the server responded with a status of (400|401|403|404|409|413|429|503)/.test(msg.text())) { return; }
-		// A test that provokes a network failure on purpose says which messages it expects.
-		if (page.expectedConsole && page.expectedConsole.test(msg.text())) { return; }
-		bucket.push(`console.error: ${msg.text()}`);
-	});
-	page.on("pageerror", (err) => bucket.push(`pageerror: ${err.message}`));
-}
 
 const results = [];
 async function test(name, fn) {

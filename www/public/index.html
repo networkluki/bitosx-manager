@@ -205,8 +205,12 @@ encrypted vault — the only thing written to disk</pre>
             <div><p><strong>Two-factor sign-in.</strong> A code from an authenticator app (TOTP, RFC 6238) as a second step at sign-in, set up on vault.bitosx.se with single-use recovery codes. The server stores the secret encrypted and refuses to sign in without the code; it never bypasses the step, not even when its own key for the second factor is missing. The desktop app asks for the code too. The second factor protects the account only; the vault master password stays what it always was: yours, and never on the server.</p></div>
           </li>
           <li>
-            <div class="phase">Phase 8<small>in review</small></div>
+            <div class="phase">Phase 8<small>built</small></div>
             <div><p><strong>Fine-tuning and account controls.</strong> Change the account password while signed in (every other device is signed out; the vault master password is untouched), two-factor confirmation for account deletion, a password generator with the desktop's options and strength rating in the web vault, favorites and sorting, and a download of the encrypted vault exactly as the server stores it. Plus a round of fixes across the API, the desktop app and the web: sessions that end cleanly everywhere, honest clipboard clearing, and no way for an old master password to come back through a conflict.</p></div>
+          </li>
+          <li>
+            <div class="phase">Phase 9<small>in review</small></div>
+            <div><p><strong>Tested for real, ready to deploy.</strong> Until now every client was tested against a stand-in for the server. Now the whole chain runs against the real API and a MariaDB database, the one production uses: the web vault in a real browser, with the browser's own CORS checks, and the desktop app's client go through registration, email verification, two-factor sign-in, encrypted sync, password change and reset, and account deletion, in CI. The API gets its production deployment files — a locked-down service, the web server in front, a deploy script that backs up the database before it migrates and switches back to the previous release if the new one does not come up healthy — and checks that a production-configured server behaves as documented. Plus a window icon for the desktop app and smaller fixes.</p></div>
           </li>
         </ol>
       </div>

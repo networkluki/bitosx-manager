@@ -91,8 +91,9 @@ process; it is zeroed on lock. The master password is still never kept.
 a browser save with `vault-crypto.js` under Node, and the same envelope was opened with
 `BitosX.Crypto.VaultCryptor` + `VaultSerializer` + `VaultValidation` from a .NET console program
 (parse, unlock with the canonical password encoding, deserialize, validate all items) — see the
-pull request for the run. Not verified: a real desktop syncing a browser-written revision through
-`api.bitosx.se`.
+pull request for the run. Since phase 9 the live suite (Verification) saves a browser edit to the
+real API and opens what that server then returns with `vault-crypto.js`. Not verified: a real desktop
+syncing a browser-written revision through `api.bitosx.se`.
 
 ## Account recovery and deletion (phase 6)
 
@@ -234,7 +235,10 @@ Phases as presented on the product page, and where each stands:
 5. **Phase 5:** editing in the browser, above — this repository, merged.
 6. **Phase 6:** account recovery and deletion — merged.
 7. **Phase 7:** two-factor sign-in and setup — merged.
-8. **Phase 8:** fine-tuning and account controls, above — this repository.
+8. **Phase 8:** fine-tuning and account controls, above — merged.
+9. **Phase 9:** tested for real and ready to deploy — the live suite (Verification, below) runs the
+   web vault against the real API and a MariaDB database; the API repository gets the local live stack,
+   CI and its production deployment files.
 
 ## Deployment prerequisites outside this repository
 
@@ -355,6 +359,49 @@ mock server's clock can be moved or stopped (`mock.clock`), so TOTP codes and ex
 from a time the test controls and a 30-second boundary can never fall inside a test; the page's clock
 is Playwright's `page.clock` where idle timers and time limits are tested. `BITOSX_E2E_ONLY=<text>`
 runs only the tests whose name contains the text.
+
+### Against the real API (live suite, phase 9)
+
+`tests/e2e-live.js` runs the unchanged `vault/public` in Chromium against a real API and database: the
+local stack of `networkluki/bitosx-api` (`tools/devstack/up.sh`, MariaDB + the API in its Testing
+environment, mail held in the outbox). It reads exactly three variables, which `up.sh` writes to
+`tools/devstack/.state/env`:
+
+```bash
+# in bitosx-api: tools/devstack/up.sh   (and tools/devstack/down.sh afterwards)
+set -a; . ../bitosx-api/tools/devstack/.state/env; set +a   # BITOSX_LIVE_API_URL, _WEB_ORIGIN, _MAIL_CMD
+node tests/e2e-live.js
+```
+
+Without them it prints `live suite not configured: set BITOSX_LIVE_API_URL, BITOSX_LIVE_WEB_ORIGIN,
+BITOSX_LIVE_MAIL_CMD` and exits with code **2**, never 0; a stack that does not answer `GET /health`
+fails it (exit 1). It also needs `openssl`. The API repository's `e2e.yml` workflow runs it nightly and
+on changes to the API. One fresh account per run (`e2e-<random>@example.test`) goes through:
+register → verify with the token the mail command reads from the outbox → sign in → sessions (another
+device's session listed and revoked) → TOTP enrollment (codes computed in the test, each on a later
+30-second step than the last, as the server's replay rule requires) → sign out → sign in with a code →
+a fixture envelope written by the desktop's code uploaded through the API (the page cannot create a
+vault) → opened with its master password → an item edited and saved (a real `PUT`) → reload, sign in,
+re-open, the edit is there, and the server's copy opens under Node → the encrypted backup is byte for
+byte `GET /v1/sync/envelope` → account password changed with a code (the other session is signed out,
+this one stays) → forgot + reset with the mailed token → sign-in with a recovery code → account
+deleted with a code → sign-in fails. It runs in about a minute, mostly waiting for TOTP steps.
+
+**How the page reaches the live API, with the site unchanged.** `config.js` and every CSP name
+`https://api.bitosx.se`, and they stay that way: nothing in `vault/public` knows about tests, so what is
+deployed is byte for byte what was tested, and no visitor can switch anything on. The suite starts a
+loopback TLS relay with a throw-away self-signed certificate for `api.bitosx.se` (made with `openssl`
+in a temporary directory, deleted after the run) and launches its own Chromium with
+`--host-resolver-rules` (`api.bitosx.se` resolves to the relay, every other name fails),
+`--ignore-certificate-errors-spki-list` (only that one key is trusted) and no proxy (a proxy would
+resolve the name itself). The vault is served on `BITOSX_LIVE_WEB_ORIGIN` with the headers of
+`vault/public/_headers` on top of each page's `<meta>` CSP, so `connect-src https://api.bitosx.se`
+is what lets the requests out. The browser sends its real preflights and requests; the relay passes
+them to `BITOSX_LIVE_API_URL` and returns the API's response headers unchanged (only hop-by-hop
+framing headers are re-framed), so the browser applies CORS to the API's own `Access-Control-*`
+answers. No Playwright interception is used: Playwright answers the preflight of an intercepted
+request itself. The first test shows the check is real: from a second local origin the API does not
+list, the browser refuses the answer.
 
 After deployment, the live checks are:
 
