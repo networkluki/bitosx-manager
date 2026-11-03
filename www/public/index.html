@@ -13,7 +13,7 @@
     <title>BitosX — Your Security</title>
     <link rel="canonical" href="https://bitosx.se/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.5.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.6.0" />
     <meta name="theme-color" content="#26292E" />
     <!-- Theme applied before first paint (avoids a flash of the wrong theme) -->
     <script src="/assets/js/theme-init.js"></script>
@@ -113,7 +113,7 @@ encrypted vault — the only thing written to disk</pre>
     <section class="section" id="today">
       <div class="container">
         <h2>What works today</h2>
-        <p class="intro">Honest status, no marketing. The desktop application (0.7.0) is a complete local encrypted vault. Server features are being built behind it, one audited layer at a time.</p>
+        <p class="intro">Honest status, no marketing. The desktop application (0.11.0) is a complete local encrypted vault. The online account, encrypted sync and the web vault are built behind it, one audited layer at a time.</p>
         <div class="two-col">
           <article class="card">
             <h3>Desktop app — available</h3>
@@ -129,18 +129,17 @@ encrypted vault — the only thing written to disk</pre>
             </ul>
           </article>
           <article class="card">
-            <h3>Online account — phase 1</h3>
+            <h3>Online account and web vault</h3>
             <ul>
               <li>Email-first registration: no password is accepted until you own the address</li>
-              <li>Email verification sets the account password (12–128 characters)</li>
-              <li>Sign in, short-lived access tokens, rotating refresh tokens</li>
-              <li>See and revoke your own sessions at <a href="https://vault.bitosx.se/">vault.bitosx.se</a></li>
+              <li>Sign in with short-lived access tokens and rotating refresh tokens, optionally with a second factor (TOTP)</li>
+              <li>See and revoke your sessions, change or reset the account password, delete the account at <a href="https://vault.bitosx.se/">vault.bitosx.se</a></li>
+              <li>Encrypted sync: the server stores the vault the desktop encrypted, and cannot open it</li>
+              <li>Open, edit and back up that vault in the browser with the master password, which never leaves the browser</li>
             </ul>
             <h3 class="card-subhead">Not yet</h3>
             <ul class="muted">
-              <li>Vault synchronisation between the desktop app and the server</li>
-              <li>Reading your vault in the browser</li>
-              <li>Browser extension, mobile apps, password reset, two-factor authentication</li>
+              <li>Browser extension and mobile apps</li>
             </ul>
           </article>
         </div>
@@ -160,8 +159,8 @@ encrypted vault — the only thing written to disk</pre>
             </li>
             <li>
               <span class="host">vault.bitosx.se</span>
-              <span class="badge ok">phase 1</span>
-              <span class="desc">Web account: register, verify your email, sign in, manage sessions. Talks to the API directly from your browser.</span>
+              <span class="badge ok">static</span>
+              <span class="desc">Web account and web vault: register, sign in (with two-factor if you set it up), manage sessions and the account, and open your encrypted vault in the browser. Talks to the API directly from your browser.</span>
             </li>
             <li>
               <span class="host">api.bitosx.se</span>
@@ -202,8 +201,12 @@ encrypted vault — the only thing written to disk</pre>
             <div><p><strong>Account recovery and deletion.</strong> Reset a forgotten <em>account</em> password through an emailed, single-use link that signs out every device. The vault master password is deliberately out of reach: it was never on the server, so nothing can reset it. Delete the account, its sessions and the stored encrypted vault for good, behind a password confirmation.</p></div>
           </li>
           <li>
-            <div class="phase">Phase 7<small>in review</small></div>
+            <div class="phase">Phase 7<small>built</small></div>
             <div><p><strong>Two-factor sign-in.</strong> A code from an authenticator app (TOTP, RFC 6238) as a second step at sign-in, set up on vault.bitosx.se with single-use recovery codes. The server stores the secret encrypted and refuses to sign in without the code; it never bypasses the step, not even when its own key for the second factor is missing. The desktop app asks for the code too. The second factor protects the account only; the vault master password stays what it always was: yours, and never on the server.</p></div>
+          </li>
+          <li>
+            <div class="phase">Phase 8<small>in review</small></div>
+            <div><p><strong>Fine-tuning and account controls.</strong> Change the account password while signed in (every other device is signed out; the vault master password is untouched), two-factor confirmation for account deletion, a password generator with the desktop's options and strength rating in the web vault, favorites and sorting, and a download of the encrypted vault exactly as the server stores it. Plus a round of fixes across the API, the desktop app and the web: sessions that end cleanly everywhere, honest clipboard clearing, and no way for an old master password to come back through a conflict.</p></div>
           </li>
         </ol>
       </div>
@@ -211,7 +214,7 @@ encrypted vault — the only thing written to disk</pre>
   </main>
 
   <footer>
-    <div class="footer-version">web v0.5.0 · app v0.9.0 · api v0.1.0</div>
+    <div class="footer-version">web v0.6.0 · app v0.11.0 · api v0.1.0</div>
     <div class="footer-links">
       <a href="https://github.com/networkluki/bitosx" target="_blank" rel="noopener noreferrer">bitosx</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">bitosx-api</a>

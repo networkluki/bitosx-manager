@@ -8,7 +8,11 @@
 //    only in a POST body; neither is ever logged, put in a URL or in the DOM.
 //  - Refresh is single-flighted: the API revokes the whole session if a
 //    refresh token is presented twice, so two concurrent refreshes must never
-//    happen.
+//    happen. A 401 on an authenticated call gets exactly one refresh and one
+//    retry; if that fails too, the session is over and "bitosx:session-ended"
+//    is dispatched on document so the page can lock and say so.
+//  - Every session has a generation number; a response that arrives after the
+//    session it belonged to ended never touches the next one.
 //  - Every response is size-capped and type-checked before it is trusted.
 //  - All failures collapse to a small set of kinds; the server's generic
 //    ProblemDetails "detail" is only surfaced for statuses where it is known
@@ -26,6 +30,9 @@
 		refreshExpiresAt: 0
 	};
 	var refreshInFlight = null;
+	// Changes whenever a session starts or ends. Callers capture it before a request and compare
+	// afterwards, so a late answer never writes into a session that started since.
+	var generation = 0;
 
 	function ApiError(kind, status, retryAfterSeconds) {
 		this.name = "ApiError";
@@ -38,7 +45,8 @@
 	ApiError.prototype.constructor = ApiError;
 
 	var KINDS = Object.freeze({
-		NETWORK: "network",             // offline, DNS, CORS, timeout
+		NETWORK: "network",             // offline, DNS, CORS, connection dropped
+		TIMEOUT: "timeout",             // no complete answer within the client's time limit
 		INVALID: "invalid",             // 400
 		UNAUTHENTICATED: "unauthenticated", // 401
 		FORBIDDEN: "forbidden",         // 403: authenticated, but the password confirmation failed
@@ -55,6 +63,18 @@
 		state.accessExpiresAt = 0;
 		state.refreshToken = null;
 		state.refreshExpiresAt = 0;
+		refreshInFlight = null;
+		generation++;
+	}
+
+	// The server ended the session (a 401 that one refresh could not cure, or a refused refresh).
+	// Drops the tokens and tells the page once.
+	function endSession() {
+		var had = state.refreshToken !== null;
+		clearSession();
+		if (had && global.document && typeof global.CustomEvent === "function") {
+			global.document.dispatchEvent(new global.CustomEvent("bitosx:session-ended"));
+		}
 	}
 
 	function isSignedIn() {
@@ -84,12 +104,16 @@
 
 	// Low-level request. Resolves to { status, body } where body is the parsed
 	// JSON (or null for 204 / empty). Rejects with ApiError. options.maxBytes
-	// raises the response cap for the one call that needs it (the envelope).
+	// raises the response cap and options.timeoutMs the time limit for the calls
+	// that need it (the envelope transfers, the session list). The time limit
+	// covers the whole exchange, body included.
 	function request(method, path, options) {
 		options = options || {};
 		var maxBytes = options.maxBytes || cfg.maxResponseBytes;
 		var controller = new AbortController();
-		var timer = setTimeout(function () { controller.abort(); }, cfg.requestTimeoutMs);
+		var timedOut = false;
+		var timer = setTimeout(function () { timedOut = true; controller.abort(); }, options.timeoutMs || cfg.requestTimeoutMs);
+		function transportError() { return new ApiError(timedOut ? KINDS.TIMEOUT : KINDS.NETWORK, 0); }
 		var headers = { "Accept": "application/json" };
 		var init = {
 			method: method,
@@ -108,7 +132,7 @@
 		}
 
 		return fetch(cfg.apiBase + path, init)
-			.catch(function () { throw new ApiError(KINDS.NETWORK, 0); })
+			.catch(function () { throw transportError(); })
 			.then(function (res) {
 				var status = res.status;
 				var retryAfter = parseRetryAfter(res);
@@ -117,7 +141,7 @@
 				var isJson = type.indexOf("application/json") === 0 || type.indexOf("application/problem+json") === 0;
 				var declared = parseInt(res.headers.get("content-length") || "", 10);
 				if (Number.isFinite(declared) && declared > maxBytes) { throw new ApiError(KINDS.UNEXPECTED, status); }
-				return res.text().then(function (text) {
+				return res.text().catch(function () { throw transportError(); }).then(function (text) {
 					if (text.length > maxBytes) { throw new ApiError(KINDS.UNEXPECTED, status); }
 					var body = null;
 					if (isJson && text.length > 0) {
@@ -132,8 +156,14 @@
 
 	// ---- shape validation (the API is ours, but a response is still input) ----
 	function isNonEmptyString(v, max) { return typeof v === "string" && v.length > 0 && v.length <= (max || 8192); }
+	// Every timestamp the API sends is UTC with an explicit offset. One without an offset is still
+	// read as UTC, never as the browser's local time.
+	var NO_OFFSET_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?$/;
+	var ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})$/i;
 	function parseUtc(v) {
 		if (typeof v !== "string" || v.length > 64) { return NaN; }
+		if (NO_OFFSET_RE.test(v)) { v += "Z"; }
+		else if (!ISO_RE.test(v)) { return NaN; }
 		return new Date(v).getTime();
 	}
 	var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -145,7 +175,6 @@
 		if (!isNonEmptyString(body.accessToken) || !isNonEmptyString(body.refreshToken, 256) ||
 			!Number.isFinite(accessExp) || !Number.isFinite(refreshExp) ||
 			(body.tokenType !== undefined && body.tokenType !== "Bearer")) {
-			clearSession();
 			throw new ApiError(KINDS.UNEXPECTED, 200);
 		}
 		state.accessToken = body.accessToken;
@@ -193,8 +222,10 @@
 				}
 				if (b && b.mfaToken !== undefined) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
 				adoptTokens(b);
+				generation++;
 				return { signedIn: true };
-			});
+			})
+			.catch(function (err) { clearSession(); throw err; });
 	}
 
 	// Second sign-in step: the challenge token from login() and a TOTP or recovery code.
@@ -202,42 +233,67 @@
 		if (typeof mfaToken !== "string" || !MFA_TOKEN_RE.test(mfaToken) || typeof code !== "string" || code.length === 0 || code.length > 32) {
 			return Promise.reject(new ApiError(KINDS.UNAUTHENTICATED, 401));
 		}
+		clearSession();
 		return request("POST", "/v1/auth/login/totp", { body: { mfaToken: mfaToken, code: code } })
-			.then(function (r) { adoptTokens(r.body); return true; });
+			.then(function (r) { adoptTokens(r.body); generation++; return true; })
+			.catch(function (err) { clearSession(); throw err; });
 	}
 
-	// Single-flight refresh. A failed refresh ends the local session.
+	// Single-flight refresh. A refused refresh ends the session; a network failure does not.
 	function refresh() {
 		if (refreshInFlight) { return refreshInFlight; }
 		var token = state.refreshToken;
 		if (!token) { return Promise.reject(new ApiError(KINDS.UNAUTHENTICATED, 401)); }
-		refreshInFlight = request("POST", "/v1/auth/refresh", { body: { refreshToken: token } })
-			.then(function (r) { adoptTokens(r.body); return true; })
+		var gen = generation;
+		var p = request("POST", "/v1/auth/refresh", { body: { refreshToken: token } })
+			.then(function (r) {
+				// The session this refresh belonged to ended meanwhile: its tokens are not adopted.
+				if (gen !== generation) { throw new ApiError(KINDS.UNAUTHENTICATED, 401); }
+				try { adoptTokens(r.body); }
+				catch (e) { endSession(); throw e; } // a malformed answer leaves nothing usable
+				return true;
+			})
 			.catch(function (err) {
-				if (err instanceof ApiError && (err.kind === KINDS.UNAUTHENTICATED || err.kind === KINDS.INVALID)) {
-					clearSession();
+				if (gen === generation && err instanceof ApiError && (err.kind === KINDS.UNAUTHENTICATED || err.kind === KINDS.INVALID)) {
+					endSession();
 				}
 				throw err;
 			})
-			.finally(function () { refreshInFlight = null; });
-		return refreshInFlight;
+			.finally(function () { if (refreshInFlight === p) { refreshInFlight = null; } });
+		refreshInFlight = p;
+		return p;
 	}
 
 	// ---- authenticated endpoints ----
 	function withAccessToken() {
-		if (!isSignedIn()) { return Promise.reject(new ApiError(KINDS.UNAUTHENTICATED, 401)); }
+		if (!isSignedIn()) {
+			if (state.refreshToken !== null) { endSession(); } // the refresh token ran out
+			return Promise.reject(new ApiError(KINDS.UNAUTHENTICATED, 401));
+		}
 		var needsRefresh = !state.accessToken || (state.accessExpiresAt - Date.now()) < cfg.refreshSkewMs;
 		var ready = needsRefresh ? refresh() : Promise.resolve(true);
 		return ready.then(function () { return state.accessToken; });
 	}
 
 	function authed(method, path, options) {
+		var gen = generation;
+		function send(token) { return request(method, path, Object.assign({}, options || {}, { accessToken: token })); }
 		return withAccessToken().then(function (token) {
-			var opts = Object.assign({}, options || {}, { accessToken: token });
-			return request(method, path, opts).catch(function (err) {
-				// A 401 on a token we believed valid means the session is gone server-side.
-				if (err instanceof ApiError && err.kind === KINDS.UNAUTHENTICATED) { clearSession(); }
-				throw err;
+			return send(token).catch(function (err) {
+				if (!(err instanceof ApiError && err.kind === KINDS.UNAUTHENTICATED) || gen !== generation) { throw err; }
+				// The server refused a token this client believed valid (a clock behind the server's,
+				// or the session ended there). Exactly one refresh — or the one another call has
+				// finished meanwhile — and exactly one retry; the server never ran the refused request.
+				var ready = (state.accessToken && state.accessToken !== token) ? Promise.resolve(true) : refresh();
+				return ready
+					.then(function () {
+						if (gen !== generation) { throw err; }
+						return send(state.accessToken);
+					})
+					.catch(function (err2) {
+						if (err2 instanceof ApiError && err2.kind === KINDS.UNAUTHENTICATED && gen === generation) { endSession(); }
+						throw err2;
+					});
 			});
 		});
 	}
@@ -255,7 +311,7 @@
 	}
 
 	function sessions() {
-		return authed("GET", "/v1/account/sessions").then(function (r) {
+		return authed("GET", "/v1/account/sessions", { maxBytes: cfg.maxSessionsResponseBytes }).then(function (r) {
 			if (!Array.isArray(r.body) || r.body.length > 1000) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
 			return r.body.map(function (s) {
 				var created = parseUtc(s && s.createdAt);
@@ -305,7 +361,7 @@
 	// The stored envelope as bytes, with the server's statements about it. The caller checks the
 	// fingerprint; the size is checked here. null when the server holds nothing.
 	function syncEnvelope() {
-		return authed("GET", "/v1/sync/envelope", { maxBytes: cfg.maxEnvelopeResponseBytes })
+		return authed("GET", "/v1/sync/envelope", { maxBytes: cfg.maxEnvelopeResponseBytes, timeoutMs: cfg.envelopeTimeoutMs })
 			.then(function (r) {
 				var meta = parseSyncStatus(r.body, r.status);
 				var text = r.body.envelope;
@@ -332,7 +388,7 @@
 		}
 		var binary = "";
 		for (var i = 0; i < envelopeBytes.length; i++) { binary += String.fromCharCode(envelopeBytes[i]); }
-		return authed("PUT", "/v1/sync/envelope", { body: { baseRevision: baseRevision, envelope: btoa(binary) } })
+		return authed("PUT", "/v1/sync/envelope", { body: { baseRevision: baseRevision, envelope: btoa(binary) }, timeoutMs: cfg.envelopeTimeoutMs })
 			.then(function (r) {
 				var stored = parseSyncStatus(r.body, r.status);
 				if (stored.sizeBytes !== envelopeBytes.length || stored.revision <= baseRevision) { throw new ApiError(KINDS.UNEXPECTED, r.status); }
@@ -401,24 +457,67 @@
 		return authed("POST", "/v1/account/totp/recovery-codes", { body: { password: password, code: code } }).then(parseRecoveryCodes);
 	}
 
+	function optionalCode(code) {
+		return code === undefined || code === null || code === "" ? null : code;
+	}
+	function badCode(code) { return code !== null && (typeof code !== "string" || code.length > 32); }
+
 	// Permanently deletes the signed-in account (and the vault stored on the server) after the
-	// server re-checks the account password. The local session is gone either way on success.
-	function deleteAccount(password) {
-		if (typeof password !== "string" || password.length === 0 || password.length > cfg.passwordMaxLength) {
+	// server re-checks the account password, and the second factor when the account has one. On
+	// success the server session is gone; the caller clears the local one. A refusal is a 403 and
+	// the session stays valid.
+	function deleteAccount(password, code) {
+		code = optionalCode(code);
+		if (typeof password !== "string" || password.length === 0 || password.length > cfg.passwordMaxLength || badCode(code)) {
 			return Promise.reject(new ApiError(KINDS.FORBIDDEN, 403));
 		}
-		return authed("POST", "/v1/account/delete", { body: { password: password } })
-			.then(function () { clearSession(); return true; });
+		var body = { password: password };
+		if (code !== null) { body.code = code; }
+		return authed("POST", "/v1/account/delete", { body: body })
+			.then(function () { return true; }); // the caller ends the local session (it is gone on the server)
 	}
 
+	// Replaces the account password. Every other session is revoked by the server; this one stays.
+	// The vault master password is not involved: the server has never seen it.
+	function changePassword(currentPassword, newPassword, code) {
+		code = optionalCode(code);
+		if (typeof currentPassword !== "string" || currentPassword.length === 0 || currentPassword.length > cfg.passwordMaxLength || badCode(code)) {
+			return Promise.reject(new ApiError(KINDS.FORBIDDEN, 403));
+		}
+		if (typeof newPassword !== "string" || newPassword.length < cfg.passwordMinLength || newPassword.length > cfg.passwordMaxLength) {
+			return Promise.reject(new ApiError(KINDS.INVALID, 400));
+		}
+		var body = { currentPassword: currentPassword, newPassword: newPassword };
+		if (code !== null) { body.code = code; }
+		return authed("POST", "/v1/account/password", { body: body }).then(function () { return true; });
+	}
+
+	// Signing out here always signs out locally, whether or not the server could be told.
 	function logout() {
 		return authed("POST", "/v1/auth/logout").then(function () { clearSession(); return true; })
 			.catch(function (err) { clearSession(); throw err; });
 	}
 
+	// Signing out everywhere keeps this session when the server could not be told, so the user can
+	// try again: the other devices are still signed in.
 	function logoutAll() {
-		return authed("POST", "/v1/auth/logout-all").then(function () { clearSession(); return true; })
-			.catch(function (err) { clearSession(); throw err; });
+		return authed("POST", "/v1/auth/logout-all").then(function () { clearSession(); return true; });
+	}
+
+	// The page is going away: drop the tokens and, best effort, revoke the session on the server so
+	// it does not stay listed as active. Fire and forget; nothing waits for the answer.
+	function revokeOnUnload() {
+		var token = state.accessToken;
+		var usable = typeof token === "string" && isSignedIn() && state.accessExpiresAt - Date.now() > 5000;
+		clearSession();
+		if (!usable || typeof global.fetch !== "function") { return false; }
+		try {
+			global.fetch(cfg.apiBase + "/v1/auth/logout", {
+				method: "POST", keepalive: true, credentials: "omit", cache: "no-store", redirect: "error",
+				headers: { "Accept": "application/json", "Authorization": "Bearer " + token }
+			}).catch(function () { /* best effort */ });
+		} catch (e) { return false; }
+		return true;
 	}
 
 	global.bitosxApi = Object.freeze({
@@ -426,6 +525,9 @@
 		KINDS: KINDS,
 		isSignedIn: isSignedIn,
 		clearSession: clearSession,
+		generation: function () { return generation; },
+		revokeOnUnload: revokeOnUnload,
+		changePassword: changePassword,
 		register: register,
 		resendVerification: resendVerification,
 		verifyEmail: verifyEmail,
@@ -446,6 +548,7 @@
 		syncEnvelope: syncEnvelope,
 		syncUpload: syncUpload,
 		logout: logout,
-		logoutAll: logoutAll
+		logoutAll: logoutAll,
+		_parseUtc: parseUtc
 	});
 })(window);

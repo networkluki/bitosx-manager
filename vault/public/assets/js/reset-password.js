@@ -50,7 +50,7 @@
 
 	if (!token) {
 		ui.notice(noticeEl, "err", "This reset link is incomplete or malformed. Open the link from the email again, or request a new one.");
-		ui.setBusy(form, true);
+		ui.lockForm(form);
 		return;
 	}
 
@@ -59,8 +59,8 @@
 		var password = passEl.value;
 		var password2 = pass2El.value;
 		var okLen = ui.validPassword(password);
-		passEl.setAttribute("aria-invalid", okLen ? "false" : "true");
-		pass2El.setAttribute("aria-invalid", password === password2 ? "false" : "true");
+		ui.markField(passEl, !okLen, noticeEl);
+		ui.markField(pass2El, okLen && password !== password2, noticeEl);
 		if (!okLen) {
 			ui.notice(noticeEl, "err", "The account password must be 12–128 characters.");
 			return;
@@ -77,12 +77,14 @@
 				passEl.value = "";
 				pass2El.value = "";
 				ui.notice(noticeEl, "ok", "Your account password is reset and every device is signed out. You can sign in with the new password now.");
-				// The token is single-use: keep the form disabled after success.
+				// The token is single-use: the form stays disabled after success.
+				ui.lockForm(form);
 			})
 			.catch(function (err) {
 				ui.notice(noticeEl, "err", ui.describeError(err, "reset"));
 				// 400 means the token is spent/expired; anything else may be retried.
-				if (!(err && err.kind === api.KINDS.INVALID)) { ui.setBusy(form, false); }
+				if (err && err.kind === api.KINDS.INVALID) { ui.lockForm(form); }
+				else { ui.setBusy(form, false); }
 			})
 			.finally(function () { password = null; password2 = null; });
 	});

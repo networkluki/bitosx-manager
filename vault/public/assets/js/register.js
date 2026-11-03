@@ -10,7 +10,7 @@
 
 	var GENERIC_OK = "If the address can be registered or needs verification, an email is on its way. Open the link within 30 minutes to choose your account password.";
 
-	function wire(formId, emailId, noticeId, action) {
+	function wire(formId, emailId, noticeId, action, unavailableText) {
 		var form = $(formId);
 		var emailEl = $(emailId);
 		var noticeEl = $(noticeId);
@@ -19,7 +19,7 @@
 			ev.preventDefault();
 			var email = emailEl.value;
 			var ok = ui.validEmail(email);
-			emailEl.setAttribute("aria-invalid", ok ? "false" : "true");
+			ui.markField(emailEl, !ok, noticeEl);
 			if (!ok) {
 				ui.notice(noticeEl, "err", "Enter a valid email address.");
 				return;
@@ -33,7 +33,7 @@
 				})
 				.catch(function (err) {
 					var msg = (err && err.kind === api.KINDS.UNAVAILABLE)
-						? "Email delivery is not available right now. Nothing was created; try again later."
+						? unavailableText
 						: ui.describeError(err, "register");
 					ui.notice(noticeEl, "err", msg);
 				})
@@ -41,8 +41,10 @@
 		});
 	}
 
-	wire("register-form", "register-email", "register-notice", api.register);
-	wire("resend-form", "resend-email", "resend-notice", api.resendVerification);
+	wire("register-form", "register-email", "register-notice", api.register,
+		"Email delivery is not available right now. Nothing was created; try again later.");
+	wire("resend-form", "resend-email", "resend-notice", api.resendVerification,
+		"Email delivery is not available right now. Nothing was sent; try again later.");
 
 	// Deep link from the sign-in page: /register#resend focuses the resend form.
 	if (window.location.hash === "#resend") {

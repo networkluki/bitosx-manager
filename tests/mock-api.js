@@ -20,20 +20,29 @@ function json(status, obj) {
 function noContent() { return { status: 204, contentType: null, body: "" }; }
 
 function createMockApi(options = {}) {
-	const now = () => Date.now();
+	// The server's clock: real time, unless a test moves it (offsetMs) or stops it (frozenAt), so
+	// that TOTP codes and expiries are computed from a time the test controls.
+	const clock = { offsetMs: 0, frozenAt: null, freeze(ms) { this.frozenAt = ms; }, unfreeze() { this.frozenAt = null; } };
+	const now = () => (clock.frozenAt !== null ? clock.frozenAt : Date.now() + clock.offsetMs);
 	const accounts = new Map(); // email -> { id, password, verified, createdAt }
 	const verificationTokens = new Map(); // token -> email
 	const resetTokens = new Map(); // token -> email (password reset, verified accounts only)
 	const sessions = new Map(); // sessionId -> { accountId, createdAt, lastSeenAt, expiresAt, revoked }
 	const refreshTokens = new Map(); // refreshToken -> { sessionId, consumed }
-	const accessTokens = new Map(); // accessToken -> sessionId
+	const accessTokens = new Map(); // accessToken -> { sessionId, expiresAt }
 	const calls = []; // { method, path, body, headers }
 	const envelopes = new Map(); // accountId -> { bytes, revision, updatedAt, fingerprintOverride }
 	const totp = new Map(); // accountId -> { secret (Buffer), confirmed, lastUsedStep, recoveryCodes: Map(code -> used) }
 	const mfaChallenges = new Map(); // mfaToken -> { accountId, expiresAt, attempts, consumed, password }
+	const lastRevisions = new Map(); // accountId -> the last revision ever stored (revisions never restart)
 
 	const accessLifetimeMs = options.accessLifetimeMs ?? 15 * 60 * 1000;
-	const flags = { emailDelivery: true, rateLimitLogin: false, rateLimitForgot: false, failHealth: false, totpCapability: true };
+	// JwtOptions.ClockSkew: the server still accepts an access token this long after its expiry.
+	const accessClockSkewMs = 60 * 1000;
+	// TotpOptions: the digit count is configurable (6..8, default 6); a challenge allows 5 wrong codes.
+	const totpDigits = options.totpDigits ?? 6;
+	const mfaMaxAttempts = 5;
+	const flags = { emailDelivery: true, rateLimitLogin: false, rateLimitForgot: false, failHealth: false, totpCapability: true, capacity503: false };
 
 	function seedAccount(email, password) {
 		const id = crypto.randomUUID();
@@ -71,15 +80,22 @@ function createMockApi(options = {}) {
 		return codes;
 	}
 	// Verifies and consumes a TOTP code (±1 step, replay guard) or a recovery code. Mirrors the server.
+	function matchTotp(t, trimmed) {
+		const step = totpStep(now());
+		for (const candidate of [step - 1, step, step + 1]) {
+			if (t.lastUsedStep !== null && candidate <= t.lastUsedStep) { continue; }
+			if (totpCode(t.secret, candidate, totpDigits) === trimmed) { return candidate; }
+		}
+		return null;
+	}
 	function consumeCode(t, code) {
 		const trimmed = String(code).trim();
-		if (/^[0-9]{6}$/.test(trimmed)) {
-			const step = totpStep(now());
-			for (const candidate of [step - 1, step, step + 1]) {
-				if (t.lastUsedStep !== null && candidate <= t.lastUsedStep) { continue; }
-				if (totpCode(t.secret, candidate) === trimmed) { t.lastUsedStep = candidate; return true; }
-			}
-			return false;
+		if (/^[0-9]+$/.test(trimmed)) {
+			if (trimmed.length !== totpDigits) { return false; }
+			const matched = matchTotp(t, trimmed);
+			if (matched === null) { return false; }
+			t.lastUsedStep = matched;
+			return true;
 		}
 		const canonical = trimmed.toLowerCase().replace(/[- ]/g, "");
 		for (const [c, used] of t.recoveryCodes) {
@@ -92,8 +108,8 @@ function createMockApi(options = {}) {
 		resetTokens.set(token, email.toLowerCase());
 		return token;
 	}
-	function revokeAllSessions(accountId) {
-		for (const s of sessions.values()) { if (s.accountId === accountId) { s.revoked = true; } }
+	function revokeAllSessions(accountId, exceptSessionId) {
+		for (const [id, s] of sessions) { if (s.accountId === accountId && id !== exceptSessionId) { s.revoked = true; } }
 	}
 	function seedSession(accountId, ageMs) {
 		const id = crypto.randomUUID();
@@ -108,9 +124,10 @@ function createMockApi(options = {}) {
 	// Puts an encrypted envelope on the "server" for an account, as a desktop sync would.
 	// fingerprintOverride lets a test make the server lie about the bytes.
 	function seedEnvelope(accountId, bytes, options = {}) {
-		const prev = envelopes.get(accountId);
+		const revision = (lastRevisions.get(accountId) || 0) + 1;
+		lastRevisions.set(accountId, revision);
 		envelopes.set(accountId, {
-			bytes: Buffer.from(bytes), revision: prev ? prev.revision + 1 : 1,
+			bytes: Buffer.from(bytes), revision,
 			updatedAt: new Date(now()).toISOString(), fingerprintOverride: options.fingerprintOverride || null
 		});
 	}
@@ -126,7 +143,7 @@ function createMockApi(options = {}) {
 	function issueTokens(sessionId) {
 		const accessToken = "jwt." + crypto.randomBytes(24).toString("base64url");
 		const refreshToken = crypto.randomBytes(32).toString("base64url");
-		accessTokens.set(accessToken, sessionId);
+		accessTokens.set(accessToken, { sessionId, expiresAt: now() + accessLifetimeMs });
 		refreshTokens.set(refreshToken, { sessionId, consumed: false });
 		return {
 			accessToken,
@@ -140,15 +157,21 @@ function createMockApi(options = {}) {
 	function authenticate(headers) {
 		const auth = headers["authorization"] || "";
 		if (!auth.startsWith("Bearer ")) { return null; }
-		const sid = accessTokens.get(auth.slice(7));
-		if (!sid) { return null; }
+		const rec = accessTokens.get(auth.slice(7));
+		// The server checks the token's own expiry (with its clock skew), whatever the client believes.
+		if (!rec || now() > rec.expiresAt + accessClockSkewMs) { return null; }
+		const sid = rec.sessionId;
 		const s = sessions.get(sid);
 		if (!s || s.revoked) { return null; }
 		s.lastSeenAt = new Date(now()).toISOString();
 		return { sessionId: sid, session: s };
 	}
 
-	// The real server caps auth bodies at 4 KiB and only the envelope upload at ~22 MiB.
+	// The real server caps the bodies of these endpoints at 4 KiB (RejectOversizedBody); the rest are
+	// bounded by Kestrel's 64 KiB, and only the envelope upload may be ~22 MiB.
+	const SMALL_BODY = new Set(["/v1/auth/forgot-password", "/v1/auth/reset-password", "/v1/auth/login", "/v1/auth/login/totp",
+		"/v1/auth/refresh", "/v1/account/delete", "/v1/account/password", "/v1/account/totp/enroll", "/v1/account/totp/confirm",
+		"/v1/account/totp/disable", "/v1/account/totp/recovery-codes"]);
 	function parseBody(raw, limit) {
 		if (!raw) { return {}; }
 		if (Buffer.byteLength(raw) > limit) { return { __tooLarge: true }; }
@@ -158,7 +181,7 @@ function createMockApi(options = {}) {
 	// Returns { status, contentType, body, headers? }
 	function handle(method, path, headers, rawBody) {
 		const isUpload = method === "PUT" && path === "/v1/sync/envelope";
-		const body = parseBody(rawBody, isUpload ? 23 * 1024 * 1024 : 4096);
+		const body = parseBody(rawBody, isUpload ? 23 * 1024 * 1024 : SMALL_BODY.has(path) ? 4096 : 64 * 1024);
 		calls.push({ method, path, body, headers });
 		if (body.__tooLarge) { return problem(413, "Payload Too Large", "Request body too large."); }
 		if (body.__malformed) { return problem(400, "Bad Request", "Malformed JSON."); }
@@ -168,11 +191,19 @@ function createMockApi(options = {}) {
 		}
 		if (method === "GET" && path === "/version") { return json(200, { service: "BitosX API", version: "0.1.0" }); }
 
-		if (method === "POST" && (path === "/v1/auth/register" || path === "/v1/auth/resend-verification")) {
+		// Argon2 admission overload: a generic 503 with Retry-After: 1 (AuthEndpoints.CapacityUnavailable).
+		const capacity = () => ({ ...problem(503, "Service unavailable", "The service is temporarily unavailable. Try again shortly."), headers: { "Retry-After": "1" } });
+
+		if (method === "POST" && path === "/v1/auth/resend-verification") {
+			// Always the same generic 202 once delivery is on, whatever the address (AuthEndpoints, API.md).
+			if (!flags.emailDelivery) { return problem(503, "Service unavailable", "Email verification is temporarily unavailable."); }
+			return json(202, { message: "If the address can be registered or needs verification, check your email." });
+		}
+		if (method === "POST" && path === "/v1/auth/register") {
 			if (typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
 				return problem(400, "Bad Request", "Invalid email address.");
 			}
-			if (!flags.emailDelivery) { return problem(503, "Service unavailable", "Service temporarily unavailable. Try again later."); }
+			if (!flags.emailDelivery) { return problem(503, "Service unavailable", "Email verification is temporarily unavailable."); }
 			if (path === "/v1/auth/register" && !accounts.has(body.email.toLowerCase())) {
 				seedVerificationToken(body.email);
 			}
@@ -221,6 +252,7 @@ function createMockApi(options = {}) {
 			if (flags.rateLimitLogin) {
 				return { ...problem(429, "Too Many Requests", "Too many requests. Try again later."), headers: { "Retry-After": "30" } };
 			}
+			if (flags.capacity503) { return capacity(); }
 			const acct = typeof body.email === "string" ? accounts.get(body.email.toLowerCase()) : undefined;
 			if (!acct || !acct.verified || acct.password === null || acct.password !== body.password) {
 				return problem(401, "Unauthorized", "Invalid email or password.");
@@ -230,6 +262,7 @@ function createMockApi(options = {}) {
 				if (!flags.totpCapability) { return problem(503, "Service unavailable", "Two-factor sign-in is temporarily unavailable."); }
 				const token = crypto.randomBytes(32).toString("base64url");
 				mfaChallenges.set(token, { accountId: acct.id, expiresAt: now() + 5 * 60000, attempts: 0, consumed: false, password: acct.password, userAgent: headers["user-agent"] });
+				// (The response states the same expiry.)
 				return json(202, { mfaToken: token, mfaTokenExpiresAt: new Date(now() + 5 * 60000).toISOString(), method: "totp" });
 			}
 			const sid = seedSession(acct.id, 0);
@@ -246,7 +279,7 @@ function createMockApi(options = {}) {
 			if (!acct || acct.password !== ch.password || !t || !t.confirmed) { ch.consumed = true; return generic(); }
 			if (typeof body.code !== "string" || !consumeCode(t, body.code)) {
 				ch.attempts++;
-				if (ch.attempts >= 5) { ch.consumed = true; }
+				if (ch.attempts >= mfaMaxAttempts) { ch.consumed = true; }
 				return generic();
 			}
 			ch.consumed = true;
@@ -288,15 +321,15 @@ function createMockApi(options = {}) {
 				const secret = crypto.randomBytes(20);
 				totp.set(acct.id, { secret, confirmed: false, lastUsedStep: null, recoveryCodes: new Map() });
 				const b32 = base32(secret);
-				return json(200, { secret: b32, otpauthUri: `otpauth://totp/BitosX:${encodeURIComponent(acct.email)}?secret=${b32}&issuer=BitosX&algorithm=SHA1&digits=6&period=30`, issuer: "BitosX", label: acct.email, digits: 6, periodSeconds: 30 });
+				return json(200, { secret: b32, otpauthUri: `otpauth://totp/BitosX:${encodeURIComponent(acct.email)}?secret=${b32}&issuer=BitosX&algorithm=SHA1&digits=${totpDigits}&period=30`, issuer: "BitosX", label: acct.email, digits: totpDigits, periodSeconds: 30 });
 			}
 			if (method === "POST" && path === "/v1/account/totp/confirm") {
 				if (!t || t.confirmed) { return problem(409, "Conflict", "There is no enrollment to confirm. Start enrollment first."); }
-				const step = totpStep(now());
-				const ok = typeof body.code === "string" && [step - 1, step, step + 1].some(s => totpCode(t.secret, s) === body.code.trim());
-				if (!ok) { return problem(400, "Invalid request", "The code is not valid. Check the time on your device and try the next code."); }
+				// The step that matched is recorded (TotpEnrollmentService passes TryMatchTotp's step on).
+				const matched = typeof body.code === "string" ? matchTotp(t, body.code.trim()) : null;
+				if (matched === null) { return problem(400, "Invalid request", "The code is not valid. Check the time on your device and try the next code."); }
 				t.confirmed = true;
-				t.lastUsedStep = step;
+				t.lastUsedStep = matched;
 				const codes = newRecoveryCodes();
 				t.recoveryCodes = new Map(codes.map(c => [c, false]));
 				return json(200, { recoveryCodes: codes });
@@ -316,9 +349,38 @@ function createMockApi(options = {}) {
 			}
 			return problem(404, "Not Found", "Not found.");
 		}
+		// A password confirmation, plus the second factor when the account has one (phase-8 contract §6, §7).
+		function confirmed(acct, password, code) {
+			if (typeof password !== "string" || password.length === 0 || !acct || acct.password !== password) { return false; }
+			const t = totp.get(acct.id);
+			if (t && t.confirmed) { return typeof code === "string" && consumeCode(t, code); }
+			return true;
+		}
+		// Contract deviation (API): with TOTP confirmed but the server's TOTP capability off, these
+		// answer a 503 without Retry-After, not a 403 — fail closed, the session stays valid.
+		const secondFactorOff = (acct) => {
+			const t = acct && totp.get(acct.id);
+			return t && t.confirmed && !flags.totpCapability ? problem(503, "Service unavailable", "Two-factor authentication is temporarily unavailable.") : null;
+		};
+		if (method === "POST" && path === "/v1/account/password") {
+			const acct = [...accounts.values()].find(a => a.id === auth.session.accountId);
+			if (flags.capacity503) { return capacity(); }
+			const off = secondFactorOff(acct);
+			if (off) { return off; }
+			if (typeof body.newPassword !== "string" || body.newPassword.length < 12 || body.newPassword.length > 128) {
+				return problem(400, "Invalid request", "Password must be between 12 and 128 characters.");
+			}
+			if (!confirmed(acct, body.currentPassword, body.code)) { return problem(403, "Forbidden", "Password confirmation failed."); }
+			acct.password = body.newPassword;
+			revokeAllSessions(acct.id, auth.sessionId);
+			for (const [t, e] of resetTokens) { if (e === acct.email.toLowerCase()) { resetTokens.delete(t); } }
+			return noContent();
+		}
 		if (method === "POST" && path === "/v1/account/delete") {
 			const acct = [...accounts.values()].find(a => a.id === auth.session.accountId);
-			if (typeof body.password !== "string" || body.password.length === 0 || !acct || acct.password !== body.password) {
+			const off = secondFactorOff(acct);
+			if (off) { return off; }
+			if (!confirmed(acct, body.password, body.code)) {
 				return problem(403, "Forbidden", "Password confirmation failed.");
 			}
 			accounts.delete(acct.email.toLowerCase());
@@ -332,8 +394,11 @@ function createMockApi(options = {}) {
 			return json(200, { accountId: acct.id, email: acct.email, emailVerified: acct.verified, createdAt: acct.createdAt });
 		}
 		if (method === "GET" && path === "/v1/account/sessions") {
+			// At most 200, newest first (phase-8 contract §3).
 			const list = [...sessions.entries()]
 				.filter(([, s]) => s.accountId === auth.session.accountId && !s.revoked)
+				.sort(([, a], [, b]) => b.createdAt.localeCompare(a.createdAt))
+				.slice(0, 200)
 				.map(([id, s]) => ({ id, createdAt: s.createdAt, lastSeenAt: s.lastSeenAt, expiresAt: s.expiresAt, current: id === auth.sessionId }));
 			return json(200, list);
 		}
@@ -386,18 +451,18 @@ function createMockApi(options = {}) {
 		return problem(404, "Not Found", "Not found.");
 	}
 
-	return { handle, calls, flags, seedAccount, seedVerificationToken, seedResetToken, seedSession, seedEnvelope, seedTotp, sessions, accounts, envelopes, resetTokens, totp, mfaChallenges };
+	return { handle, calls, flags, clock, now, totpDigits, seedAccount, seedVerificationToken, seedResetToken, seedSession, seedEnvelope, seedTotp, sessions, accounts, envelopes, resetTokens, totp, mfaChallenges, accessTokens };
 }
 
-// ---- RFC 6238 (HMAC-SHA1, 6 digits, 30 s) and RFC 4648 Base32, for the mock and the tests ----
+// ---- RFC 6238 (HMAC-SHA1, 6-8 digits, 30 s) and RFC 4648 Base32, for the mock and the tests ----
 function totpStep(unixMs) { return Math.floor(unixMs / 1000 / 30); }
-function totpCode(secret, step) {
+function totpCode(secret, step, digits = 6) {
 	const counter = Buffer.alloc(8);
 	counter.writeBigUInt64BE(BigInt(step));
 	const mac = crypto.createHmac("sha1", secret).update(counter).digest();
 	const offset = mac[19] & 0x0f;
 	const binary = ((mac[offset] & 0x7f) << 24) | (mac[offset + 1] << 16) | (mac[offset + 2] << 8) | mac[offset + 3];
-	return String(binary % 1000000).padStart(6, "0");
+	return String(binary % (10 ** digits)).padStart(digits, "0");
 }
 function base32(buf) {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";

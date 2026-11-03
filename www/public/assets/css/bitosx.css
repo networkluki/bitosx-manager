@@ -189,9 +189,11 @@ tr:last-child td{border-bottom:0}
 .links{margin-top:18px;font-size:.9rem;color:var(--text-soft);text-align:center}
 .links a + a::before{content:"·";margin:0 8px;color:var(--text-soft)}
 
-/* Notices (status messages). role=status / role=alert in markup */
-.notice{display:none;border-radius:10px;padding:12px 14px;margin:0 0 18px;font-size:.93rem;border:1px solid var(--border);background:var(--page-bg)}
-.notice.is-visible{display:block}
+/* Notices (status messages). role=status / role=alert in markup. An empty notice stays rendered
+   (a live region that is display:none when its text arrives is often not announced); it is only
+   taken out of the visual layout. */
+.notice{display:block;border-radius:10px;padding:12px 14px;margin:0 0 18px;font-size:.93rem;border:1px solid var(--border);background:var(--page-bg)}
+.notice:not(.is-visible){position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
 .notice.ok{border-color:var(--ok)}
 .notice.warn{border-color:var(--warn)}
 .notice.err{border-color:var(--err)}
@@ -283,3 +285,20 @@ footer .footer-copyright{color:#6a6f78;font-size:11px;letter-spacing:.3px}
 .vault-conflict{border:1px solid var(--err);border-radius:12px;padding:14px 16px;margin:0 0 16px;background:var(--page-bg)}
 .vault-conflict p{margin:0 0 10px}
 .vault-item__actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+
+/* Phase 8: account controls, editor checks, generator options, list filters */
+[hidden]{display:none!important} /* .btn and friends set display; hidden must still hide */
+.field input[type="checkbox"]{width:auto;padding:0;flex:0 0 auto}
+.field-error{display:block;margin-top:5px;font-size:.82rem;color:var(--err)}
+.field-error[hidden]{display:none}
+.vault-editor .field textarea[aria-invalid="true"],.field select[aria-invalid="true"]{border-color:var(--err)}
+.vault-generator{margin-top:8px;font-size:.88rem}
+.vault-generator summary{cursor:pointer;color:var(--text-soft)}
+.vault-generator__options{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:10px 0 6px}
+.vault-generator__options label[for="gen-length"]{margin:0;font-weight:600;color:var(--text-soft)}
+.vault-generator__options input[type="number"]{width:5.5em;padding:6px 8px}
+.vault-filter{font-size:.88rem;white-space:nowrap}
+.vault-sort{padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--page-bg);color:var(--text);font-size:.88rem;font-family:inherit}
+.vault-backup-row{margin:-6px 0 16px}
+.totp-secret{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.totp-secret code{overflow-wrap:anywhere;letter-spacing:.5px}

@@ -254,6 +254,11 @@
 		if (!Number.isFinite(t)) { throw new VaultError(KINDS.CONTENT, "The vault contains an invalid item (" + field + ")."); }
 		return new Date(t);
 	}
+	// The desktop writes DateTimeOffset with up to seven fractional digits; a JavaScript Date keeps
+	// three. The text as read is kept so that an item nobody changed is written back exactly as it
+	// was, not rounded to the millisecond.
+	var DATE_TEXT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?(?:Z|[+-]\d{2}:\d{2})$/;
+	function dateText(v) { return typeof v === "string" && DATE_TEXT_RE.test(v) ? v : null; }
 	function optionalString(v, field, max) {
 		if (v === undefined || v === null) { return null; }
 		if (typeof v !== "string" || v.length > max) { throw new VaultError(KINDS.CONTENT, "The vault contains an invalid item (" + field + ")."); }
@@ -287,6 +292,7 @@
 			var created = raw.CreatedAt === undefined ? new Date(0) : parseDate(raw.CreatedAt, "CreatedAt");
 			var updated = raw.UpdatedAt === undefined ? created : parseDate(raw.UpdatedAt, "UpdatedAt");
 			if (updated < created) { updated = created; } // VaultValidation.NormalizeLoaded
+			var updatedNormalized = raw.UpdatedAt !== undefined && updated === created && parseDate(raw.UpdatedAt, "UpdatedAt").getTime() !== created.getTime();
 			return Object.freeze({
 				id: id,
 				type: "login",
@@ -295,6 +301,8 @@
 				favorite: raw.Favorite === true,
 				createdAt: created,
 				updatedAt: updated,
+				createdAtText: raw.CreatedAt === undefined ? null : dateText(raw.CreatedAt),
+				updatedAtText: raw.UpdatedAt === undefined || updatedNormalized ? null : dateText(raw.UpdatedAt),
 				username: optionalString(raw.Username, "Username", 1024),
 				password: optionalString(raw.Password, "Password", 4096),
 				urls: Object.freeze((raw.Urls || []).slice())
@@ -325,6 +333,12 @@
 		return out + "\"";
 	}
 
+	// The text a date was read as, when it still says the same instant; otherwise jsonDate.
+	function itemDate(date, text) {
+		if (typeof text === "string" && DATE_TEXT_RE.test(text) && new Date(text).getTime() === date.getTime()) { return text; }
+		return jsonDate(date);
+	}
+
 	// DateTimeOffset as System.Text.Json writes a UTC value: seconds, a trimmed fraction, "+00:00".
 	function jsonDate(date) {
 		var iso = date.toISOString();            // 2026-10-01T09:00:00.123Z
@@ -336,11 +350,28 @@
 
 	var LIMITS = Object.freeze({ name: 200, username: 320, password: 4096, notes: 16384, url: 2048, urls: 64 }); // VaultValidation
 
+	// A string with half of a surrogate pair (half an emoji) cannot be written as UTF-8 and is
+	// refused by the desktop's JSON reader; it is never written.
+	var LONE_SURROGATE_RE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+	function isWellFormed(text) {
+		return typeof text.isWellFormed === "function" ? text.isWellFormed() : !LONE_SURROGATE_RE.test(text);
+	}
+	function requireWellFormed(text, what) {
+		if (typeof text === "string" && !isWellFormed(text)) {
+			throw new VaultError(KINDS.CONTENT, what + " contains an incomplete character (half of an emoji or symbol). Remove it and type it again.");
+		}
+	}
+
 	// VaultValidation.Validate for a login item, with the desktop's messages.
 	function validateItem(item) {
 		if (!isPlainObject(item)) { throw new VaultError(KINDS.CONTENT, "Item is required."); }
 		if (typeof item.id !== "string" || !UUID_RE.test(item.id)) { throw new VaultError(KINDS.CONTENT, "Item id must not be empty."); }
 		if (typeof item.name !== "string" || item.name.trim().length === 0) { throw new VaultError(KINDS.CONTENT, "Name is required."); }
+		requireWellFormed(item.name, "The name");
+		requireWellFormed(item.username, "The username");
+		requireWellFormed(item.password, "The password");
+		requireWellFormed(item.notes, "The notes");
+		if (Array.isArray(item.urls)) { item.urls.forEach(function (u) { requireWellFormed(u, "A URL"); }); }
 		if (item.name.length > LIMITS.name) { throw new VaultError(KINDS.CONTENT, "Name must be at most " + LIMITS.name + " characters."); }
 		if (item.notes != null && (typeof item.notes !== "string" || item.notes.length > LIMITS.notes)) { throw new VaultError(KINDS.CONTENT, "Notes must be at most " + LIMITS.notes + " characters."); }
 		if (item.username != null && (typeof item.username !== "string" || item.username.length > LIMITS.username)) { throw new VaultError(KINDS.CONTENT, "Username must be at most " + LIMITS.username + " characters."); }
@@ -378,8 +409,8 @@
 			if (item.notes != null) { fields.push("\"Notes\":" + jsonString(item.notes)); }
 			fields.push("\"Favorite\":" + (item.favorite ? "true" : "false"));
 			// Dates are written by System.Text.Json's date formatter, not its string encoder: no escaping.
-			fields.push("\"CreatedAt\":\"" + jsonDate(item.createdAt) + "\"");
-			fields.push("\"UpdatedAt\":\"" + jsonDate(item.updatedAt) + "\"");
+			fields.push("\"CreatedAt\":\"" + itemDate(item.createdAt, item.createdAtText) + "\"");
+			fields.push("\"UpdatedAt\":\"" + itemDate(item.updatedAt, item.updatedAtText) + "\"");
 			return "{" + fields.join(",") + "}";
 		});
 		return utf8("{\"schemaVersion\":1,\"items\":[" + parts.join(",") + "]}");
@@ -447,20 +478,205 @@
 		return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
 	}
 
-	// A random password from a fixed alphabet, without modulo bias (rejection sampling).
-	var PASSWORD_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+,-./:;<=>?@[]^_{|}~";
-	function generatePassword(length) {
-		length = length || 24;
-		var out = "";
-		var limit = 256 - (256 % PASSWORD_ALPHABET.length);
-		var buf = new Uint8Array(64);
-		while (out.length < length) {
-			webcrypto.getRandomValues(buf);
-			for (var i = 0; i < buf.length && out.length < length; i++) {
-				if (buf[i] < limit) { out += PASSWORD_ALPHABET[buf[i] % PASSWORD_ALPHABET.length]; }
+	// ---- the password generator (BitosX.Core.Generation.PasswordGenerator, the same rules) ----
+	// Every selected class is represented when the length allows, the rest is drawn from all of
+	// them, and the result is shuffled (Fisher–Yates). Every draw is uniform: rejection sampling
+	// over 32-bit values from the CSPRNG, never a modulo of a biased range.
+	var GENERATOR_CLASSES = Object.freeze({
+		lowercase: "abcdefghijklmnopqrstuvwxyz",
+		uppercase: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+		digits: "0123456789",
+		symbols: "!@#$%^&*()-_=+[]{};:,.?/"
+	});
+	var AMBIGUOUS = "Il1O0o";
+	var GENERATOR_DEFAULTS = Object.freeze({
+		length: 20, lowercase: true, uppercase: true, digits: true, symbols: true, excludeAmbiguous: false
+	});
+	var GENERATOR_MIN_LENGTH = 4, GENERATOR_MAX_LENGTH = 256;
+
+	function randomInt(n) {
+		var limit = Math.floor(4294967296 / n) * n;
+		var buf = new Uint32Array(1);
+		do { webcrypto.getRandomValues(buf); } while (buf[0] >= limit);
+		return buf[0] % n;
+	}
+
+	// The options as the generator takes them; anything missing is the desktop's default.
+	function generatorOptions(options) {
+		var o = {};
+		Object.keys(GENERATOR_DEFAULTS).forEach(function (k) {
+			o[k] = options && options[k] !== undefined ? options[k] : GENERATOR_DEFAULTS[k];
+		});
+		return o;
+	}
+
+	// PasswordGenerationOptions.Validate, with the desktop's messages.
+	function validateGeneratorOptions(o) {
+		if (!Number.isInteger(o.length) || o.length < GENERATOR_MIN_LENGTH || o.length > GENERATOR_MAX_LENGTH) {
+			throw new VaultError(KINDS.CONTENT, "Password length must be between " + GENERATOR_MIN_LENGTH + " and " + GENERATOR_MAX_LENGTH + ".");
+		}
+		if (!o.lowercase && !o.uppercase && !o.digits && !o.symbols) {
+			throw new VaultError(KINDS.CONTENT, "At least one character class must be selected.");
+		}
+	}
+
+	// generatePassword(20) still works; otherwise an options object as above.
+	function generatePassword(options) {
+		var o = generatorOptions(typeof options === "number" ? { length: options } : options);
+		validateGeneratorOptions(o);
+		var classes = ["lowercase", "uppercase", "digits", "symbols"]
+			.filter(function (k) { return o[k]; })
+			.map(function (k) {
+				var set = GENERATOR_CLASSES[k];
+				return o.excludeAmbiguous ? set.split("").filter(function (c) { return AMBIGUOUS.indexOf(c) < 0; }).join("") : set;
+			})
+			.filter(function (set) { return set.length > 0; });
+		var combined = classes.join("");
+		var out = [];
+		if (o.length >= classes.length) {
+			classes.forEach(function (set) { out.push(set[randomInt(set.length)]); });
+		}
+		while (out.length < o.length) { out.push(combined[randomInt(combined.length)]); }
+		for (var i = out.length - 1; i > 0; i--) {
+			var j = randomInt(i + 1);
+			var t = out[i]; out[i] = out[j]; out[j] = t;
+		}
+		return out.join("");
+	}
+
+	// ---- password strength (BitosX.Core.Security.PasswordStrength, ported rule for rule) ----
+	// A rough local heuristic: length and character classes, discounted for repeats, runs such as
+	// "abcd" or "qwerty", a repeated block, and the most common passwords (also with the usual
+	// substitutions). It has no dictionary and knows nothing about breaches. Text is looked at in
+	// UTF-16 code units, as .NET's char is; tests/fixtures/password-strength-vectors.json holds the
+	// desktop's own results for the same inputs.
+	var STRENGTH_NAMES = Object.freeze(["Very weak", "Weak", "Fair", "Strong", "Very strong"]);
+	var PATTERN_CONTINUATION_BITS = 1.0;
+	var COMMON_PASSWORD_BITS = 7.0;
+	var KEYBOARD_ROWS = ["1234567890", "qwertyuiop\u00E5", "asdfghjkl\u00F6\u00E4", "zxcvbnm"];
+	var COMMON_PASSWORDS = [
+		"administrator", "qwertyuiop", "1q2w3e4r5t", "password", "iloveyou", "sunshine", "princess",
+		"football", "baseball", "superman", "starwars", "whatever", "trustno1", "changeme", "zaq12wsx",
+		"1q2w3e4r", "letmein", "welcome", "freedom", "bitosx", "qwerty", "azerty", "monkey", "dragon",
+		"master", "shadow", "secret", "hunter", "batman", "summer", "winter", "asdfgh", "zxcvbn",
+		"abc123", "admin", "login", "hello"
+	];
+	var RE_LOWER = /^\p{Ll}$/u, RE_UPPER = /^\p{Lu}$/u, RE_DIGIT = /^\p{Nd}$/u, RE_LETTER = /^\p{L}$/u;
+
+	// char.ToLowerInvariant / ToUpperInvariant: one UTF-16 unit in, one out (simple case mapping).
+	function lowerUnit(c) {
+		if (c === "\u0130") { return "i"; }
+		var l = c.toLowerCase();
+		return l.length === 1 ? l : c;
+	}
+	function upperUnit(c) {
+		var u = c.toUpperCase();
+		return u.length === 1 ? u : c;
+	}
+	function normalizeUnit(c) {
+		switch (c) {
+			case "0": return "o";
+			case "1": case "!": case "|": return "i";
+			case "3": return "e";
+			case "4": case "@": return "a";
+			case "5": case "$": return "s";
+			case "7": return "t";
+			default: return lowerUnit(c);
+		}
+	}
+
+	function poolSize(text) {
+		var lower = false, upper = false, digit = false, symbol = false;
+		for (var i = 0; i < text.length; i++) {
+			var c = text[i];
+			if (RE_LOWER.test(c)) { lower = true; }
+			else if (RE_UPPER.test(c)) { upper = true; }
+			else if (RE_DIGIT.test(c)) { digit = true; }
+			else { symbol = true; }
+		}
+		return (lower ? 26 : 0) + (upper ? 26 : 0) + (digit ? 10 : 0) + (symbol ? 32 : 0);
+	}
+
+	function smallestPeriod(text) {
+		for (var period = 1; period <= Math.floor(text.length / 2); period++) {
+			if (text.length % period !== 0) { continue; }
+			var repeats = true;
+			for (var i = period; i < text.length && repeats; i++) { repeats = text[i] === text[i - period]; }
+			if (repeats) { return period; }
+		}
+		return text.length;
+	}
+
+	function commonPasswordLengthAt(text, normalized, start) {
+		for (var k = 0; k < COMMON_PASSWORDS.length; k++) {
+			var common = COMMON_PASSWORDS[k];
+			if (text.length - start < common.length) { continue; }
+			var asTyped = true, substituted = true;
+			for (var i = 0; i < common.length && (asTyped || substituted); i++) {
+				if (asTyped && upperUnit(text[start + i]) !== upperUnit(common[i])) { asTyped = false; }
+				if (substituted && normalized[start + i] !== common[i]) { substituted = false; }
+			}
+			if (asTyped || substituted) { return common.length; }
+		}
+		return 0;
+	}
+
+	function continuesPattern(previous, current) {
+		if (previous === current) { return true; }
+		var sameKind = (RE_LETTER.test(previous) && RE_LETTER.test(current)) || (RE_DIGIT.test(previous) && RE_DIGIT.test(current));
+		if (sameKind && Math.abs(current.charCodeAt(0) - previous.charCodeAt(0)) === 1) { return true; }
+		var a = lowerUnit(previous), b = lowerUnit(current);
+		for (var r = 0; r < KEYBOARD_ROWS.length; r++) {
+			var row = KEYBOARD_ROWS[r];
+			var index = row.indexOf(a);
+			if (index >= 0) {
+				return (index > 0 && row[index - 1] === b) || (index < row.length - 1 && row[index + 1] === b);
 			}
 		}
-		return out;
+		return false;
+	}
+
+	function estimateSequence(text, bitsPerCharacter) {
+		var normalized = [];
+		for (var i = 0; i < text.length; i++) { normalized.push(normalizeUnit(text[i])); }
+		var bits = 0, position = 0;
+		while (position < text.length) {
+			var common = commonPasswordLengthAt(text, normalized, position);
+			if (common > 0) { bits += COMMON_PASSWORD_BITS; position += common; continue; }
+			var continues = position > 0 && continuesPattern(text[position - 1], text[position]);
+			bits += continues ? PATTERN_CONTINUATION_BITS : bitsPerCharacter;
+			position++;
+		}
+		return bits;
+	}
+
+	// Approximate guessing entropy in bits (PasswordStrength.EstimateEntropyBits).
+	function estimateEntropyBits(password) {
+		if (typeof password !== "string" || password.length === 0) { return 0; }
+		var bitsPerCharacter = Math.log2(poolSize(password));
+		var period = smallestPeriod(password);
+		if (period < password.length) {
+			return estimateSequence(password.slice(0, period), bitsPerCharacter) + Math.log2(password.length / period);
+		}
+		return estimateSequence(password, bitsPerCharacter);
+	}
+
+	// 0 very weak .. 4 very strong (PasswordStrength.Estimate).
+	function estimateStrength(password) {
+		if (typeof password !== "string" || password.length === 0) { return 0; }
+		var bits = estimateEntropyBits(password);
+		return bits < 40 ? 0 : bits < 60 ? 1 : bits < 80 ? 2 : bits < 100 ? 3 : 4;
+	}
+
+	// The envelopes protect their vault key the same way: same KDF and parameters, same salt, the
+	// same wrapped key under the same nonce. Differs after a master-password change or a key
+	// rotation on another device.
+	function sameKeyWrap(a, b) {
+		var pa = a.kdfParameters, pb = b.kdfParameters;
+		return a.version === b.version && a.kdf === b.kdf && a.algorithm === b.algorithm &&
+			pa.memoryKiB === pb.memoryKiB && pa.iterations === pb.iterations && pa.parallelism === pb.parallelism &&
+			pa.keyLengthBytes === pb.keyLengthBytes &&
+			bytesEqual(a.salt, b.salt) && bytesEqual(a.keyWrapNonce, b.keyWrapNonce) && bytesEqual(a.encryptedVaultKey, b.encryptedVaultKey);
 	}
 
 	function sha256Hex(bytes) {
@@ -471,6 +687,7 @@
 		VaultError: VaultError,
 		KINDS: KINDS,
 		MAX_ENVELOPE_BYTES: MAX_ENVELOPE_BYTES,
+		MAX_ITEMS: MAX_ITEMS,
 		parseEnvelope: parseEnvelope,
 		passwordCandidates: passwordCandidates,
 		keyWrapAad: keyWrapAad,
@@ -489,6 +706,16 @@
 		encryptContent: encryptContent,
 		newId: newId,
 		generatePassword: generatePassword,
+		GENERATOR_DEFAULTS: GENERATOR_DEFAULTS,
+		GENERATOR_MIN_LENGTH: GENERATOR_MIN_LENGTH,
+		GENERATOR_MAX_LENGTH: GENERATOR_MAX_LENGTH,
+		generatorOptions: generatorOptions,
+		validateGeneratorOptions: validateGeneratorOptions,
+		estimateEntropyBits: estimateEntropyBits,
+		estimateStrength: estimateStrength,
+		STRENGTH_NAMES: STRENGTH_NAMES,
+		sameKeyWrap: sameKeyWrap,
+		isWellFormed: isWellFormed,
 		_jsonString: jsonString,
 		_jsonDate: jsonDate
 	});
