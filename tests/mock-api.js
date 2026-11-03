@@ -356,9 +356,17 @@ function createMockApi(options = {}) {
 			if (t && t.confirmed) { return typeof code === "string" && consumeCode(t, code); }
 			return true;
 		}
+		// Contract deviation (API): with TOTP confirmed but the server's TOTP capability off, these
+		// answer a 503 without Retry-After, not a 403 — fail closed, the session stays valid.
+		const secondFactorOff = (acct) => {
+			const t = acct && totp.get(acct.id);
+			return t && t.confirmed && !flags.totpCapability ? problem(503, "Service unavailable", "Two-factor authentication is temporarily unavailable.") : null;
+		};
 		if (method === "POST" && path === "/v1/account/password") {
 			const acct = [...accounts.values()].find(a => a.id === auth.session.accountId);
 			if (flags.capacity503) { return capacity(); }
+			const off = secondFactorOff(acct);
+			if (off) { return off; }
 			if (typeof body.newPassword !== "string" || body.newPassword.length < 12 || body.newPassword.length > 128) {
 				return problem(400, "Invalid request", "Password must be between 12 and 128 characters.");
 			}
@@ -370,6 +378,8 @@ function createMockApi(options = {}) {
 		}
 		if (method === "POST" && path === "/v1/account/delete") {
 			const acct = [...accounts.values()].find(a => a.id === auth.session.accountId);
+			const off = secondFactorOff(acct);
+			if (off) { return off; }
 			if (!confirmed(acct, body.password, body.code)) {
 				return problem(403, "Forbidden", "Password confirmation failed.");
 			}

@@ -2048,6 +2048,19 @@ async function test(name, fn) {
 		await page.click("#pw-submit");
 		await page.waitForFunction(() => /password is changed/.test(document.getElementById("pw-notice").textContent));
 		assert.equal(mock.calls.find((c) => c.path === "/v1/account/password").body.code, "mnpqr-stuvw");
+		// The server's second factor switched off meanwhile: a 503 without Retry-After (contract
+		// deviation), the generic text, nothing changed, still signed in.
+		mock.flags.totpCapability = false;
+		await page.fill("#pw-current", "brand new password 42");
+		await page.fill("#pw-new", "another new password 43");
+		await page.fill("#pw-new2", "another new password 43");
+		await page.fill("#pw-code", codeAt(mock, secret, 1));
+		await page.click("#pw-submit");
+		await page.waitForSelector("#pw-notice.err");
+		assert.equal(await page.textContent("#pw-notice"), "The service is temporarily unavailable. Try again shortly.");
+		assert.equal(mock.accounts.get("user@example.com").password, "brand new password 42");
+		assert.equal(await page.isHidden("#account-panel"), false);
+		mock.flags.totpCapability = true;
 		// Deletion needs the code too: a wrong one is the generic 403, the right one deletes.
 		assert.equal(await page.isHidden("#delete-code-field"), false);
 		const good = [-1, 0, 1].map((o) => codeAt(mock, secret, o));
