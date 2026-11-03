@@ -44,7 +44,7 @@
 				// switched off, or the second factor being unavailable. Only the second sign-in step
 				// and the two-factor settings name the second factor, and only without Retry-After.
 				if (err && err.retryAfterSeconds) { return "The server is busy right now. Try again in a moment."; }
-				if (context === "code") { return "Two-factor sign-in is temporarily unavailable on the server. Try again shortly."; }
+				if (context === "code" || context === "passkey-mfa") { return "Two-factor sign-in is temporarily unavailable on the server. Try again shortly."; }
 				if (context === "totp") { return "Two-factor authentication is temporarily unavailable on the server. Try again shortly."; }
 				return "The service is temporarily unavailable. Try again shortly.";
 			case KINDS.TOO_LARGE:
@@ -52,6 +52,8 @@
 			case KINDS.UNAUTHENTICATED:
 				if (context === "login") { return "Invalid email or password."; }
 				if (context === "code") { return "The code was not accepted. Try the next code from your app, or a recovery code. After several wrong codes, or after a few minutes, start over with your password."; }
+				if (context === "passkey-mfa") { return "The passkey was not accepted. Try again, or enter a code from your app or a recovery code. After several failed attempts, or after a few minutes, start over with your password."; }
+				if (context === "passkey-login") { return "The passkey was not accepted. A passkey that was removed from the account no longer signs in; use your email and password instead."; }
 				return "Your session has ended. Sign in again.";
 			case KINDS.FORBIDDEN:
 				// 403: the session is fine, the password (or the code) given to confirm was not.
@@ -63,14 +65,22 @@
 				if (context === "reset") { return "This reset link is invalid, expired or already used. Request a new one."; }
 				if (context === "totp") { return "The code is not valid. Check the time on your device and try the next code."; }
 				if (context === "password") { return "The new password was refused: it must be 12–128 characters. The password was not changed."; }
+				if (context === "passkey") { return "The passkey could not be verified by the server, so it was not added. If your device or password manager saved it anyway, remove it there."; }
+				if (context === "passkey-name") { return "The name was refused: 1–64 characters, without control characters. Nothing was changed."; }
 				return "The request was rejected. Check the fields and try again.";
 			case KINDS.NOT_FOUND:
 				if (context === "session") { return "That session no longer exists."; }
 				if (context === "vault") { return "The server no longer holds a vault for this account."; }
+				if (context === "passkey" || context === "passkey-name") { return "That passkey is no longer on the account. The list is reloaded."; }
+				if (context === "passkey-login" || context === "passkey-mfa") { return "Passkey sign-in is not available on this server."; }
 				return "This is not available on the server right now.";
 			case KINDS.CONFLICT:
 				if (context === "totp") { return "Two-factor authentication is already in that state. Reload the status and try again."; }
+				if (context === "passkey") { return "No passkey was added: passkeys need two-factor authentication to be on, and an account can hold at most 10 of them."; }
 				return "Another device changed the vault on the server first. Nothing was changed.";
+			case KINDS.GONE:
+				if (context === "passkey") { return "The passkey setup expired or was already used, so nothing was added. Start again."; }
+				return "This step expired or was already used. Start again.";
 			default:
 				return "Something unexpected happened. Nothing was changed. Try again.";
 		}
