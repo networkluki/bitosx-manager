@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "input": {
+    "parts": [
+      {
+        "text": "<KeePassFile><Meta>",
+        "repeat": 1
+      },
+      {
+        "text": "<a>",
+        "repeat": 99
+      },
+      {
+        "text": "</a>",
+        "repeat": 99
+      },
+      {
+        "text": "</Meta></KeePassFile>",
+        "repeat": 1
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "refused, whatever the vault and the choices",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "refused": "nested_too_deeply"
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "logins": [
+    {
+      "site": "example.com",
+      "user": "fake.user",
+      "pass": "FAKE-pw"
+    }
+  ]
+}

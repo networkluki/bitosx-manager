@@ -1,0 +1,7 @@
+"url","username","password","httpRealm","formActionOrigin","guid","timeCreated","timeLastUsed","timePasswordChanged"
+"https://example.com","fake.user@example.test","FAKE-firefox-pw-1",,"https://example.com","{00000000-0000-4000-8000-000000000001}","1700000000000","1700000000001","1700000000002"
+"https://accounts.example.org","fake.user","FAKE ""quoted"" pw, with a comma",,"https://accounts.example.org","{00000000-0000-4000-8000-000000000002}","1700000000000","1700000000001","1700000000002"
+"http://192.168.1.1","fake.admin","FAKE-router-pw","Router login",,"{00000000-0000-4000-8000-000000000003}","1700000000000","1700000000001","1700000000002"
+"chrome://FirefoxAccounts","fake.account@example.test","FAKE-sync-token","Firefox Accounts credentials",,"{00000000-0000-4000-8000-000000000004}","1700000000000","1700000000001","1700000000002"
+"https://example.com","fake.user@example.test","FAKE-firefox-pw-1",,"https://example.com","{00000000-0000-4000-8000-000000000005}","1700000000000","1700000000001","1700000000002"
+"https://no-username.example","","FAKE-no-username-pw",,"https://no-username.example","{00000000-0000-4000-8000-000000000006}","1700000000000","1700000000001","1700000000002"

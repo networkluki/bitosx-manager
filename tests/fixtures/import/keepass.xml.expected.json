@@ -1,0 +1,316 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "keepass.xml"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "keepass_xml",
+        "label": "KeePass 2 (XML)",
+        "records": 8,
+        "unsupported": {},
+        "inTrash": 2,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 3,
+          "duplicates": 1,
+          "notImported": 1,
+          "empty": 1,
+          "httpsAdded": 1,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 3,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "folder": 1,
+          "custom_field": 3
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example",
+            "username": "fake.user@example.test",
+            "password": "FAKE-kdbx <pw> & \"more\"",
+            "urls": [
+              "https://example.com/login"
+            ],
+            "notes": "First line\nsecond line & an ampersand, <angle brackets>\nÜnïcödé 日本語 \uD83D\uDE00",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "otp",
+                  "value": "otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Example"
+                },
+                {
+                  "name": "Recovery code",
+                  "value": "FAKE-recovery-code"
+                },
+                {
+                  "name": "KP2A_URL",
+                  "value": "https://example.com/second-address"
+                }
+              ]
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A <title> in CDATA & more",
+            "username": "fake.räksmörgås",
+            "password": "   ",
+            "urls": [
+              "https://example.org/sign-in"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "field_twice",
+            "name": "Twice",
+            "username": "",
+            "password": "FAKE-first-of-two",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Example",
+            "username": "fake.user@example.test",
+            "password": "FAKE-kdbx <pw> & \"more\"",
+            "urls": [
+              "https://example.com/login"
+            ],
+            "notes": "The same login in another group.",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Internet",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Shop",
+            "username": "",
+            "password": "FAKE-shop-pw",
+            "urls": [
+              "https://shop.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Internet/Shops",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "what BitosX has no field for is copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "keepass_xml",
+        "label": "KeePass 2 (XML)",
+        "records": 8,
+        "unsupported": {},
+        "inTrash": 2,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 3,
+          "duplicates": 1,
+          "notImported": 1,
+          "empty": 1,
+          "httpsAdded": 1,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 3,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "folder": 1,
+          "custom_field": 3
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example",
+            "username": "fake.user@example.test",
+            "password": "FAKE-kdbx <pw> & \"more\"",
+            "urls": [
+              "https://example.com/login"
+            ],
+            "notes": "First line\nsecond line & an ampersand, <angle brackets>\nÜnïcödé 日本語 \uD83D\uDE00\n\notp: otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Example\nRecovery code: FAKE-recovery-code\nKP2A_URL: https://example.com/second-address",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "otp",
+                  "value": "otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Example"
+                },
+                {
+                  "name": "Recovery code",
+                  "value": "FAKE-recovery-code"
+                },
+                {
+                  "name": "KP2A_URL",
+                  "value": "https://example.com/second-address"
+                }
+              ]
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A <title> in CDATA & more",
+            "username": "fake.räksmörgås",
+            "password": "   ",
+            "urls": [
+              "https://example.org/sign-in"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "field_twice",
+            "name": "Twice",
+            "username": "",
+            "password": "FAKE-first-of-two",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Example",
+            "username": "fake.user@example.test",
+            "password": "FAKE-kdbx <pw> & \"more\"",
+            "urls": [
+              "https://example.com/login"
+            ],
+            "notes": "The same login in another group.\n\nFolder: Internet",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Internet",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Shop",
+            "username": "",
+            "password": "FAKE-shop-pw",
+            "urls": [
+              "https://shop.example/"
+            ],
+            "notes": "Folder: Internet/Shops",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Internet/Shops",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

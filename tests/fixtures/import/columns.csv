@@ -1,0 +1,4 @@
+website,URL,login_password,Password,password,,notes,note,title,name,username
+https://website-column.example,https://url-column.example,FAKE-login_password-column,FAKE-left-password-column,FAKE-right-password-column,under a column without a name,the notes column,the note column,The title column,The name column,fake.columns
+https://only-website.example,,FAKE-only-login_password,,FAKE-only-right-password,,only the notes column,,Only the title column,,fake.no-fallback
+https://short-website.example,https://short-url.example

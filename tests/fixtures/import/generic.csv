@@ -1,0 +1,80 @@
+﻿Title,Website,User Name,Password,Comments,Fav,Grouping,OTPAuth,Tags,Last Used
+
+Example,https://example.com/login,fake.user,FAKE-generic-pw-1,a comment,1,Personal\Mail,otpauth://totp/Example?secret=FAKEFAKE,"mail, work",2026-01-02
+  Spaced name  ,  https://spaced.example  ,  fake spaced  ,  FAKE spaced  ,  note  ,0,,,,
+,,,,,,,,only an ignored value,
+   
+No scheme,www.example.org/path?x=1,fake.noscheme,FAKE-noscheme,,true,,,,
+Several addresses,"https://one.example
+two.example
+ftp://files.example
+
+localhost:8080",fake.several,FAKE-several,,,,,,
+Invalid address,https://,fake.invalid,FAKE-invalid,,,,,,
+Too many addresses,"https://example.com/1
+https://example.com/2
+https://example.com/3
+https://example.com/4
+https://example.com/5
+https://example.com/6
+https://example.com/7
+https://example.com/8
+https://example.com/9
+https://example.com/10
+https://example.com/11
+https://example.com/12
+https://example.com/13
+https://example.com/14
+https://example.com/15
+https://example.com/16
+https://example.com/17
+https://example.com/18
+https://example.com/19
+https://example.com/20
+https://example.com/21
+https://example.com/22
+https://example.com/23
+https://example.com/24
+https://example.com/25
+https://example.com/26
+https://example.com/27
+https://example.com/28
+https://example.com/29
+https://example.com/30
+https://example.com/31
+https://example.com/32
+https://example.com/33
+https://example.com/34
+https://example.com/35
+https://example.com/36
+https://example.com/37
+https://example.com/38
+https://example.com/39
+https://example.com/40
+https://example.com/41
+https://example.com/42
+https://example.com/43
+https://example.com/44
+https://example.com/45
+https://example.com/46
+https://example.com/47
+https://example.com/48
+https://example.com/49
+https://example.com/50
+https://example.com/51
+https://example.com/52
+https://example.com/53
+https://example.com/54
+https://example.com/55
+https://example.com/56
+https://example.com/57
+https://example.com/58
+https://example.com/59
+https://example.com/60
+https://example.com/61
+https://example.com/62
+https://example.com/63
+https://example.com/64
+https://example.com/65",fake.many,FAKE-many,,,,,,
+Long address,https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,fake.longurl,FAKE-longurl,,,,,,
+nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn,https://longname.example,fake.longname,FAKE-longname,,,,,,

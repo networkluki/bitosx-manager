@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "input": {
+    "parts": [
+      {
+        "text": "name,password,attachment\nfake.example,FAKE-pw,\"",
+        "repeat": 1
+      },
+      {
+        "text": "0123456789abcdef",
+        "repeat": 524288
+      },
+      {
+        "text": "\"\n",
+        "repeat": 1
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 1,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "attachment"
+        ],
+        "counts": {
+          "toAdd": 1,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 1,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.example",
+            "username": "",
+            "password": "FAKE-pw",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

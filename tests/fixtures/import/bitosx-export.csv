@@ -1,0 +1,11 @@
+name,url,username,password,note
+"Example Mail","https://mail.example.com/login","fake.user@example.test","FAKE-mail-pw-1","The address book is shared."
+"Two addresses","https://first.example.org/","fake.two","FAKE-two-pw",""
+"Quotes ""and"", commas","https://example.net/?ids=1,2,3","fake,""user""","FAKE ""pw"", with a comma","line one
+line two
+line three, with a ""quote"""
+"Café räksmörgås 日本","https://xn--bcher-kva.example/","användare@example.test","FAKE-lösenord-🔑","Notes with an emoji 😀 and a no-break space."
+"Only a name","","","",""
+"Spaces kept","https://example.com/spaces","  fake spaced  ","  FAKE spaced pw  ","  notes with spaces around them  "
+"=SUM(1,2)","https://example.com/formula","=fake","+FAKE-@formula","@note -x"
+"Backslashes","","DOMAIN\fake.user","FAKE\pw\\two","C:\Users\fake\file.txt"

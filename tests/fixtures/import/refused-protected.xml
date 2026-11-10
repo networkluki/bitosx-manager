@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<KeePassFile>
+	<Root>
+		<Group>
+			<UUID>cm9vdC1ncm91cC11dWlkMQ==</UUID>
+			<Name>Fake database</Name>
+			<Entry>
+				<String>
+					<Key>Title</Key>
+					<Value>fake</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value Protected="True">RkFLRS1zdGlsbC1lbmNyeXB0ZWQ=</Value>
+				</String>
+			</Entry>
+		</Group>
+	</Root>
+</KeePassFile>

@@ -1,0 +1,1484 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "text-rules.csv"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 33,
+        "unsupported": {
+          "secure_note": 1
+        },
+        "inTrash": 0,
+        "ignoredColumns": [
+          "Ignored column"
+        ],
+        "counts": {
+          "toAdd": 26,
+          "duplicates": 0,
+          "notImported": 5,
+          "empty": 1,
+          "httpsAdded": 2,
+          "namesDerived": 11,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 26,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 1,
+          "folder": 1,
+          "other_address": 3,
+          "custom_field": 4
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Trimmed name",
+            "username": "\u00A0fake.kept\u00A0",
+            "password": "\u0085FAKE-kept\u0085",
+            "urls": [
+              "https://trim.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "only-space-name.example",
+            "username": "fake.derived",
+            "password": "FAKE-derived",
+            "urls": [
+              "https://only-space-name.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "​᠎Zero width stays​",
+            "username": "fake.zero",
+            "password": "FAKE-zero",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Extras are trimmed",
+            "username": "fake.extras",
+            "password": "FAKE-extras",
+            "urls": [
+              "https://extras.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "FAKEFAKEFAKEFAKE",
+              "folder": "Fake folder",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Extras of nothing",
+            "username": "fake.noextras",
+            "password": "FAKE-noextras",
+            "urls": [
+              "https://no-extras.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Line ends in a cell",
+            "username": "fake.lines",
+            "password": "FAKE-lines",
+            "urls": [
+              "https://one.example",
+              "https://two.example",
+              "https://three.example",
+              "https://four.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Ended by a carriage return",
+            "username": "fake.cr",
+            "password": "FAKE-cr",
+            "urls": [
+              "https://cr.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "After the carriage return",
+            "username": "fake.after",
+            "password": "FAKE-after",
+            "urls": [
+              "https://after-cr.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Fields on lines",
+            "username": "fake.fields",
+            "password": "FAKE-fields",
+            "urls": [
+              "https://fields.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "first",
+                  "value": "FAKE-one"
+                },
+                {
+                  "name": "second: with",
+                  "value": "FAKE-two"
+                },
+                {
+                  "name": "",
+                  "value": "no separator in this line"
+                },
+                {
+                  "name": "padded name",
+                  "value": " FAKE-kept spaces "
+                }
+              ]
+            }
+          },
+          {
+            "position": 11,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Favorite, written loudly",
+            "username": "fake.fav",
+            "password": "FAKE-fav",
+            "urls": [
+              "https://fav.example"
+            ],
+            "notes": "",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Not a favorite",
+            "username": "fake.notfav",
+            "password": "FAKE-notfav",
+            "urls": [
+              "https://not-fav.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 14,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Type login",
+            "username": "fake.type",
+            "password": "FAKE-type",
+            "urls": [
+              "https://type.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 15,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Control characters",
+            "username": "fake.ctrl",
+            "password": "FAKE-ctrl",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "https://ctrl\u000B.example/",
+                "https://del\u007F.example/"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 16,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11",
+            "username": "fake.200",
+            "password": "FAKE-200",
+            "urls": [
+              "https://two-hundred.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 17,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "name_too_long",
+            "name": "\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11",
+            "username": "fake.202",
+            "password": "FAKE-202",
+            "urls": [
+              "https://two-hundred-and-two.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 18,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Café",
+            "username": "fake.cafe",
+            "password": "FAKE-cafe",
+            "urls": [
+              "https://cafe.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 19,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Café",
+            "username": "fake.cafe",
+            "password": "FAKE-cafe",
+            "urls": [
+              "https://cafe.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 20,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "shop.example",
+            "username": "fake.shop",
+            "password": "FAKE-shop",
+            "urls": [
+              "https://fake.user:FAKE-pw@Shop.Example:8443/x?y#z"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 21,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "[2001:db8::1]",
+            "username": "fake.v6",
+            "password": "FAKE-v6",
+            "urls": [
+              "https://[2001:DB8::1]:8443/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 22,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "[::1",
+            "username": "fake.unclosed",
+            "password": "FAKE-unclosed",
+            "urls": [
+              "https://[::1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 23,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "bÜcher.example",
+            "username": "fake.idn",
+            "password": "FAKE-idn",
+            "urls": [
+              "https://BÜCHER.Example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 24,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "xn--bcher-kva.example",
+            "username": "fake.punycode",
+            "password": "FAKE-punycode",
+            "urls": [
+              "https://xn--bcher-kva.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 25,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "example.com:abc",
+            "username": "fake.port",
+            "password": "FAKE-port",
+            "urls": [
+              "https://example.com:abc/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 26,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake.fallback",
+            "username": "fake.fallback",
+            "password": "FAKE-fallback",
+            "urls": [
+              "https:///no-host"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 27,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.long-host",
+            "username": "fake.long-host",
+            "password": "FAKE-long-host",
+            "urls": [
+              "https://aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 28,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "second.example",
+            "username": "fake.android",
+            "password": "FAKE-android",
+            "urls": [
+              "https://second.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "android://com.example.app/"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 29,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "example.com",
+            "username": "fake.noscheme",
+            "password": "FAKE-noscheme",
+            "urls": [
+              "https://Example.COM:8443/login"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 30,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.spaced",
+            "username": "\u00A0fake.spaced\u00A0",
+            "password": "FAKE-spaced",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 31,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Untitled",
+            "username": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu",
+            "password": "FAKE-long-username",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 32,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "example.com.",
+            "username": "fake.dot",
+            "password": "FAKE-dot",
+            "urls": [
+              "https://example.com./"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 33,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "evil.example",
+            "username": "fake.two-ats",
+            "password": "FAKE-two-ats",
+            "urls": [
+              "https://fake.user@host@evil.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "the same, with what BitosX has no field for copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 33,
+        "unsupported": {
+          "secure_note": 1
+        },
+        "inTrash": 0,
+        "ignoredColumns": [
+          "Ignored column"
+        ],
+        "counts": {
+          "toAdd": 26,
+          "duplicates": 0,
+          "notImported": 5,
+          "empty": 1,
+          "httpsAdded": 2,
+          "namesDerived": 11,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 26,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 1,
+          "folder": 1,
+          "other_address": 3,
+          "custom_field": 4
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Trimmed name",
+            "username": "\u00A0fake.kept\u00A0",
+            "password": "\u0085FAKE-kept\u0085",
+            "urls": [
+              "https://trim.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "only-space-name.example",
+            "username": "fake.derived",
+            "password": "FAKE-derived",
+            "urls": [
+              "https://only-space-name.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "​᠎Zero width stays​",
+            "username": "fake.zero",
+            "password": "FAKE-zero",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Extras are trimmed",
+            "username": "fake.extras",
+            "password": "FAKE-extras",
+            "urls": [
+              "https://extras.example"
+            ],
+            "notes": "Authenticator key (TOTP): FAKEFAKEFAKEFAKE\nFolder: Fake folder",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "FAKEFAKEFAKEFAKE",
+              "folder": "Fake folder",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Extras of nothing",
+            "username": "fake.noextras",
+            "password": "FAKE-noextras",
+            "urls": [
+              "https://no-extras.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Line ends in a cell",
+            "username": "fake.lines",
+            "password": "FAKE-lines",
+            "urls": [
+              "https://one.example",
+              "https://two.example",
+              "https://three.example",
+              "https://four.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Ended by a carriage return",
+            "username": "fake.cr",
+            "password": "FAKE-cr",
+            "urls": [
+              "https://cr.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "After the carriage return",
+            "username": "fake.after",
+            "password": "FAKE-after",
+            "urls": [
+              "https://after-cr.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Fields on lines",
+            "username": "fake.fields",
+            "password": "FAKE-fields",
+            "urls": [
+              "https://fields.example"
+            ],
+            "notes": "first: FAKE-one\nsecond: with: FAKE-two\nField: no separator in this line\npadded name:  FAKE-kept spaces ",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "first",
+                  "value": "FAKE-one"
+                },
+                {
+                  "name": "second: with",
+                  "value": "FAKE-two"
+                },
+                {
+                  "name": "",
+                  "value": "no separator in this line"
+                },
+                {
+                  "name": "padded name",
+                  "value": " FAKE-kept spaces "
+                }
+              ]
+            }
+          },
+          {
+            "position": 11,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Favorite, written loudly",
+            "username": "fake.fav",
+            "password": "FAKE-fav",
+            "urls": [
+              "https://fav.example"
+            ],
+            "notes": "",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Not a favorite",
+            "username": "fake.notfav",
+            "password": "FAKE-notfav",
+            "urls": [
+              "https://not-fav.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 14,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Type login",
+            "username": "fake.type",
+            "password": "FAKE-type",
+            "urls": [
+              "https://type.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 15,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Control characters",
+            "username": "fake.ctrl",
+            "password": "FAKE-ctrl",
+            "urls": [],
+            "notes": "Other address: https://ctrl\u000B.example/\nOther address: https://del\u007F.example/",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "https://ctrl\u000B.example/",
+                "https://del\u007F.example/"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 16,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11",
+            "username": "fake.200",
+            "password": "FAKE-200",
+            "urls": [
+              "https://two-hundred.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 17,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "name_too_long",
+            "name": "\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11\uD83D\uDD11",
+            "username": "fake.202",
+            "password": "FAKE-202",
+            "urls": [
+              "https://two-hundred-and-two.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 18,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Café",
+            "username": "fake.cafe",
+            "password": "FAKE-cafe",
+            "urls": [
+              "https://cafe.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 19,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Café",
+            "username": "fake.cafe",
+            "password": "FAKE-cafe",
+            "urls": [
+              "https://cafe.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 20,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "shop.example",
+            "username": "fake.shop",
+            "password": "FAKE-shop",
+            "urls": [
+              "https://fake.user:FAKE-pw@Shop.Example:8443/x?y#z"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 21,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "[2001:db8::1]",
+            "username": "fake.v6",
+            "password": "FAKE-v6",
+            "urls": [
+              "https://[2001:DB8::1]:8443/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 22,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "[::1",
+            "username": "fake.unclosed",
+            "password": "FAKE-unclosed",
+            "urls": [
+              "https://[::1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 23,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "bÜcher.example",
+            "username": "fake.idn",
+            "password": "FAKE-idn",
+            "urls": [
+              "https://BÜCHER.Example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 24,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "xn--bcher-kva.example",
+            "username": "fake.punycode",
+            "password": "FAKE-punycode",
+            "urls": [
+              "https://xn--bcher-kva.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 25,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "example.com:abc",
+            "username": "fake.port",
+            "password": "FAKE-port",
+            "urls": [
+              "https://example.com:abc/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 26,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake.fallback",
+            "username": "fake.fallback",
+            "password": "FAKE-fallback",
+            "urls": [
+              "https:///no-host"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 27,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.long-host",
+            "username": "fake.long-host",
+            "password": "FAKE-long-host",
+            "urls": [
+              "https://aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 28,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "second.example",
+            "username": "fake.android",
+            "password": "FAKE-android",
+            "urls": [
+              "https://second.example/"
+            ],
+            "notes": "Other address: android://com.example.app/",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "android://com.example.app/"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 29,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "example.com",
+            "username": "fake.noscheme",
+            "password": "FAKE-noscheme",
+            "urls": [
+              "https://Example.COM:8443/login"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 30,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.spaced",
+            "username": "\u00A0fake.spaced\u00A0",
+            "password": "FAKE-spaced",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 31,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Untitled",
+            "username": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu",
+            "password": "FAKE-long-username",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 32,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "example.com.",
+            "username": "fake.dot",
+            "password": "FAKE-dot",
+            "urls": [
+              "https://example.com./"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 33,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "evil.example",
+            "username": "fake.two-ats",
+            "password": "FAKE-two-ats",
+            "urls": [
+              "https://fake.user@host@evil.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

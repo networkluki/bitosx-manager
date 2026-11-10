@@ -1,0 +1,350 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "firefox.csv"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "Firefox (CSV)",
+        "records": 6,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "httpRealm",
+          "formActionOrigin",
+          "guid",
+          "timeCreated",
+          "timeLastUsed",
+          "timePasswordChanged"
+        ],
+        "counts": {
+          "toAdd": 5,
+          "duplicates": 1,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 5,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 5,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "other_address": 1
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "example.com",
+            "username": "fake.user@example.test",
+            "password": "FAKE-firefox-pw-1",
+            "urls": [
+              "https://example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "accounts.example.org",
+            "username": "fake.user",
+            "password": "FAKE \"quoted\" pw, with a comma",
+            "urls": [
+              "https://accounts.example.org"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "192.168.1.1",
+            "username": "fake.admin",
+            "password": "FAKE-router-pw",
+            "urls": [
+              "http://192.168.1.1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.account@example.test",
+            "username": "fake.account@example.test",
+            "password": "FAKE-sync-token",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "chrome://FirefoxAccounts"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "example.com",
+            "username": "fake.user@example.test",
+            "password": "FAKE-firefox-pw-1",
+            "urls": [
+              "https://example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "no-username.example",
+            "username": "",
+            "password": "FAKE-no-username-pw",
+            "urls": [
+              "https://no-username.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "what BitosX has no field for is copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "Firefox (CSV)",
+        "records": 6,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "httpRealm",
+          "formActionOrigin",
+          "guid",
+          "timeCreated",
+          "timeLastUsed",
+          "timePasswordChanged"
+        ],
+        "counts": {
+          "toAdd": 5,
+          "duplicates": 1,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 5,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 5,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "other_address": 1
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "example.com",
+            "username": "fake.user@example.test",
+            "password": "FAKE-firefox-pw-1",
+            "urls": [
+              "https://example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "accounts.example.org",
+            "username": "fake.user",
+            "password": "FAKE \"quoted\" pw, with a comma",
+            "urls": [
+              "https://accounts.example.org"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "192.168.1.1",
+            "username": "fake.admin",
+            "password": "FAKE-router-pw",
+            "urls": [
+              "http://192.168.1.1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.account@example.test",
+            "username": "fake.account@example.test",
+            "password": "FAKE-sync-token",
+            "urls": [],
+            "notes": "Other address: chrome://FirefoxAccounts",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "chrome://FirefoxAccounts"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "example.com",
+            "username": "fake.user@example.test",
+            "password": "FAKE-firefox-pw-1",
+            "urls": [
+              "https://example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "no-username.example",
+            "username": "",
+            "password": "FAKE-no-username-pw",
+            "urls": [
+              "https://no-username.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

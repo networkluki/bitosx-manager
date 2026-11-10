@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KeePassFile>
+	<Root>
+		<Group>
+			<Name>Fake database</Name>
+			<Entry>
+				<String>
+					<Key>Title</Key>
+					<Value>fake</Value>
+				</String>
+		</Group>
+	</Root>
+</KeePassFile>

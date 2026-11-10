@@ -1,0 +1,13 @@
+{
+  "encrypted": false,
+  "items": [
+    {
+      "type": 1,
+      "name": "fake",
+      "login": {
+        "password": "FAKE-first",
+        "password": "FAKE-second"
+      }
+    }
+  ]
+}

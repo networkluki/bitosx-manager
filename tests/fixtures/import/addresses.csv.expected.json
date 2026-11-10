@@ -1,0 +1,3362 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "addresses.csv"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 151,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 81,
+          "duplicates": 0,
+          "notImported": 70,
+          "empty": 0,
+          "httpsAdded": 6,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 81,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "other_address": 18
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 1",
+            "username": "",
+            "password": "FAKE-pw-1",
+            "urls": [
+              "https://example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 2",
+            "username": "",
+            "password": "FAKE-pw-2",
+            "urls": [
+              "https://example.com/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 3",
+            "username": "",
+            "password": "FAKE-pw-3",
+            "urls": [
+              "http://example.com:8080/login?next=%2F"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 4",
+            "username": "",
+            "password": "FAKE-pw-4",
+            "urls": [
+              "https://bücher.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 5",
+            "username": "",
+            "password": "FAKE-pw-5",
+            "urls": [
+              "https://xn--bcher-kva.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 6",
+            "username": "",
+            "password": "FAKE-pw-6",
+            "urls": [
+              "https://user:pw@example.com:8443/p?q#f"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 7",
+            "username": "",
+            "password": "FAKE-pw-7",
+            "urls": [
+              "https://[::1]:8080/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 8",
+            "username": "",
+            "password": "FAKE-pw-8",
+            "urls": [
+              "https://[2001:db8::1]/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 9",
+            "username": "",
+            "password": "FAKE-pw-9",
+            "urls": [
+              "https://192.168.1.1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 10",
+            "username": "",
+            "password": "FAKE-pw-10",
+            "urls": [
+              "http://192.168.1.1:8080/admin"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 11,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 11",
+            "username": "",
+            "password": "FAKE-pw-11",
+            "urls": [
+              "https://intranet"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 12",
+            "username": "",
+            "password": "FAKE-pw-12",
+            "urls": [
+              "http://localhost:3000"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 13,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 13",
+            "username": "",
+            "password": "FAKE-pw-13",
+            "urls": [
+              "https://example.com/a b"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 14,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 14",
+            "username": "",
+            "password": "FAKE-pw-14",
+            "urls": [
+              "https://example.com/?q=a b#c d"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 15,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 15",
+            "username": "",
+            "password": "FAKE-pw-15",
+            "urls": [
+              "https://exa mple.com/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 16,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 16",
+            "username": "",
+            "password": "FAKE-pw-16",
+            "urls": [
+              "https://"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 17,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 17",
+            "username": "",
+            "password": "FAKE-pw-17",
+            "urls": [
+              "http://"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 18,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 18",
+            "username": "",
+            "password": "FAKE-pw-18",
+            "urls": [
+              "https:///path"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 19,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 19",
+            "username": "",
+            "password": "FAKE-pw-19",
+            "urls": [
+              "https://@/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 20,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 20",
+            "username": "",
+            "password": "FAKE-pw-20",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "http:example.com"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 21,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 21",
+            "username": "",
+            "password": "FAKE-pw-21",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "https:example.com/path"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 22,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 22",
+            "username": "",
+            "password": "FAKE-pw-22",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "https:/example.com"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 23,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 23",
+            "username": "",
+            "password": "FAKE-pw-23",
+            "urls": [
+              "https://example.com:99999"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 24,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 24",
+            "username": "",
+            "password": "FAKE-pw-24",
+            "urls": [
+              "https://example.com:65535"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 25,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 25",
+            "username": "",
+            "password": "FAKE-pw-25",
+            "urls": [
+              "https://example.com:0"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 26,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 26",
+            "username": "",
+            "password": "FAKE-pw-26",
+            "urls": [
+              "https://example.com:"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 27,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 27",
+            "username": "",
+            "password": "FAKE-pw-27",
+            "urls": [
+              "https://example.com:abc"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 28,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 28",
+            "username": "",
+            "password": "FAKE-pw-28",
+            "urls": [
+              "http://1.2.3.4.5"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 29,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 29",
+            "username": "",
+            "password": "FAKE-pw-29",
+            "urls": [
+              "https://v1.2"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 30,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 30",
+            "username": "",
+            "password": "FAKE-pw-30",
+            "urls": [
+              "https://1.2.3"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 31,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 31",
+            "username": "",
+            "password": "FAKE-pw-31",
+            "urls": [
+              "https://256.1.1.1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 32,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 32",
+            "username": "",
+            "password": "FAKE-pw-32",
+            "urls": [
+              "https://0x7f.1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 33,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 33",
+            "username": "",
+            "password": "FAKE-pw-33",
+            "urls": [
+              "https://0x7f000001"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 34,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 34",
+            "username": "",
+            "password": "FAKE-pw-34",
+            "urls": [
+              "https://2130706433"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 35,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 35",
+            "username": "",
+            "password": "FAKE-pw-35",
+            "urls": [
+              "https://exa_mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 36,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 36",
+            "username": "",
+            "password": "FAKE-pw-36",
+            "urls": [
+              "https://-a.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 37,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 37",
+            "username": "",
+            "password": "FAKE-pw-37",
+            "urls": [
+              "https://a-.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 38,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 38",
+            "username": "",
+            "password": "FAKE-pw-38",
+            "urls": [
+              "https://a..b"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 39,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 39",
+            "username": "",
+            "password": "FAKE-pw-39",
+            "urls": [
+              "https://.example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 40,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 40",
+            "username": "",
+            "password": "FAKE-pw-40",
+            "urls": [
+              "https://example.com."
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 41,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 41",
+            "username": "",
+            "password": "FAKE-pw-41",
+            "urls": [
+              "https://example..com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 42,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 42",
+            "username": "",
+            "password": "FAKE-pw-42",
+            "urls": [
+              "https://%zz.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 43,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 43",
+            "username": "",
+            "password": "FAKE-pw-43",
+            "urls": [
+              "https://%41.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 44,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 44",
+            "username": "",
+            "password": "FAKE-pw-44",
+            "urls": [
+              "https://exa%20mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 45,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 45",
+            "username": "",
+            "password": "FAKE-pw-45",
+            "urls": [
+              "https://example.com/%zz"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 46,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 46",
+            "username": "",
+            "password": "FAKE-pw-46",
+            "urls": [
+              "https://example.com/%"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 47,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 47",
+            "username": "",
+            "password": "FAKE-pw-47",
+            "urls": [
+              "https://EXAMPLE.COM/Path"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 48,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 48",
+            "username": "",
+            "password": "FAKE-pw-48",
+            "urls": [
+              "HTTPS://example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 49,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 49",
+            "username": "",
+            "password": "FAKE-pw-49",
+            "urls": [
+              "hTTp://example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 50,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 50",
+            "username": "",
+            "password": "FAKE-pw-50",
+            "urls": [
+              "https://example.com\\path"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 51,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 51",
+            "username": "",
+            "password": "FAKE-pw-51",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "https:\\\\example.com"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 52,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 52",
+            "username": "",
+            "password": "FAKE-pw-52",
+            "urls": [
+              "https://example.com/a\\b"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 53,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 53",
+            "username": "",
+            "password": "FAKE-pw-53",
+            "urls": [
+              "https://exam[ple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 54,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 54",
+            "username": "",
+            "password": "FAKE-pw-54",
+            "urls": [
+              "https://example.com/[x]"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 55,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 55",
+            "username": "",
+            "password": "FAKE-pw-55",
+            "urls": [
+              "https://example.com/{x}|y^z`"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 56,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 56",
+            "username": "",
+            "password": "FAKE-pw-56",
+            "urls": [
+              "https://example.com/<x>"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 57,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 57",
+            "username": "",
+            "password": "FAKE-pw-57",
+            "urls": [
+              "https://exa<mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 58,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 58",
+            "username": "",
+            "password": "FAKE-pw-58",
+            "urls": [
+              "https://exa>mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 59,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 59",
+            "username": "",
+            "password": "FAKE-pw-59",
+            "urls": [
+              "https://exa\"mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 60,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 60",
+            "username": "",
+            "password": "FAKE-pw-60",
+            "urls": [
+              "https://exa'mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 61,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 61",
+            "username": "",
+            "password": "FAKE-pw-61",
+            "urls": [
+              "https://exa|mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 62,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 62",
+            "username": "",
+            "password": "FAKE-pw-62",
+            "urls": [
+              "https://exa^mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 63,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 63",
+            "username": "",
+            "password": "FAKE-pw-63",
+            "urls": [
+              "https://exa`mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 64,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 64",
+            "username": "",
+            "password": "FAKE-pw-64",
+            "urls": [
+              "https://exa{mple}.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 65,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 65",
+            "username": "",
+            "password": "FAKE-pw-65",
+            "urls": [
+              "https://exa!mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 66,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 66",
+            "username": "",
+            "password": "FAKE-pw-66",
+            "urls": [
+              "https://exa$mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 67,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 67",
+            "username": "",
+            "password": "FAKE-pw-67",
+            "urls": [
+              "https://exa&mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 68,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 68",
+            "username": "",
+            "password": "FAKE-pw-68",
+            "urls": [
+              "https://exa*mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 69,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 69",
+            "username": "",
+            "password": "FAKE-pw-69",
+            "urls": [
+              "https://exa+mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 70,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 70",
+            "username": "",
+            "password": "FAKE-pw-70",
+            "urls": [
+              "https://exa,mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 71,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 71",
+            "username": "",
+            "password": "FAKE-pw-71",
+            "urls": [
+              "https://exa;mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 72,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 72",
+            "username": "",
+            "password": "FAKE-pw-72",
+            "urls": [
+              "https://exa=mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 73,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 73",
+            "username": "",
+            "password": "FAKE-pw-73",
+            "urls": [
+              "https://exa~mple.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 74,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 74",
+            "username": "",
+            "password": "FAKE-pw-74",
+            "urls": [
+              "https://exa(mple).com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 75,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 75",
+            "username": "",
+            "password": "FAKE-pw-75",
+            "urls": [
+              "https://example.com:80:90"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 76,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 76",
+            "username": "",
+            "password": "FAKE-pw-76",
+            "urls": [
+              "https://user@"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 77,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 77",
+            "username": "",
+            "password": "FAKE-pw-77",
+            "urls": [
+              "https://:8080"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 78,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 78",
+            "username": "",
+            "password": "FAKE-pw-78",
+            "urls": [
+              "https://a b@example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 79,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 79",
+            "username": "",
+            "password": "FAKE-pw-79",
+            "urls": [
+              "https://user:p@ss@example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 80,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 80",
+            "username": "",
+            "password": "FAKE-pw-80",
+            "urls": [
+              "https://[::1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 81,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 81",
+            "username": "",
+            "password": "FAKE-pw-81",
+            "urls": [
+              "https://[zz]/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 82,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 82",
+            "username": "",
+            "password": "FAKE-pw-82",
+            "urls": [
+              "https://[::ffff:1.2.3.4]/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 83,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 83",
+            "username": "",
+            "password": "FAKE-pw-83",
+            "urls": [
+              "https://[1.2.3.4]/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 84,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 84",
+            "username": "",
+            "password": "FAKE-pw-84",
+            "urls": [
+              "https://日本語.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 85,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 85",
+            "username": "",
+            "password": "FAKE-pw-85",
+            "urls": [
+              "https://example.日本/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 86,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 86",
+            "username": "",
+            "password": "FAKE-pw-86",
+            "urls": [
+              "https://a.b.c.d.e.f.g.example.com/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 87,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 87",
+            "username": "",
+            "password": "FAKE-pw-87",
+            "urls": [
+              "https://example.com/#"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 88,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 88",
+            "username": "",
+            "password": "FAKE-pw-88",
+            "urls": [
+              "https://example.com/?"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 89,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 89",
+            "username": "",
+            "password": "FAKE-pw-89",
+            "urls": [
+              "https://example.com?x"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 90,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 90",
+            "username": "",
+            "password": "FAKE-pw-90",
+            "urls": [
+              "https://example.com#x"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 91,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 91",
+            "username": "",
+            "password": "FAKE-pw-91",
+            "urls": [
+              "https://www.example.com:443/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 92,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 92",
+            "username": "",
+            "password": "FAKE-pw-92",
+            "urls": [
+              "http://www.example.com:80/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 93,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 93",
+            "username": "",
+            "password": "FAKE-pw-93",
+            "urls": [
+              "https://1.1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 94,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 94",
+            "username": "",
+            "password": "FAKE-pw-94",
+            "urls": [
+              "https://1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 95,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 95",
+            "username": "",
+            "password": "FAKE-pw-95",
+            "urls": [
+              "https://01.02.03.04"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 96,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 96",
+            "username": "",
+            "password": "FAKE-pw-96",
+            "urls": [
+              "https://1.2.3.256"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 97,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 97",
+            "username": "",
+            "password": "FAKE-pw-97",
+            "urls": [
+              "https://999.999.999.999"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 98,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 98",
+            "username": "",
+            "password": "FAKE-pw-98",
+            "urls": [
+              "https://1.2.3.4."
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 99,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 99",
+            "username": "",
+            "password": "FAKE-pw-99",
+            "urls": [
+              "https://09.1.1.1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 100,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 100",
+            "username": "",
+            "password": "FAKE-pw-100",
+            "urls": [
+              "https://0x.1.1.1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 101,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 101",
+            "username": "",
+            "password": "FAKE-pw-101",
+            "urls": [
+              "https://1e3.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 102,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 102",
+            "username": "",
+            "password": "FAKE-pw-102",
+            "urls": [
+              "https://example.123"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 103,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 103",
+            "username": "",
+            "password": "FAKE-pw-103",
+            "urls": [
+              "https://example.com./path"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 104,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 104",
+            "username": "",
+            "password": "FAKE-pw-104",
+            "urls": [
+              "https://a_b.example.com/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 105,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 105",
+            "username": "",
+            "password": "FAKE-pw-105",
+            "urls": [
+              "https://_dmarc.example.com/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 106,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 106",
+            "username": "",
+            "password": "FAKE-pw-106",
+            "urls": [
+              "https://example.com/path with spaces/and\"quotes\""
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 107,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 107",
+            "username": "",
+            "password": "FAKE-pw-107",
+            "urls": [
+              "https://ex ample.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 108,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 108",
+            "username": "",
+            "password": "FAKE-pw-108",
+            "urls": [
+              "https://example.com:8080"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 109,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 109",
+            "username": "",
+            "password": "FAKE-pw-109",
+            "urls": [
+              "https://[::1]:99999/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 110,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 110",
+            "username": "",
+            "password": "FAKE-pw-110",
+            "urls": [
+              "https://[fe80::1%25eth0]/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 111,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 111",
+            "username": "",
+            "password": "FAKE-pw-111",
+            "urls": [
+              "https://[fe80::1%eth0]/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 112,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 112",
+            "username": "",
+            "password": "FAKE-pw-112",
+            "urls": [
+              "https://example.com/é"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 113,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 113",
+            "username": "",
+            "password": "FAKE-pw-113",
+            "urls": [
+              "https://example.com/日本"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 114,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 114",
+            "username": "",
+            "password": "FAKE-pw-114",
+            "urls": [
+              "https://%E4%BE%8B.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 115,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 115",
+            "username": "",
+            "password": "FAKE-pw-115",
+            "urls": [
+              "https://example.com@evil.example/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 116,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 116",
+            "username": "",
+            "password": "FAKE-pw-116",
+            "urls": [
+              "https://a:b:c@example.com/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 117,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 117",
+            "username": "",
+            "password": "FAKE-pw-117",
+            "urls": [
+              "https://example.com/?a=1&b=2;c=3"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 118,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 118",
+            "username": "",
+            "password": "FAKE-pw-118",
+            "urls": [
+              "https://ex%61mple.com/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 119,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 119",
+            "username": "",
+            "password": "FAKE-pw-119",
+            "urls": [
+              "https://example.c"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 120,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 120",
+            "username": "",
+            "password": "FAKE-pw-120",
+            "urls": [
+              "https://e"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 121,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 121",
+            "username": "",
+            "password": "FAKE-pw-121",
+            "urls": [
+              "https://a.b"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 122,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 122",
+            "username": "",
+            "password": "FAKE-pw-122",
+            "urls": [
+              "https://-"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 123,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 123",
+            "username": "",
+            "password": "FAKE-pw-123",
+            "urls": [
+              "https://."
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 124,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 124",
+            "username": "",
+            "password": "FAKE-pw-124",
+            "urls": [
+              "https://.."
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 125,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 125",
+            "username": "",
+            "password": "FAKE-pw-125",
+            "urls": [
+              "https://*.example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 126,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 126",
+            "username": "",
+            "password": "FAKE-pw-126",
+            "urls": [
+              "https://a%2Fb.example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 127,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 127",
+            "username": "",
+            "password": "FAKE-pw-127",
+            "urls": [
+              "https://a%23b.example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 128,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 128",
+            "username": "",
+            "password": "FAKE-pw-128",
+            "urls": [
+              "https://a%3Fb.example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 129,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 129",
+            "username": "",
+            "password": "FAKE-pw-129",
+            "urls": [
+              "https://a%40b.example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 130,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 130",
+            "username": "",
+            "password": "FAKE-pw-130",
+            "urls": [
+              "https://a%5Bb.example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 131,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "fake address 131",
+            "username": "",
+            "password": "FAKE-pw-131",
+            "urls": [
+              "https://a%25b.example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 132,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 132",
+            "username": "",
+            "password": "FAKE-pw-132",
+            "urls": [
+              "https://example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 133,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 133",
+            "username": "",
+            "password": "FAKE-pw-133",
+            "urls": [
+              "https://www.example.org/path?x=1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 134,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 134",
+            "username": "",
+            "password": "FAKE-pw-134",
+            "urls": [
+              "https://example.com:8443/path"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 135,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 135",
+            "username": "",
+            "password": "FAKE-pw-135",
+            "urls": [
+              "https://192.168.1.1"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 136,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 136",
+            "username": "",
+            "password": "FAKE-pw-136",
+            "urls": [
+              "https://192.168.1.1:8080/admin"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 137,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 137",
+            "username": "",
+            "password": "FAKE-pw-137",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "localhost"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 138,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 138",
+            "username": "",
+            "password": "FAKE-pw-138",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "localhost:3000"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 139,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 139",
+            "username": "",
+            "password": "FAKE-pw-139",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "user@example.com"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 140,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 140",
+            "username": "",
+            "password": "FAKE-pw-140",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "v1.2"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 141,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 141",
+            "username": "",
+            "password": "FAKE-pw-141",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "My bank"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 142,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 142",
+            "username": "",
+            "password": "FAKE-pw-142",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "mailto:fake@example.test"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 143,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 143",
+            "username": "",
+            "password": "FAKE-pw-143",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "android://FakeHash==@com.example.app/"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 144,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 144",
+            "username": "",
+            "password": "FAKE-pw-144",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "ftp://files.example/"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 145,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 145",
+            "username": "",
+            "password": "FAKE-pw-145",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "file:///home/fake/secrets.txt"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 146,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 146",
+            "username": "",
+            "password": "FAKE-pw-146",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "javascript:alert(1)"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 147,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 147",
+            "username": "",
+            "password": "FAKE-pw-147",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "//example.com/path"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 148,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 148",
+            "username": "",
+            "password": "FAKE-pw-148",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "example.com."
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 149,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 149",
+            "username": "",
+            "password": "FAKE-pw-149",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "example.123"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 150,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 150",
+            "username": "",
+            "password": "FAKE-pw-150",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "256.1.1.1"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 151,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake address 151",
+            "username": "",
+            "password": "FAKE-pw-151",
+            "urls": [
+              "https://EXAMPLE.COM/Path"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
