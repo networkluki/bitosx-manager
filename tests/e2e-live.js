@@ -279,6 +279,11 @@ async function check(name, fn) {
 	const fixtureBytes = fs.readFileSync(path.join(FIX, "small.vault.json"));
 	const fixtureMeta = JSON.parse(fs.readFileSync(path.join(FIX, "small.meta.json"), "utf8"));
 	const vcNode = require("../vault/public/assets/js/vault-crypto.js")(require("../vault/public/assets/vendor/hash-wasm/argon2.umd.min.js"), globalThis.crypto);
+	const ieNode = require("../vault/public/assets/js/import-export.js")(vcNode);
+	// A conformance fixture of the import: Chrome's layout, and what the desktop makes of it.
+	const importFile = path.join(FIX, "import", "chrome.csv");
+	const importExpected = JSON.parse(fs.readFileSync(importFile + ".expected.json", "utf8")).cases[0].result;
+	const importedNames = importExpected.candidates.filter((c) => c.status === "add").map((c) => c.name);
 	const GITHUB_ID = "11111111-1111-4111-8111-111111111111";
 	const editedName = `GitHub (edited live ${rand(3)})`;
 	const editedUser = `live-${rand(3)}@example.test`;
@@ -502,6 +507,79 @@ async function check(name, fn) {
 		await unlock();
 		const names = (await page.locator(".vault-item__name").allTextContents()).map((n) => n.trim());
 		assert.ok(names.some((n) => n.startsWith(editedName)), `edited name listed: ${names.join(" | ")}`);
+	});
+	await step("import a file another password manager exported: a preview, then unsaved items, then Save to server (a real PUT); the server's copy holds its logins", async () => {
+		const requestsBefore = relayed.length;
+		await page.click("#vault-import");
+		await page.setInputFiles("#import-file", importFile);
+		await page.waitForSelector("#import-preview:not([hidden])");
+		assert.equal(await page.locator("#import-summary li").first().textContent(), `Format: Chrome or Edge (CSV). The file holds ${importExpected.records} entries.`);
+		assert.match(await page.textContent("#import-count"), new RegExp(`^${importedNames.length} logins would be added to the vault in this browser \\(it holds 3 now\\)`));
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 3, "nothing is added before it is confirmed");
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		assert.match(await page.textContent("#vault-notice"), new RegExp(`^Imported ${importedNames.length} logins into the vault in this browser .*Nothing is on the server until you press Save to server\\. The file you imported still holds every password in plain text\\. Delete it when you no longer need it\\.$`));
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 3 + importedNames.length);
+		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), true);
+		assert.equal(relayed.length, requestsBefore, "reading and importing the file sent nothing to the API");
+		assert.equal((await serverEnvelope(other.accessToken)).meta.revision, revision, "the server still holds what it held");
+		await page.click("#vault-save");
+		await page.waitForFunction((r) => document.getElementById("vault-notice").textContent.startsWith(`Saved: the server now holds revision ${r}.`), revision + 1);
+		revision += 1;
+		// The desktop's view: what the server holds now opens with the master password and has the logins of the file.
+		const { meta, bytes } = await serverEnvelope(other.accessToken);
+		assert.equal(meta.revision, revision);
+		const opened = await vcNode.unlock(vcNode.parseEnvelope(new Uint8Array(bytes)), fixtureMeta.typedPassword);
+		const items = vcNode.parseVault(opened.plaintext).items;
+		assert.equal(items.length, 3 + importedNames.length);
+		assert.deepEqual(items.slice(3).map((i) => [i.name, i.username || "", i.password || "", [...i.urls], i.notes || ""]),
+			importExpected.candidates.filter((c) => c.status === "add").map((c) => [c.name, c.username, c.password, c.urls, c.notes]));
+		assert.equal(new Set(items.map((i) => i.id)).size, items.length, "every item has an identifier of its own");
+	});
+	await step("reload (signed out), sign in again, re-open: the imported logins are there", async () => {
+		await page.reload();
+		await page.waitForSelector("#login-panel:not([hidden])");
+		await passwordStep(password);
+		await codeStep(await nextTotp());
+		await vaultStatusLoaded();
+		assert.match(await page.textContent("#vault-status-text"), new RegExp(`revision ${revision},`));
+		await unlock();
+		const names = (await page.locator(".vault-item__name").allTextContents()).map((n) => n.trim());
+		assert.equal(names.length, 3 + importedNames.length);
+		for (const name of importedNames) { assert.ok(names.includes(name), `${name} is listed: ${names.join(" | ")}`); }
+		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), false);
+	});
+	await step("export the vault unencrypted: the box and the master password first; a wrong password writes nothing; the right one downloads every login, and asks nothing of the API", async () => {
+		const requestsBefore = relayed.length;
+		const downloads = [];
+		const onDownload = (d) => downloads.push(d);
+		page.on("download", onDownload);
+		await page.click("#vault-export");
+		assert.equal(await page.textContent("#export-warning"), ieNode.TEXTS.exportWarning);
+		assert.equal(await page.isDisabled("#export-submit"), true, "the box has to be ticked first");
+		await page.check("#export-ack");
+		await page.fill("#export-master-password", password);   // the account password is not the master password
+		await page.click("#export-submit");
+		await page.waitForFunction(() => /incorrect/.test(document.getElementById("vault-export-notice").textContent));
+		assert.equal(await page.textContent("#vault-export-notice"), "The master password is incorrect. Nothing was exported.");
+		assert.equal(await page.inputValue("#export-master-password"), "");
+		await new Promise((r) => setTimeout(r, 500));
+		assert.equal(downloads.length, 0, "a wrong master password exports nothing");
+		await page.fill("#export-master-password", fixtureMeta.typedPassword);
+		const [download] = await Promise.all([page.waitForEvent("download"), page.click("#export-submit")]);
+		assert.match(download.suggestedFilename(), /^BitosX-export-\d{4}-\d{2}-\d{2}\.csv$/);
+		await page.waitForSelector("#vault-export-panel", { state: "hidden" });
+		page.off("download", onDownload);
+		// The file is the vault the server holds, in Chrome's layout, and reads back to its logins.
+		const saved = fs.readFileSync(await download.path());
+		const { bytes } = await serverEnvelope(other.accessToken);
+		const opened = await vcNode.unlock(vcNode.parseEnvelope(new Uint8Array(bytes)), fixtureMeta.typedPassword);
+		const items = vcNode.parseVault(opened.plaintext).items;
+		assert.ok(saved.equals(Buffer.from(ieNode.exportCsv(items))), "the export is the vault's items");
+		const back = ieNode.planImport(ieNode.parseImport(new Uint8Array(saved)), [], {});
+		assert.equal(back.label, "Chrome or Edge (CSV)");
+		assert.deepEqual(back.candidates.map((c) => c.name), items.map((i) => i.name));
+		assert.equal(relayed.length, requestsBefore, "the master password was checked in the browser: no request was made");
 	});
 	await step("download the encrypted backup: byte for byte what GET /v1/sync/envelope returns", async () => {
 		const [download] = await Promise.all([page.waitForEvent("download"), page.click("#vault-backup")]);
