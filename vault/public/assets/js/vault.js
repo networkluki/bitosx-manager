@@ -188,12 +188,15 @@
 		if (hasUnsavedChanges()) { ev.preventDefault(); ev.returnValue = ""; }
 	});
 	document.addEventListener("visibilitychange", function () {
-		if (document.visibilityState === "visible") { checkIdle(); return; }
+		if (document.visibilityState === "visible") { choosingImportFile = false; checkIdle(); return; }
 		// A hidden tab is an unattended screen: lock, as the desktop does on workstation lock —
 		// unless there are unsaved changes (also typed into the editor), which a lock would discard,
-		// or an import is open: choosing a file can hide the page (a phone's file picker does), and a
-		// lock would end the import before it began. The idle lock still applies.
-		if (opened && !hasUnsavedChanges() && importPanel.hidden) { lock("Vault locked when the tab was hidden.", true); }
+		// or the file chooser of an import has just been asked for: a phone's file chooser hides the
+		// page, and a lock at that moment would end the import before a file could be chosen. Only
+		// that moment is spared. Once a file is chosen, the chooser is called off or the page is
+		// looked at again, a hidden tab locks as always, and a preview on screen goes with it. The
+		// idle lock applies throughout.
+		if (opened && !hasUnsavedChanges() && !choosingImportFile) { lock("Vault locked when the tab was hidden.", true); }
 	});
 
 	// ---- what the server holds ----
@@ -1015,6 +1018,10 @@
 	// is chosen, and when the vault locks.
 	var importing = null;
 	var importReads = 0;   // changes with every file chosen and every reset; a read that finishes later is dropped
+	// True from the moment the file chooser is asked for until a file is chosen, the chooser is
+	// called off, the import is reset or the page is looked at again. While it is true a hidden tab
+	// does not lock the vault (see the visibilitychange handler above).
+	var choosingImportFile = false;
 	var LIST_LIMIT = 100;  // names shown in a list of the preview; the rest are counted
 	// How far from the limit an import has to stay. The size of the envelope can only be estimated
 	// before it is encrypted (vc.estimateEnvelopeSize); this is more than ten standard deviations.
@@ -1049,6 +1056,7 @@
 	}
 	function resetImport() {
 		importReads++;
+		choosingImportFile = false;
 		clearImportPreview();
 		importFile.value = "";
 		importCopyExtras.checked = false;   // both choices are off unless chosen, for every file anew
@@ -1157,7 +1165,11 @@
 		ui.notice(importNotice, blocked ? "err" : "ok", blocked ? ie.REFUSAL_TEXTS.vault_item_limit : "");
 	}
 
+	// The chooser is asked for by a click (also the one a key press or the label makes).
+	importFile.addEventListener("click", function () { choosingImportFile = opened; });
+	importFile.addEventListener("cancel", function () { choosingImportFile = false; });
 	importFile.addEventListener("change", function () {
+		choosingImportFile = false;
 		var file = importFile.files && importFile.files[0];
 		var read = ++importReads;
 		clearImportPreview();   // the logins of a file chosen earlier are let go of

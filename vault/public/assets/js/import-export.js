@@ -921,6 +921,10 @@
 	function hasPlausibleHost(webAddress) {
 		var authority = authorityOf(webAddress);
 		if (authority === null) { return false; }
+		// No backslash, before an "@" or after it: new URL ends the host at one, so
+		// "https://u\@example.com/" goes to the host "u" while the text after the "@" says
+		// "example.com" (and the desktop reads no address in it at all).
+		if (authority.indexOf("\\") >= 0) { return false; }
 		var at = authority.indexOf("@");
 		if (at >= 0) {
 			authority = authority.slice(at + 1);

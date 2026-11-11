@@ -475,8 +475,10 @@ Import and export were run in Chromium only (headless, 141): how Firefox and Saf
 untested), how they decode with `TextDecoder`, whether their URL parsers agree with Chromium's on
 unusual addresses, and how soon after the click they let a download's object URL be revoked (Chromium
 keeps the download whole even when it is revoked at once, measured) are **not verified**. Nor is a
-phone: the vault does not lock on a hidden tab while the import panel is open, because a file picker
-is assumed to hide the page there — assumed, not seen. No real export of Chrome, Firefox, Bitwarden,
+phone: the vault does not lock on a hidden tab while an import's file chooser is open (from the click
+that asks for it until a file is chosen, the chooser is called off or the page is visible again),
+because a phone's file chooser is assumed to hide the page — assumed, not seen. With a preview on
+screen, or with the panel merely open, a hidden tab locks as always. No real export of Chrome, Firefox, Bitwarden,
 KeePassXC or KeePass was imported: the fixtures are written after their source code, by the desktop
 side. A vault near 16 MiB opens and saves in the tests, slowly (a few seconds of a busy page). The
 `Strict-Transport-Security` header in `_headers` is set without `includeSubDomains`; whether to
@@ -638,7 +640,7 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 ## Versioning
 
-`web v0.8.0` (phase 11, import and export; `v0.7.0` phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
+`web v0.8.1` (two fixes to the import: a hidden tab is kept unlocked only while the file chooser is open, and an address with a backslash before the `@` is not imported; `v0.8.0` phase 11, import and export; `v0.7.0` phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
 the `?v=` cache-busting query on the stylesheet links together (the e2e hygiene test checks it). The
-desktop app (`0.11.0`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
+desktop app (`0.14.1`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
 product page for orientation only.

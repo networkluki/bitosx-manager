@@ -1145,8 +1145,18 @@ test("addresses: the host rule both clients share (§7.3)", () => {
 		"https://%41.com", "https://ex%61mple.com/", "https://example.com\\path", "https://exam[ple.com", "https://example.com:abc", "https://example.com:80:90", "https://example.com:80a/",
 		"https://example.123", "https://v1.2", "https://1.2.3", "https://1", "https://1.2.3.4.5", "https://256.1.1.1", "https://1.2.3.256", "https://01.02.03.04", "https://0x7f.1", "https://0x7f000001",
 		"https://0x.1.1.1", "https://2130706433", "https://1.2.3.4..", "https://[::1", "https://[]/", "https://[zz]/", "https://[fe80::1%25eth0]/", "https://[::1]x", "https://[::1]:80a",
-		"not an address at all", "https://a.0x/", "https://a.0X1F/", "https://a.09/"];
+		"not an address at all", "https://a.0x/", "https://a.0X1F/", "https://a.09/",
+		// A backslash before the "@": new URL would read the host "u" (or "evil.example") here.
+		"https://u\\@example.com/", "https://evil.example\\@bank.example/", "https://user:pa\\ss@example.com/", "https://\\@example.com"];
 	for (const a of implausible) { assert.equal(ie._hasPlausibleHost(a), false, a); }
+});
+
+test("addresses: a backslash before the @ would send a browser to another host than the text names, so the entry is not imported", () => {
+	// What the rule is for: new URL ends the host at the backslash.
+	assert.equal(new URL("https://evil.example\\@bank.example/").hostname, "evil.example");
+	const csv = "name,url,username,password\r\n,https://evil.example\\@bank.example/,fake.user,FAKE-pw-1\r\nKept,https://bank.example/,fake.user,FAKE-pw-2\r\n";
+	const plan = ie.planImport(ie.parseImport(new TextEncoder().encode(csv)), [], {});
+	assert.deepEqual(plan.candidates.map((c) => [c.status, c.reason]), [["not_imported", "url_invalid"], ["add", null]]);
 });
 
 test("addresses: a very long value is told apart in one pass", () => {
