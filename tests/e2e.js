@@ -3651,7 +3651,7 @@ async function test(name, fn) {
 		assert.deepEqual(pp, ["camera=()", "microphone=()", "geolocation=()", "payment=()", "usb=()",
 			"publickey-credentials-create=(self)", "publickey-credentials-get=(self)"]);
 		// One web version everywhere: every footer and every stylesheet link.
-		const WEB_VERSION = "0.8.0";
+		const WEB_VERSION = "0.8.1";
 		for (const f of files) {
 			const html = fs.readFileSync(f, "utf8");
 			for (const m of html.matchAll(/bitosx\.css\?v=([0-9.]+)/g)) { assert.equal(m[1], WEB_VERSION, `stylesheet version in ${f}`); }
