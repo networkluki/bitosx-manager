@@ -30,7 +30,6 @@
 	var KDF_KEYS = ["memoryKiB", "iterations", "parallelism", "keyLengthBytes"];
 	var ITEM_KEYS = ["type", "Id", "Name", "Notes", "Favorite", "CreatedAt", "UpdatedAt", "Username", "Password", "Urls"];
 	var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-	var BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 	var KINDS = Object.freeze({
 		FORMAT: "format",     // not a vault envelope this version can read (fails before any key work)
@@ -64,8 +63,23 @@
 	}
 	function isInt(v) { return typeof v === "number" && Number.isInteger(v); }
 
+	// Strict Base64 (RFC 4648 §4, padded): only the alphabet, and "=" or "==" at the very end where the
+	// length asks for it. Written as a loop: a pattern with a repeated group overflows the engine's
+	// stack on a string of several million characters, which a vault of a few MiB already is.
+	function isBase64(text) {
+		var length = text.length;
+		if (length === 0 || length % 4 !== 0) { return false; }
+		var end = length;
+		if (text.charCodeAt(end - 1) === 0x3D) { end--; }
+		if (text.charCodeAt(end - 1) === 0x3D) { end--; }
+		for (var i = 0; i < end; i++) {
+			var c = text.charCodeAt(i);
+			if (!((c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) || (c >= 0x30 && c <= 0x39) || c === 0x2B || c === 0x2F)) { return false; }
+		}
+		return true;
+	}
 	function base64ToBytes(text, field) {
-		if (typeof text !== "string" || text.length === 0 || text.length % 4 !== 0 || !BASE64_RE.test(text)) {
+		if (typeof text !== "string" || !isBase64(text)) {
 			throw new VaultError(KINDS.FORMAT, "The vault field '" + field + "' is not valid base64.");
 		}
 		var binary = atob(text);
@@ -755,6 +769,7 @@
 		unlock: unlock,
 		parseVault: parseVault,
 		sha256Hex: sha256Hex,
+		isBase64: isBase64,
 		base64ToBytes: base64ToBytes,
 		bytesToHex: bytesToHex,
 		bytesToBase64: bytesToBase64,
