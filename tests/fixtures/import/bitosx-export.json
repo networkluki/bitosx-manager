@@ -1,0 +1,108 @@
+{
+  "format": "bitosx-export",
+  "version": 1,
+  "exportedAt": "2026-11-10T12:00:00Z",
+  "items": [
+    {
+      "type": "login",
+      "name": "Example Mail",
+      "username": "fake.user@example.test",
+      "password": "FAKE-mail-pw-1",
+      "urls": [
+        "https://mail.example.com/login"
+      ],
+      "notes": "The address book is shared.",
+      "favorite": true,
+      "createdAt": "2025-03-04T05:06:07Z",
+      "updatedAt": "2026-04-05T06:07:08Z"
+    },
+    {
+      "type": "login",
+      "name": "Two addresses",
+      "username": "fake.two",
+      "password": "FAKE-two-pw",
+      "urls": [
+        "https://first.example.org/",
+        "https://second.example.org/sign-in?next=%2Fhome"
+      ],
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-03-05T05:06:07.1234567Z",
+      "updatedAt": "2026-04-06T06:07:08Z"
+    },
+    {
+      "type": "login",
+      "name": "Quotes \"and\", commas",
+      "username": "fake,\"user\"",
+      "password": "FAKE \"pw\", with a comma",
+      "urls": [
+        "https://example.net/?ids=1,2,3"
+      ],
+      "notes": "line one\nline two\r\nline three, with a \"quote\"",
+      "favorite": false,
+      "createdAt": "2025-03-06T05:06:07.2469134Z",
+      "updatedAt": "2026-04-07T06:07:08Z"
+    },
+    {
+      "type": "login",
+      "name": "Café räksmörgås 日本",
+      "username": "användare@example.test",
+      "password": "FAKE-lösenord-\uD83D\uDD11",
+      "urls": [
+        "https://xn--bcher-kva.example/"
+      ],
+      "notes": "Notes with an emoji \uD83D\uDE00 and a no-break\u00A0space.",
+      "favorite": false,
+      "createdAt": "2025-03-07T05:06:07.3703701Z",
+      "updatedAt": "2026-04-08T06:07:08Z"
+    },
+    {
+      "type": "login",
+      "name": "Only a name",
+      "username": "",
+      "password": "",
+      "urls": [],
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-03-08T05:06:07.4938268Z",
+      "updatedAt": "2026-04-09T06:07:08Z"
+    },
+    {
+      "type": "login",
+      "name": "Spaces kept",
+      "username": "  fake spaced  ",
+      "password": "  FAKE spaced pw  ",
+      "urls": [
+        "https://example.com/spaces"
+      ],
+      "notes": "  notes with spaces around them  ",
+      "favorite": false,
+      "createdAt": "2025-03-09T05:06:07.6172835Z",
+      "updatedAt": "2026-04-10T06:07:08Z"
+    },
+    {
+      "type": "login",
+      "name": "=SUM(1,2)",
+      "username": "=fake",
+      "password": "+FAKE-@formula",
+      "urls": [
+        "https://example.com/formula"
+      ],
+      "notes": "@note -x",
+      "favorite": true,
+      "createdAt": "2025-03-10T05:06:07.7407402Z",
+      "updatedAt": "2026-04-11T06:07:08Z"
+    },
+    {
+      "type": "login",
+      "name": "Backslashes",
+      "username": "DOMAIN\\fake.user",
+      "password": "FAKE\\pw\\\\two",
+      "urls": [],
+      "notes": "C:\\Users\\fake\\file.txt",
+      "favorite": false,
+      "createdAt": "2025-03-11T05:06:07.8641969Z",
+      "updatedAt": "2026-04-12T06:07:08Z"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "keepass1.csv"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "KeePass 1.x (CSV)",
+        "records": 3,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 3,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 1,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 3,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example",
+            "username": "fake.user",
+            "password": "FAKE-kp1-pw",
+            "urls": [
+              "https://example.com"
+            ],
+            "notes": "A comment",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Quoted \"name\"",
+            "username": "DOMAIN\\fake.user",
+            "password": "FAKE\\pw \"x\"",
+            "urls": [
+              "https://example.org"
+            ],
+            "notes": "Line one\r\nLine two with a \\ backslash",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "No site",
+            "username": "fake.nosite",
+            "password": "FAKE-nosite-pw",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

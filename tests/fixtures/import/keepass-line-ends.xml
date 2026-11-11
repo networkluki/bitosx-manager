@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<KeePassFile>
+	<Root>
+		<Group>
+			<Name>Fake database</Name>
+			<Entry>
+				<String>
+					<Key>Title</Key>
+					<Value>Line ends written as they are</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.raw</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value>FAKE-raw</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://raw-one.example
+https://raw-two.examplehttps://raw-three.example</Value>
+				</String>
+				<String>
+					<Key>Notes</Key>
+					<Value>line one
+line twoline three
+line four</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<String>
+					<Key>Title</Key>
+					<Value>Line ends written as references</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.references</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value>FAKE-references</Value>
+				</String>
+				<String>
+					<Key>URL</Key>
+					<Value>https://ref-one.example&#13;&#10;https://ref-two.example&#xD;https://ref-three.example</Value>
+				</String>
+				<String>
+					<Key>Notes</Key>
+					<Value>line one&#13;&#10;line two&#xD;line three&#xA;line four</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<String>
+					<Key>Title</Key>
+					<Value>A line end in a CDATA section</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.cdata</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value>FAKE-cdata</Value>
+				</String>
+				<String>
+					<Key>Notes</Key>
+					<Value><![CDATA[line one
+line twoline three]]></Value>
+				</String>
+			</Entry>
+		</Group>
+	</Root>
+</KeePassFile>

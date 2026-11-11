@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<!DOCTYPE KeePassFile [
+  <!ENTITY a "fake fake fake fake fake fake fake fake fake fake">
+  <!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">
+  <!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;">
+  <!ENTITY secret SYSTEM "file:///etc/passwd">
+]>
+<KeePassFile><Root><Group><Entry><String><Key>Notes</Key><Value>&c;&secret;</Value></String></Entry></Group></Root></KeePassFile>

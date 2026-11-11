@@ -1,0 +1,443 @@
+{
+  "encrypted": false,
+  "folders": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000f1",
+      "name": "Work"
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000f2",
+      "name": "Private/Shops"
+    }
+  ],
+  "items": [
+    {
+      "passwordHistory": [
+        {
+          "lastUsedDate": "2026-01-02T03:04:05.000Z",
+          "password": "FAKE-older-pw"
+        }
+      ],
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000001",
+      "organizationId": null,
+      "folderId": "00000000-0000-4000-8000-0000000000f1",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Mail",
+      "notes": "First line\nsecond line with \"quotes\"\nÜnïcödé 日本語 😀",
+      "favorite": true,
+      "fields": [
+        {
+          "name": "PIN",
+          "value": "0000",
+          "type": 1,
+          "linkedId": null
+        },
+        {
+          "name": "Security question",
+          "value": "FAKE answer\non two lines",
+          "type": 0,
+          "linkedId": null
+        },
+        {
+          "name": "Newsletter",
+          "value": "true",
+          "type": 2,
+          "linkedId": null
+        },
+        {
+          "name": "Linked to the username",
+          "value": null,
+          "type": 3,
+          "linkedId": 100
+        },
+        {
+          "name": null,
+          "value": "FAKE value without a name",
+          "type": 0,
+          "linkedId": null
+        }
+      ],
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://mail.example.com/login"
+          },
+          {
+            "match": 0,
+            "uri": "androidapp://com.example.mail"
+          },
+          {
+            "match": null,
+            "uri": null
+          }
+        ],
+        "fido2Credentials": [],
+        "username": "fake.user@example.test",
+        "password": "FAKE-bw-json-pw-1",
+        "totp": "otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&issuer=Example"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000002",
+      "organizationId": null,
+      "folderId": null,
+      "type": 2,
+      "reprompt": 0,
+      "name": "A secure note",
+      "notes": "The text of the note.",
+      "favorite": false,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000003",
+      "organizationId": null,
+      "folderId": null,
+      "type": 3,
+      "reprompt": 0,
+      "name": "A card",
+      "notes": null,
+      "favorite": false,
+      "card": {
+        "cardholderName": "Fake Person",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "1",
+        "expYear": "2030",
+        "code": "000"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000004",
+      "organizationId": null,
+      "folderId": null,
+      "type": 4,
+      "reprompt": 0,
+      "name": "An identity",
+      "notes": null,
+      "favorite": false,
+      "identity": {
+        "title": "Mx",
+        "firstName": "Fake",
+        "lastName": "Person",
+        "email": "fake.person@example.test"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000005",
+      "organizationId": null,
+      "folderId": null,
+      "type": 5,
+      "reprompt": 0,
+      "name": "An SSH key",
+      "notes": null,
+      "favorite": false,
+      "sshKey": {
+        "privateKey": "FAKE-not-a-key",
+        "publicKey": "ssh-ed25519 FAKE",
+        "keyFingerprint": "SHA256:FAKE"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000006",
+      "organizationId": null,
+      "folderId": null,
+      "type": 6,
+      "reprompt": 0,
+      "name": "A bank account",
+      "notes": null,
+      "favorite": false,
+      "bankAccount": {
+        "bankName": "Fake Bank",
+        "accountNumber": "00000000"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000007",
+      "organizationId": null,
+      "folderId": null,
+      "type": 7,
+      "reprompt": 0,
+      "name": "A driving licence",
+      "notes": null,
+      "favorite": false,
+      "driversLicense": {
+        "licenseNumber": "FAKE-000"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000008",
+      "organizationId": null,
+      "folderId": null,
+      "type": 8,
+      "reprompt": 0,
+      "name": "A passport",
+      "notes": null,
+      "favorite": false,
+      "passport": {
+        "passportNumber": "FAKE-000"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000009",
+      "organizationId": null,
+      "folderId": null,
+      "type": 99,
+      "reprompt": 0,
+      "name": "Something newer than this file format",
+      "notes": null,
+      "favorite": false,
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": "2026-03-04T05:06:07.000Z",
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000010",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "In the trash",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": [],
+        "username": "fake.deleted",
+        "password": "FAKE-deleted-pw",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000011",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Example Mail",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://mail.example.com/login"
+          }
+        ],
+        "username": "fake.user@example.test",
+        "password": "FAKE-bw-json-pw-1",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000012",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Only a name",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": null,
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000013",
+      "organizationId": null,
+      "folderId": "00000000-0000-4000-8000-00000000dead",
+      "type": 1,
+      "reprompt": 0,
+      "name": "A host without a scheme",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "example.net"
+          },
+          {
+            "match": null,
+            "uri": " https://second.example.net/path "
+          }
+        ],
+        "username": "fake.third",
+        "password": "FAKE-bw-json-pw-3",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000014",
+      "organizationId": null,
+      "folderId": "00000000-0000-4000-8000-0000000000f2",
+      "type": 1,
+      "reprompt": 0,
+      "name": "",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://Unnamed.Example.org:8443/account"
+          }
+        ],
+        "username": "fake.unnamed",
+        "password": "FAKE-bw-json-pw-4",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": null,
+      "id": "00000000-0000-4000-8000-000000000015",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "With a passkey",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://passkey.example"
+          }
+        ],
+        "fido2Credentials": [
+          {
+            "credentialId": "FAKE-credential-id",
+            "keyType": "public-key",
+            "keyAlgorithm": "ECDSA",
+            "keyCurve": "P-256",
+            "keyValue": "FAKE-not-a-key",
+            "rpId": "passkey.example",
+            "userHandle": "FAKE",
+            "userName": "fake.passkey",
+            "counter": "0",
+            "rpName": "Passkey Example",
+            "userDisplayName": "Fake",
+            "discoverable": "true",
+            "creationDate": "2025-01-02T03:04:05.000Z"
+          }
+        ],
+        "username": "fake.passkey",
+        "password": "FAKE-bw-json-pw-5",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2026-02-03T04:05:06.000Z",
+      "creationDate": "2025-01-02T03:04:05.000Z",
+      "deletedDate": null,
+      "archivedDate": "2026-03-04T05:06:07.000Z",
+      "id": "00000000-0000-4000-8000-000000000016",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Archived",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": [],
+        "username": "fake.archived",
+        "password": "FAKE-archived-pw",
+        "totp": null
+      },
+      "collectionIds": null
+    }
+  ]
+}

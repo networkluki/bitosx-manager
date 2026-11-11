@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "columns.csv"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 3,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "website",
+          "login_password",
+          "password",
+          "notes",
+          "title"
+        ],
+        "counts": {
+          "toAdd": 3,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 2,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 3,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "The name column",
+            "username": "fake.columns",
+            "password": "FAKE-left-password-column",
+            "urls": [
+              "https://url-column.example"
+            ],
+            "notes": "the note column",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.no-fallback",
+            "username": "fake.no-fallback",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "short-url.example",
+            "username": "",
+            "password": "",
+            "urls": [
+              "https://short-url.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

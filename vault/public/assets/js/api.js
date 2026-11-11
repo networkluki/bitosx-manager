@@ -404,7 +404,21 @@
 
 	// ---- encrypted sync: what the server holds, and the envelope itself (opaque bytes) ----
 	var HEX64_RE = /^[0-9a-f]{64}$/;
-	var BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+	// Strict Base64 (RFC 4648 §4, padded): only the alphabet, and "=" or "==" at the very end where the
+	// length asks for it. Written as a loop: a pattern with a repeated group overflows the engine's
+	// stack on a string of several million characters, which the envelope of a vault of a few MiB already is.
+	function isBase64(text) {
+		var length = text.length;
+		if (length === 0 || length % 4 !== 0) { return false; }
+		var end = length;
+		if (text.charCodeAt(end - 1) === 0x3D) { end--; }
+		if (text.charCodeAt(end - 1) === 0x3D) { end--; }
+		for (var i = 0; i < end; i++) {
+			var c = text.charCodeAt(i);
+			if (!((c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) || (c >= 0x30 && c <= 0x39) || c === 0x2B || c === 0x2F)) { return false; }
+		}
+		return true;
+	}
 	var MAX_ENVELOPE_BYTES = 16 * 1024 * 1024;
 
 	function parseSyncStatus(b, status) {
@@ -436,7 +450,7 @@
 			.then(function (r) {
 				var meta = parseSyncStatus(r.body, r.status);
 				var text = r.body.envelope;
-				if (typeof text !== "string" || text.length === 0 || text.length % 4 !== 0 || !BASE64_RE.test(text)) {
+				if (typeof text !== "string" || !isBase64(text)) {
 					throw new ApiError(KINDS.UNEXPECTED, r.status);
 				}
 				var binary = atob(text);

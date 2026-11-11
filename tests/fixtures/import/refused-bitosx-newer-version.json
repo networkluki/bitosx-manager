@@ -1,0 +1,12 @@
+{
+  "format": "bitosx-export",
+  "version": 2,
+  "exportedAt": "2030-01-02T03:04:05Z",
+  "items": [
+    {
+      "type": "login",
+      "name": "fake",
+      "password": "FAKE-pw"
+    }
+  ]
+}

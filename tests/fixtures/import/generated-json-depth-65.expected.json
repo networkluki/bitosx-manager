@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "input": {
+    "parts": [
+      {
+        "text": "{\"items\": [{\"type\": 1, \"name\": \"fake, 65 levels\", \"login\": {\"password\": \"FAKE-pw\"}}], \"deep\": ",
+        "repeat": 1
+      },
+      {
+        "text": "[",
+        "repeat": 64
+      },
+      {
+        "text": "]",
+        "repeat": 64
+      },
+      {
+        "text": "}",
+        "repeat": 1
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "refused, whatever the vault and the choices",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "refused": "invalid_json"
+      }
+    }
+  ]
+}

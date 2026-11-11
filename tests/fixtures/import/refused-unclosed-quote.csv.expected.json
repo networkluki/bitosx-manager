@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "refused-unclosed-quote.csv"
+  },
+  "cases": [
+    {
+      "name": "refused, whatever the vault and the choices",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "refused": "invalid_csv",
+        "line": 3
+      }
+    }
+  ]
+}

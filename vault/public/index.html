@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Sign in — BitosX vault</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.7.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.8.0" />
     <meta name="theme-color" content="#26292E" />
     <script src="/assets/js/theme-init.js"></script>
 </head>
@@ -305,6 +305,8 @@
             </select>
             <span class="vault-count" id="vault-count" aria-live="polite"></span>
             <button class="btn ghost small" type="button" id="vault-add">Add login</button>
+            <button class="btn ghost small" type="button" id="vault-import">Import…</button>
+            <button class="btn ghost small" type="button" id="vault-export">Export…</button>
             <button class="btn small" type="button" id="vault-save" disabled>Save to server</button>
             <button class="btn ghost small" type="button" id="vault-lock">Lock</button>
           </div>
@@ -366,6 +368,60 @@
             </div>
           </form>
 
+          <form id="vault-import-panel" class="vault-editor" novalidate hidden>
+            <h2 class="panel-subhead">Import logins</h2>
+            <p class="help">Reads the logins another password manager exported: Chrome or Edge, Firefox, Bitwarden (CSV or unencrypted JSON), KeePassXC (CSV), KeePass 1.x (CSV), KeePass 2 (XML), any other CSV file whose first line names its columns, or BitosX's own export. The file is read <strong>in this browser</strong> and is never uploaded. You see what the import would do before anything is added, and nothing is on the server until you then press <strong>Save to server</strong>.</p>
+            <div class="field">
+              <label for="import-file">File to import (at most 16 MiB)</label>
+              <input id="import-file" type="file" accept=".csv,.json,.xml,text/csv,application/json,text/xml,application/xml" aria-describedby="import-file-hint" />
+              <span class="hint" id="import-file-hint">What the file is is decided from its contents, not from its name.</span>
+            </div>
+            <div class="notice" id="vault-import-notice" role="alert"></div>
+            <p class="import-count" id="import-count" role="status"></p>
+            <div id="import-preview" hidden>
+              <ul class="import-summary" id="import-summary"></ul>
+              <details class="import-details" id="import-not-imported" hidden>
+                <summary id="import-not-imported-summary"></summary>
+                <ul id="import-not-imported-list"></ul>
+              </details>
+              <div class="field">
+                <label class="vault-editor__check"><input id="import-copy-extras" type="checkbox" /> Copy what BitosX has no field for into each item's notes</label>
+                <label class="vault-editor__check"><input id="import-duplicates" type="checkbox" /> Import duplicates too</label>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn" type="submit" id="import-confirm" disabled>Import</button>
+              <button class="btn ghost" type="button" id="import-cancel">Cancel</button>
+            </div>
+          </form>
+
+          <form id="vault-export-panel" class="vault-editor" novalidate hidden data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
+            <h2 class="panel-subhead">Export the vault, unencrypted</h2>
+            <p class="help">Writes every login of this vault to a file another password manager can read. The file is made <strong>in this browser</strong> and saved as a download; nothing is sent to the server.</p>
+            <fieldset class="export-format">
+              <legend>Format</legend>
+              <label class="vault-editor__check"><input id="export-format-csv" name="export-format" type="radio" value="csv" checked /> CSV, in the layout Chrome writes and most password managers read: one address for each item</label>
+              <label class="vault-editor__check"><input id="export-format-json" name="export-format" type="radio" value="json" /> JSON, BitosX's own format: everything an item holds, every address included</label>
+            </fieldset>
+            <p class="inline-note" id="export-several-urls" hidden></p>
+            <p class="export-warning" id="export-warning">This file will contain every password in plain text. Anyone who can read it can sign in as you. Keep it only as long as you need it, and delete it afterwards. Do not open it in a spreadsheet program: such programs can run formulas found in files like this. To keep a copy of your vault, use the encrypted backup instead.</p>
+            <div class="field">
+              <label class="vault-editor__check"><input id="export-ack" type="checkbox" aria-describedby="export-warning" /> I understand that this file is not encrypted</label>
+            </div>
+            <div class="field">
+              <label for="export-master-password">Master password of the vault</label>
+              <input id="export-master-password" name="exportMasterPassword" type="password" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" spellcheck="false" maxlength="1024" required />
+              <span class="hint">Asked for again and checked in this browser before anything is written. It is never sent anywhere.</span>
+            </div>
+            <div class="notice" id="vault-export-notice" role="alert"></div>
+            <div class="form-actions">
+              <button class="btn danger" type="submit" id="export-submit" disabled>Export</button>
+              <button class="btn ghost" type="button" id="export-cancel">Cancel</button>
+              <span class="spacer"></span>
+              <span class="vault-progress" id="export-progress" role="status" aria-live="polite"></span>
+            </div>
+          </form>
+
           <div class="vault-conflict" id="vault-conflict" hidden>
             <p id="vault-conflict-text"></p>
             <div class="form-actions">
@@ -388,7 +444,7 @@
   </main>
 
   <footer>
-    <div class="footer-version">web v0.7.0</div>
+    <div class="footer-version">web v0.8.0</div>
     <div class="footer-links">
       <a href="https://bitosx.se/#security" rel="noopener noreferrer">How your data is protected</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">API source</a>
@@ -404,6 +460,7 @@
   <script src="/assets/js/webauthn.js"></script>
   <script src="/assets/vendor/hash-wasm/argon2.umd.min.js"></script>
   <script src="/assets/js/vault-crypto.js"></script>
+  <script src="/assets/js/import-export.js"></script>
   <script src="/assets/js/account.js" defer></script>
   <script src="/assets/js/vault.js" defer></script>
 </body>

@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "input": {
+    "parts": [
+      {
+        "text": "{\"items\": [{\"type\": 1, \"name\": \"fake, 64 levels\", \"login\": {\"password\": \"FAKE-pw\"}}], \"deep\": ",
+        "repeat": 1
+      },
+      {
+        "text": "[",
+        "repeat": 63
+      },
+      {
+        "text": "]",
+        "repeat": 63
+      },
+      {
+        "text": "}",
+        "repeat": 1
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "bitwarden_json",
+        "label": "Bitwarden (JSON)",
+        "records": 1,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 1,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 1,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake, 64 levels",
+            "username": "",
+            "password": "FAKE-pw",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

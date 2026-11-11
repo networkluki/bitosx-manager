@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "refused-utf16.csv"
+  },
+  "cases": [
+    {
+      "name": "refused, whatever the vault and the choices",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "refused": "unsupported_encoding"
+      }
+    }
+  ]
+}

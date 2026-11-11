@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "keepass-line-ends.xml"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "keepass_xml",
+        "label": "KeePass 2 (XML)",
+        "records": 3,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 3,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 3,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Line ends written as they are",
+            "username": "fake.raw",
+            "password": "FAKE-raw",
+            "urls": [
+              "https://raw-one.example",
+              "https://raw-two.example",
+              "https://raw-three.example"
+            ],
+            "notes": "line one\nline two\nline three\nline four",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Line ends written as references",
+            "username": "fake.references",
+            "password": "FAKE-references",
+            "urls": [
+              "https://ref-one.example",
+              "https://ref-two.example",
+              "https://ref-three.example"
+            ],
+            "notes": "line one\r\nline two\rline three\nline four",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A line end in a CDATA section",
+            "username": "fake.cdata",
+            "password": "FAKE-cdata",
+            "urls": [],
+            "notes": "line one\nline two\nline three",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

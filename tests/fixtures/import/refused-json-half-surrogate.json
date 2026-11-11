@@ -1,0 +1,12 @@
+{
+  "encrypted": false,
+  "items": [
+    {
+      "type": 1,
+      "name": "fake \uD83D",
+      "login": {
+        "password": "FAKE-pw"
+      }
+    }
+  ]
+}

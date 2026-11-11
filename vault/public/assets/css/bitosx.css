@@ -313,3 +313,22 @@ footer .footer-copyright{color:#6a6f78;font-size:11px;letter-spacing:.3px}
 .passkey-item__meta{color:var(--text-soft);font-size:.8rem;margin:2px 0 0}
 .passkey-item__actions{display:flex;flex-wrap:wrap;gap:6px}
 #passkey-rename-form,#passkey-delete-form,#passkey-add-form{border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:0 0 14px;background:var(--page-bg)}
+
+/* Phase 11: import and export */
+.vault-editor .field input[type="file"]{padding:8px 10px;font-size:.92rem}
+.import-count{font-weight:600;margin:0 0 10px}
+.import-count:empty{display:none}
+.import-summary{margin:0 0 14px;padding-left:20px;font-size:.93rem}
+.import-summary li{margin:0 0 5px;overflow-wrap:anywhere}
+.import-details{margin:0 0 16px;font-size:.9rem}
+.import-details summary{cursor:pointer;color:var(--text-soft)}
+.import-details ul{margin:8px 0 0;padding-left:20px}
+.import-details li{margin:0 0 4px;overflow-wrap:anywhere}
+.import-name{font-weight:600}
+#import-preview .vault-editor__check + .vault-editor__check{margin-top:8px}
+.export-format{border:1px solid var(--border);border-radius:8px;padding:10px 14px 12px;margin:0 0 14px;min-width:0}
+.export-format legend{font-size:.85rem;font-weight:600;color:var(--text-soft);padding:0 4px}
+.export-format .vault-editor__check{align-items:flex-start;margin-top:8px}
+.export-format input[type="radio"]{flex:0 0 auto;margin-top:.3em}
+.export-warning{border:1px solid var(--warn);border-radius:10px;padding:12px 14px;margin:0 0 16px;font-size:.93rem;background:var(--card-bg)}
+#export-several-urls{margin:0 0 14px}

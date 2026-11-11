@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "refused-doctype-entities.xml"
+  },
+  "cases": [
+    {
+      "name": "refused, whatever the vault and the choices",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "refused": "doctype"
+      }
+    }
+  ]
+}

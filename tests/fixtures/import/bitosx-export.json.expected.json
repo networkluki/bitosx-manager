@@ -1,0 +1,476 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "bitosx-export.json"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "bitosx_json",
+        "label": "BitosX (JSON)",
+        "records": 8,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 8,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 8,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example Mail",
+            "username": "fake.user@example.test",
+            "password": "FAKE-mail-pw-1",
+            "urls": [
+              "https://mail.example.com/login"
+            ],
+            "notes": "The address book is shared.",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Two addresses",
+            "username": "fake.two",
+            "password": "FAKE-two-pw",
+            "urls": [
+              "https://first.example.org/",
+              "https://second.example.org/sign-in?next=%2Fhome"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Quotes \"and\", commas",
+            "username": "fake,\"user\"",
+            "password": "FAKE \"pw\", with a comma",
+            "urls": [
+              "https://example.net/?ids=1,2,3"
+            ],
+            "notes": "line one\nline two\r\nline three, with a \"quote\"",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Café räksmörgås 日本",
+            "username": "användare@example.test",
+            "password": "FAKE-lösenord-\uD83D\uDD11",
+            "urls": [
+              "https://xn--bcher-kva.example/"
+            ],
+            "notes": "Notes with an emoji \uD83D\uDE00 and a no-break\u00A0space.",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Only a name",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Spaces kept",
+            "username": "  fake spaced  ",
+            "password": "  FAKE spaced pw  ",
+            "urls": [
+              "https://example.com/spaces"
+            ],
+            "notes": "  notes with spaces around them  ",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "=SUM(1,2)",
+            "username": "=fake",
+            "password": "+FAKE-@formula",
+            "urls": [
+              "https://example.com/formula"
+            ],
+            "notes": "@note -x",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Backslashes",
+            "username": "DOMAIN\\fake.user",
+            "password": "FAKE\\pw\\\\two",
+            "urls": [],
+            "notes": "C:\\Users\\fake\\file.txt",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "the vault it was exported from",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [
+        {
+          "name": "Example Mail",
+          "username": "fake.user@example.test",
+          "password": "FAKE-mail-pw-1",
+          "urls": [
+            "https://mail.example.com/login"
+          ]
+        },
+        {
+          "name": "Two addresses",
+          "username": "fake.two",
+          "password": "FAKE-two-pw",
+          "urls": [
+            "https://first.example.org/",
+            "https://second.example.org/sign-in?next=%2Fhome"
+          ]
+        },
+        {
+          "name": "Quotes \"and\", commas",
+          "username": "fake,\"user\"",
+          "password": "FAKE \"pw\", with a comma",
+          "urls": [
+            "https://example.net/?ids=1,2,3"
+          ]
+        },
+        {
+          "name": "Café räksmörgås 日本",
+          "username": "användare@example.test",
+          "password": "FAKE-lösenord-\uD83D\uDD11",
+          "urls": [
+            "https://xn--bcher-kva.example/"
+          ]
+        },
+        {
+          "name": "Only a name",
+          "username": "",
+          "password": "",
+          "urls": []
+        },
+        {
+          "name": "Spaces kept",
+          "username": "  fake spaced  ",
+          "password": "  FAKE spaced pw  ",
+          "urls": [
+            "https://example.com/spaces"
+          ]
+        },
+        {
+          "name": "=SUM(1,2)",
+          "username": "=fake",
+          "password": "+FAKE-@formula",
+          "urls": [
+            "https://example.com/formula"
+          ]
+        },
+        {
+          "name": "Backslashes",
+          "username": "DOMAIN\\fake.user",
+          "password": "FAKE\\pw\\\\two",
+          "urls": []
+        }
+      ],
+      "result": {
+        "format": "bitosx_json",
+        "label": "BitosX (JSON)",
+        "records": 8,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 0,
+          "duplicates": 8,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "vaultItemsBefore": 8,
+          "vaultItemsAfter": 8,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Example Mail",
+            "username": "fake.user@example.test",
+            "password": "FAKE-mail-pw-1",
+            "urls": [
+              "https://mail.example.com/login"
+            ],
+            "notes": "The address book is shared.",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Two addresses",
+            "username": "fake.two",
+            "password": "FAKE-two-pw",
+            "urls": [
+              "https://first.example.org/",
+              "https://second.example.org/sign-in?next=%2Fhome"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Quotes \"and\", commas",
+            "username": "fake,\"user\"",
+            "password": "FAKE \"pw\", with a comma",
+            "urls": [
+              "https://example.net/?ids=1,2,3"
+            ],
+            "notes": "line one\nline two\r\nline three, with a \"quote\"",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Café räksmörgås 日本",
+            "username": "användare@example.test",
+            "password": "FAKE-lösenord-\uD83D\uDD11",
+            "urls": [
+              "https://xn--bcher-kva.example/"
+            ],
+            "notes": "Notes with an emoji \uD83D\uDE00 and a no-break\u00A0space.",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Only a name",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Spaces kept",
+            "username": "  fake spaced  ",
+            "password": "  FAKE spaced pw  ",
+            "urls": [
+              "https://example.com/spaces"
+            ],
+            "notes": "  notes with spaces around them  ",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "=SUM(1,2)",
+            "username": "=fake",
+            "password": "+FAKE-@formula",
+            "urls": [
+              "https://example.com/formula"
+            ],
+            "notes": "@note -x",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Backslashes",
+            "username": "DOMAIN\\fake.user",
+            "password": "FAKE\\pw\\\\two",
+            "urls": [],
+            "notes": "C:\\Users\\fake\\file.txt",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

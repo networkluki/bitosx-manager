@@ -1,0 +1,570 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "generic.csv"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 9,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "Tags",
+          "Last Used"
+        ],
+        "counts": {
+          "toAdd": 4,
+          "duplicates": 0,
+          "notImported": 4,
+          "empty": 1,
+          "httpsAdded": 2,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 4,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 1,
+          "folder": 1,
+          "other_address": 2
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example",
+            "username": "fake.user",
+            "password": "FAKE-generic-pw-1",
+            "urls": [
+              "https://example.com/login"
+            ],
+            "notes": "a comment",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "otpauth://totp/Example?secret=FAKEFAKE",
+              "folder": "Personal\\Mail",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Spaced name",
+            "username": "  fake spaced  ",
+            "password": "  FAKE spaced  ",
+            "urls": [
+              "https://spaced.example"
+            ],
+            "notes": "  note  ",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "No scheme",
+            "username": "fake.noscheme",
+            "password": "FAKE-noscheme",
+            "urls": [
+              "https://www.example.org/path?x=1"
+            ],
+            "notes": "",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Several addresses",
+            "username": "fake.several",
+            "password": "FAKE-several",
+            "urls": [
+              "https://one.example",
+              "https://two.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "ftp://files.example",
+                "localhost:8080"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "Invalid address",
+            "username": "fake.invalid",
+            "password": "FAKE-invalid",
+            "urls": [
+              "https://"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "too_many_urls",
+            "name": "Too many addresses",
+            "username": "fake.many",
+            "password": "FAKE-many",
+            "urls": [
+              "https://example.com/1",
+              "https://example.com/2",
+              "https://example.com/3",
+              "https://example.com/4",
+              "https://example.com/5",
+              "https://example.com/6",
+              "https://example.com/7",
+              "https://example.com/8",
+              "https://example.com/9",
+              "https://example.com/10",
+              "https://example.com/11",
+              "https://example.com/12",
+              "https://example.com/13",
+              "https://example.com/14",
+              "https://example.com/15",
+              "https://example.com/16",
+              "https://example.com/17",
+              "https://example.com/18",
+              "https://example.com/19",
+              "https://example.com/20",
+              "https://example.com/21",
+              "https://example.com/22",
+              "https://example.com/23",
+              "https://example.com/24",
+              "https://example.com/25",
+              "https://example.com/26",
+              "https://example.com/27",
+              "https://example.com/28",
+              "https://example.com/29",
+              "https://example.com/30",
+              "https://example.com/31",
+              "https://example.com/32",
+              "https://example.com/33",
+              "https://example.com/34",
+              "https://example.com/35",
+              "https://example.com/36",
+              "https://example.com/37",
+              "https://example.com/38",
+              "https://example.com/39",
+              "https://example.com/40",
+              "https://example.com/41",
+              "https://example.com/42",
+              "https://example.com/43",
+              "https://example.com/44",
+              "https://example.com/45",
+              "https://example.com/46",
+              "https://example.com/47",
+              "https://example.com/48",
+              "https://example.com/49",
+              "https://example.com/50",
+              "https://example.com/51",
+              "https://example.com/52",
+              "https://example.com/53",
+              "https://example.com/54",
+              "https://example.com/55",
+              "https://example.com/56",
+              "https://example.com/57",
+              "https://example.com/58",
+              "https://example.com/59",
+              "https://example.com/60",
+              "https://example.com/61",
+              "https://example.com/62",
+              "https://example.com/63",
+              "https://example.com/64",
+              "https://example.com/65"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_too_long",
+            "name": "Long address",
+            "username": "fake.longurl",
+            "password": "FAKE-longurl",
+            "urls": [
+              "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "name_too_long",
+            "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+            "username": "fake.longname",
+            "password": "FAKE-longname",
+            "urls": [
+              "https://longname.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "what BitosX has no field for is copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 9,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "Tags",
+          "Last Used"
+        ],
+        "counts": {
+          "toAdd": 4,
+          "duplicates": 0,
+          "notImported": 4,
+          "empty": 1,
+          "httpsAdded": 2,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 4,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 1,
+          "folder": 1,
+          "other_address": 2
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example",
+            "username": "fake.user",
+            "password": "FAKE-generic-pw-1",
+            "urls": [
+              "https://example.com/login"
+            ],
+            "notes": "a comment\n\nAuthenticator key (TOTP): otpauth://totp/Example?secret=FAKEFAKE\nFolder: Personal\\Mail",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "otpauth://totp/Example?secret=FAKEFAKE",
+              "folder": "Personal\\Mail",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Spaced name",
+            "username": "  fake spaced  ",
+            "password": "  FAKE spaced  ",
+            "urls": [
+              "https://spaced.example"
+            ],
+            "notes": "  note  ",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "No scheme",
+            "username": "fake.noscheme",
+            "password": "FAKE-noscheme",
+            "urls": [
+              "https://www.example.org/path?x=1"
+            ],
+            "notes": "",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Several addresses",
+            "username": "fake.several",
+            "password": "FAKE-several",
+            "urls": [
+              "https://one.example",
+              "https://two.example"
+            ],
+            "notes": "Other address: ftp://files.example\nOther address: localhost:8080",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [
+                "ftp://files.example",
+                "localhost:8080"
+              ],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_invalid",
+            "name": "Invalid address",
+            "username": "fake.invalid",
+            "password": "FAKE-invalid",
+            "urls": [
+              "https://"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "too_many_urls",
+            "name": "Too many addresses",
+            "username": "fake.many",
+            "password": "FAKE-many",
+            "urls": [
+              "https://example.com/1",
+              "https://example.com/2",
+              "https://example.com/3",
+              "https://example.com/4",
+              "https://example.com/5",
+              "https://example.com/6",
+              "https://example.com/7",
+              "https://example.com/8",
+              "https://example.com/9",
+              "https://example.com/10",
+              "https://example.com/11",
+              "https://example.com/12",
+              "https://example.com/13",
+              "https://example.com/14",
+              "https://example.com/15",
+              "https://example.com/16",
+              "https://example.com/17",
+              "https://example.com/18",
+              "https://example.com/19",
+              "https://example.com/20",
+              "https://example.com/21",
+              "https://example.com/22",
+              "https://example.com/23",
+              "https://example.com/24",
+              "https://example.com/25",
+              "https://example.com/26",
+              "https://example.com/27",
+              "https://example.com/28",
+              "https://example.com/29",
+              "https://example.com/30",
+              "https://example.com/31",
+              "https://example.com/32",
+              "https://example.com/33",
+              "https://example.com/34",
+              "https://example.com/35",
+              "https://example.com/36",
+              "https://example.com/37",
+              "https://example.com/38",
+              "https://example.com/39",
+              "https://example.com/40",
+              "https://example.com/41",
+              "https://example.com/42",
+              "https://example.com/43",
+              "https://example.com/44",
+              "https://example.com/45",
+              "https://example.com/46",
+              "https://example.com/47",
+              "https://example.com/48",
+              "https://example.com/49",
+              "https://example.com/50",
+              "https://example.com/51",
+              "https://example.com/52",
+              "https://example.com/53",
+              "https://example.com/54",
+              "https://example.com/55",
+              "https://example.com/56",
+              "https://example.com/57",
+              "https://example.com/58",
+              "https://example.com/59",
+              "https://example.com/60",
+              "https://example.com/61",
+              "https://example.com/62",
+              "https://example.com/63",
+              "https://example.com/64",
+              "https://example.com/65"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "url_too_long",
+            "name": "Long address",
+            "username": "fake.longurl",
+            "password": "FAKE-longurl",
+            "urls": [
+              "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "name_too_long",
+            "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+            "username": "fake.longname",
+            "password": "FAKE-longname",
+            "urls": [
+              "https://longname.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

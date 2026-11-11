@@ -424,3 +424,130 @@ test("an item nobody changed is written back with its timestamps exactly as read
 	const lying = Object.assign({}, vault.items[0], { createdAtText: "2020-01-01T00:00:00+00:00" });
 	assert.ok(Buffer.from(vc.serializeVault({ items: [lying] })).toString("utf8").includes("\"CreatedAt\":\"2026-10-01T09:00:00.123+00:00\""));
 });
+
+// ------------------------------------------------ the size an envelope will have
+test("the size an envelope will have is estimated from the size of its content, within a few kilobytes", async () => {
+	const { bytes, meta } = readFixture("small");
+	const env = vc.parseEnvelope(bytes);
+	const opened = await vc.unlock(env, meta.typedPassword);
+	// The envelope the desktop wrote: every "+" of its Base64 is six bytes in the file, and how many
+	// there are cannot be known beforehand.
+	const fixture = vc.estimateEnvelopeSize(env, opened.plaintext.length);
+	assert.ok(Math.abs(fixture - bytes.length) < 64, `${fixture} estimated, ${bytes.length} written`);
+	// Every envelope this page writes, whatever the length of its content modulo three.
+	for (const length of [0, 1, 2, 3, 4, 5, 6, 100, 1000, 4096, 4097, 65537, 1048576, 3000000]) {
+		const plaintext = new Uint8Array(length).fill(0x61);
+		const next = await vc.encryptContent(env, opened.vaultKey, plaintext);
+		const written = vc.serializeEnvelope(next).length;
+		const estimated = vc.estimateEnvelopeSize(env, length);
+		// Six standard deviations of the number of "+" among the Base64 characters, five bytes each, and the nonce's own.
+		const allowed = 6 * 5 * Math.sqrt((4 * Math.ceil((length + 16) / 3)) * 63 / 4096) + 100;
+		assert.ok(Math.abs(written - estimated) < allowed, `content of ${length} bytes: ${estimated} estimated, ${written} written`);
+		// Never less than the Base64 itself.
+		assert.ok(written >= vc.estimateEnvelopeSize(env, 0) - 30 + 4 * Math.ceil((length + 16) / 3) - 4 * Math.ceil(16 / 3));
+	}
+	// The envelope is about 44 % larger than its content: some 11.1 MiB of content is the most that fits in 16 MiB.
+	const growth = (vc.estimateEnvelopeSize(env, 6400000) - vc.estimateEnvelopeSize(env, 0)) / 6400000;
+	assert.ok(Math.abs(growth - (4 / 3) * (69 / 64)) < 0.0001, String(growth));
+	assert.ok(vc.estimateEnvelopeSize(env, Math.floor(11.1 * 1024 * 1024)) < vc.MAX_ENVELOPE_BYTES);
+	assert.ok(vc.estimateEnvelopeSize(env, Math.floor(11.2 * 1024 * 1024)) > vc.MAX_ENVELOPE_BYTES);
+	for (const bad of [-1, 1.5, NaN, "10", null, undefined]) { throwsKind(() => vc.estimateEnvelopeSize(env, bad), vc.KINDS.CONTENT); }
+	// Nothing of the envelope is changed by asking.
+	assert.deepEqual(Buffer.from(vc.serializeEnvelope(env)), Buffer.from(bytes));
+});
+
+// --------------------------------------- the master password, asked for again
+test("the master password is checked against the key the open session holds, without decrypting the vault again", async () => {
+	const { bytes, meta } = readFixture("small");
+	const env = vc.parseEnvelope(bytes);
+	const opened = await vc.unlock(env, meta.typedPassword);
+	assert.equal(await vc.verifyMasterPassword(env, meta.typedPassword, opened.vaultKey), true);
+	for (const wrong of ["not the password", "", meta.typedPassword + " ", meta.typedPassword.toUpperCase(), " " + meta.typedPassword]) {
+		assert.equal(await vc.verifyMasterPassword(env, wrong, opened.vaultKey), false, JSON.stringify(wrong));
+	}
+	// It is the envelope's key wrap that is asked, so the content may have been saved again meanwhile.
+	const next = await vc.encryptContent(env, opened.vaultKey, utf8("{\"schemaVersion\":1,\"items\":[]}"));
+	assert.equal(await vc.verifyMasterPassword(next, meta.typedPassword, opened.vaultKey), true);
+	assert.equal(await vc.verifyMasterPassword(next, "not the password", opened.vaultKey), false);
+	// The right password of a vault whose key is not the one this session holds is not this session's password.
+	const otherKey = Uint8Array.from(opened.vaultKey); otherKey[0] ^= 0x01;
+	assert.equal(await vc.verifyMasterPassword(env, meta.typedPassword, otherKey), false);
+	// The key the session holds is neither changed nor wiped by the check.
+	assert.deepEqual(Buffer.from(opened.vaultKey), Buffer.from((await vc.unlock(env, meta.typedPassword)).vaultKey));
+	// A changed key wrap opens with nothing.
+	const flipped = Object.assign({}, env, { encryptedVaultKey: Uint8Array.from(env.encryptedVaultKey, (b, i) => i === 0 ? b ^ 1 : b) });
+	assert.equal(await vc.verifyMasterPassword(flipped, meta.typedPassword, opened.vaultKey), false);
+	await rejectsKind(vc.verifyMasterPassword(env, meta.typedPassword, new Uint8Array(16)), vc.KINDS.CONTENT);
+	await rejectsKind(vc.verifyMasterPassword(env, meta.typedPassword, "key"), vc.KINDS.CONTENT);
+});
+
+test("the check accepts the master password however it is typed, exactly as unlocking does", async () => {
+	const canonical = readFixture("unicode-canonical");
+	const env = vc.parseEnvelope(canonical.bytes);
+	const nfc = canonical.meta.typedPassword;
+	const key = (await vc.unlock(env, nfc)).vaultKey;
+	const plainSpaces = nfc.replace(/　/g, " ");
+	for (const typed of [nfc, nfc.normalize("NFD"), plainSpaces, plainSpaces.replace(/ /g, " ")]) {
+		assert.equal(await vc.verifyMasterPassword(env, typed, key), true, JSON.stringify(typed));
+	}
+	assert.equal(await vc.verifyMasterPassword(env, nfc.replace(/é/, "e"), key), false);
+	// A vault keyed before desktop 0.6.0 with the password as typed: the legacy candidates find it.
+	const legacy = readFixture("unicode-legacy-nfd");
+	const legacyEnv = vc.parseEnvelope(legacy.bytes);
+	const legacyKey = (await vc.unlock(legacyEnv, legacy.meta.typedPassword)).vaultKey;
+	assert.equal(await vc.verifyMasterPassword(legacyEnv, legacy.meta.typedPassword, legacyKey), true);
+	assert.equal(await vc.verifyMasterPassword(legacyEnv, legacy.meta.typedPassword.normalize("NFC"), legacyKey), true);
+	assert.equal(await vc.verifyMasterPassword(legacyEnv, "something else", legacyKey), false);
+});
+
+test("a key derivation that cannot run is said to be that, not a wrong password", async () => {
+	const { bytes, meta } = readFixture("small");
+	const env = vc.parseEnvelope(bytes);
+	const key = (await vc.unlock(env, meta.typedPassword)).vaultKey;
+	const withoutKdf = factory(undefined, globalThis.crypto);
+	await assert.rejects(withoutKdf.verifyMasterPassword(env, meta.typedPassword, key), (e) => e instanceof withoutKdf.VaultError && e.kind === vc.KINDS.RESOURCE);
+	const failingKdf = factory({ argon2id: () => Promise.reject(new Error("out of memory")) }, globalThis.crypto);
+	await assert.rejects(failingKdf.verifyMasterPassword(env, meta.typedPassword, key), (e) => e instanceof failingKdf.VaultError && e.kind === vc.KINDS.RESOURCE);
+});
+
+// ------------------------------------------------------- a vault of many MiB
+test("Base64 is checked strictly, and in a way that copes with an envelope of 16 MiB", () => {
+	for (const ok of ["AAAA", "AA==", "AAA=", "abcdEFGH0123+/==", "+/+/", "QUJD", "AAAAAA=="]) { assert.equal(vc.isBase64(ok), true, ok); }
+	for (const bad of ["", "A", "AA", "AAA", "AAAAA", "A===", "====", "=AAA", "AA=A", "AA==AAAA", "AAA=AAAA", "AAA-", "AAA_", "AA A", "AAA\n", "AAAA\n", "\u00C4AAA", "AAA\u0100", "AAA\uFF21", "AA=", "AAAA="]) {
+		assert.equal(vc.isBase64(bad), false, JSON.stringify(bad));
+		assert.throws(() => vc.base64ToBytes(bad, "x"), (e) => e instanceof vc.VaultError && e.kind === vc.KINDS.FORMAT);
+	}
+	// Every valid length up to 64 bytes agrees with what Node writes.
+	for (let n = 1; n <= 64; n++) {
+		const bytes = Uint8Array.from({ length: n }, (_, i) => (i * 37 + n) & 0xFF);
+		const text = Buffer.from(bytes).toString("base64");
+		assert.equal(vc.isBase64(text), true);
+		assert.deepEqual(Buffer.from(vc.base64ToBytes(text, "x")), Buffer.from(bytes));
+	}
+	// The ciphertext of a vault at the limit is some 22 million characters: checked in a moment, not with a pattern
+	// that overflows the stack (which made every vault larger than a few MiB impossible to open).
+	const large = "QUJD".repeat(5600000) + "QQ==";
+	const started = Date.now();
+	assert.equal(vc.isBase64(large), true);
+	assert.equal(vc.isBase64(large.slice(0, 11000000) + "*" + large.slice(11000001)), false);
+	assert.ok(Date.now() - started < 5000, `took ${Date.now() - started} ms`);
+});
+
+test("an envelope near the 16 MiB limit is written, parsed and opened again", async () => {
+	const { bytes, meta } = readFixture("small");
+	const env = vc.parseEnvelope(bytes);
+	const opened = await vc.unlock(env, meta.typedPassword);
+	// Some 11 MiB of content: an envelope of about 15.8 MiB.
+	const at = new Date("2026-10-01T09:00:00Z");
+	const items = Array.from({ length: 690 }, (_, i) => ({ id: "00000000-0000-4000-8000-" + String(i).padStart(12, "0"), type: "login", name: "Large " + i, username: null, password: null, urls: [],
+		notes: "n".repeat(16384), favorite: false, createdAt: at, updatedAt: at }));
+	const plaintext = vc.serializeVault({ items });
+	const written = vc.serializeEnvelope(await vc.encryptContent(env, opened.vaultKey, plaintext));
+	assert.ok(written.length > 15.5 * 1024 * 1024 && written.length <= vc.MAX_ENVELOPE_BYTES, `${written.length} bytes`);
+	assert.ok(Math.abs(written.length - vc.estimateEnvelopeSize(env, plaintext.length)) < 32 * 1024);
+	const again = await vc.unlock(vc.parseEnvelope(written), meta.typedPassword);
+	assert.equal(vc.parseVault(again.plaintext).items.length, 690);
+	assert.equal(await vc.verifyMasterPassword(vc.parseEnvelope(written), meta.typedPassword, opened.vaultKey), true);
+	// One byte over the limit is not an envelope this page reads.
+	throwsKind(() => vc.parseEnvelope(new Uint8Array(vc.MAX_ENVELOPE_BYTES + 1)), vc.KINDS.FORMAT);
+});

@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "input": {
+    "parts": [
+      {
+        "text": "name,url,username,password\n",
+        "repeat": 1
+      },
+      {
+        "text": "example.com,https://example.com/,fake.user,FAKE-pw\n",
+        "repeat": 10001
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "refused, whatever the vault and the choices",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "refused": "too_many_entries"
+      }
+    }
+  ]
+}

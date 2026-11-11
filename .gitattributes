@@ -1,0 +1,3 @@
+# The import fixtures are the desktop application's, copied byte for byte (tests/fixtures/import/README.md).
+# Their line ends are part of what is tested, and some of them are deliberately not text.
+tests/fixtures/import/** -text

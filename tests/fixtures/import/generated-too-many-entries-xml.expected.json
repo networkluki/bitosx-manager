@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "input": {
+    "parts": [
+      {
+        "text": "<KeePassFile><Root><Group><Name>fake</Name>",
+        "repeat": 1
+      },
+      {
+        "text": "<Entry><String><Key>Title</Key><Value>fake</Value></String></Entry>",
+        "repeat": 10001
+      },
+      {
+        "text": "</Group></Root></KeePassFile>",
+        "repeat": 1
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "refused, whatever the vault and the choices",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "refused": "too_many_entries"
+      }
+    }
+  ]
+}

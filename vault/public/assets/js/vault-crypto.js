@@ -30,7 +30,6 @@
 	var KDF_KEYS = ["memoryKiB", "iterations", "parallelism", "keyLengthBytes"];
 	var ITEM_KEYS = ["type", "Id", "Name", "Notes", "Favorite", "CreatedAt", "UpdatedAt", "Username", "Password", "Urls"];
 	var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-	var BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 	var KINDS = Object.freeze({
 		FORMAT: "format",     // not a vault envelope this version can read (fails before any key work)
@@ -64,8 +63,23 @@
 	}
 	function isInt(v) { return typeof v === "number" && Number.isInteger(v); }
 
+	// Strict Base64 (RFC 4648 §4, padded): only the alphabet, and "=" or "==" at the very end where the
+	// length asks for it. Written as a loop: a pattern with a repeated group overflows the engine's
+	// stack on a string of several million characters, which a vault of a few MiB already is.
+	function isBase64(text) {
+		var length = text.length;
+		if (length === 0 || length % 4 !== 0) { return false; }
+		var end = length;
+		if (text.charCodeAt(end - 1) === 0x3D) { end--; }
+		if (text.charCodeAt(end - 1) === 0x3D) { end--; }
+		for (var i = 0; i < end; i++) {
+			var c = text.charCodeAt(i);
+			if (!((c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) || (c >= 0x30 && c <= 0x39) || c === 0x2B || c === 0x2F)) { return false; }
+		}
+		return true;
+	}
 	function base64ToBytes(text, field) {
-		if (typeof text !== "string" || text.length === 0 || text.length % 4 !== 0 || !BASE64_RE.test(text)) {
+		if (typeof text !== "string" || !isBase64(text)) {
 			throw new VaultError(KINDS.FORMAT, "The vault field '" + field + "' is not valid base64.");
 		}
 		var binary = atob(text);
@@ -362,6 +376,15 @@
 		}
 	}
 
+	// VaultValidation.IsValidUrl as the web vault has it: an absolute http or https address to this
+	// browser's own URL parser. Says nothing about its length, which LIMITS.url limits.
+	function isValidUrl(url) {
+		if (typeof url !== "string") { return false; }
+		var parsed;
+		try { parsed = new URL(url); } catch (e) { return false; }
+		return parsed.protocol === "http:" || parsed.protocol === "https:";
+	}
+
 	// VaultValidation.Validate for a login item, with the desktop's messages.
 	function validateItem(item) {
 		if (!isPlainObject(item)) { throw new VaultError(KINDS.CONTENT, "Item is required."); }
@@ -381,9 +404,7 @@
 		item.urls.forEach(function (url) {
 			if (typeof url !== "string" || url.trim().length === 0) { throw new VaultError(KINDS.CONTENT, "A URL must not be blank."); }
 			if (url.length > LIMITS.url) { throw new VaultError(KINDS.CONTENT, "A URL must be at most " + LIMITS.url + " characters."); }
-			var parsed;
-			try { parsed = new URL(url); } catch (e) { parsed = null; }
-			if (!parsed || (parsed.protocol !== "http:" && parsed.protocol !== "https:")) { throw new VaultError(KINDS.CONTENT, "'" + url + "' is not a valid absolute http(s) URL."); }
+			if (!isValidUrl(url)) { throw new VaultError(KINDS.CONTENT, "'" + url + "' is not a valid absolute http(s) URL."); }
 		});
 		if (!(item.createdAt instanceof Date) || !(item.updatedAt instanceof Date) || isNaN(item.createdAt) || isNaN(item.updatedAt)) { throw new VaultError(KINDS.CONTENT, "Item dates are required."); }
 		if (item.updatedAt < item.createdAt) { throw new VaultError(KINDS.CONTENT, "UpdatedAt must not be earlier than CreatedAt."); }
@@ -436,6 +457,58 @@
 			+ "  \"ciphertext\": " + jsonString(bytesToBase64(envelope.ciphertext)) + "\n"
 			+ "}";
 		return utf8(text);
+	}
+
+	// About how many bytes serializeEnvelope will write for this envelope once its content is
+	// `plaintextLength` bytes. The ciphertext is the plaintext and a tag, in Base64; and Base64
+	// writes "+" for one value in 64, which the envelope's JSON writes as \u002B, six bytes for one
+	// (as the desktop's encoder does). How many there are depends on the ciphertext, which is new
+	// with every save, so the size can only be estimated: this is its expected value. What comes out
+	// is within a few kilobytes of it (a standard deviation of about 2.5 KiB at 16 MiB). An envelope
+	// larger than MAX_ENVELOPE_BYTES is one this page, the desktop and the server all refuse to read.
+	function estimateEnvelopeSize(envelope, plaintextLength) {
+		if (!Number.isInteger(plaintextLength) || plaintextLength < 0) { throw new VaultError(KINDS.CONTENT, "Invalid content length."); }
+		var withoutContent = serializeEnvelope({
+			version: envelope.version, kdf: envelope.kdf, kdfParameters: envelope.kdfParameters, salt: envelope.salt,
+			algorithm: envelope.algorithm, keyWrapNonce: envelope.keyWrapNonce, encryptedVaultKey: envelope.encryptedVaultKey,
+			contentNonce: envelope.contentNonce, ciphertext: new Uint8Array(0)
+		}).length;
+		var base64Length = 4 * Math.ceil((plaintextLength + TAG_BYTES) / 3);
+		return withoutContent + Math.ceil(base64Length * 69 / 64);
+	}
+
+	// Whether the password as typed is the master password of the vault that is open: the key is
+	// derived as unlock derives it (every candidate encoding), the envelope's vault key is unwrapped
+	// with it, and the result is compared with the key the unlocked session holds. Nothing is
+	// decrypted beyond the 32-byte key, and nothing is sent anywhere. Resolves to true or false;
+	// rejects with RESOURCE when the key derivation cannot run.
+	function verifyMasterPassword(envelope, typedPassword, vaultKey) {
+		if (!(vaultKey instanceof Uint8Array) || vaultKey.length !== KEY_BYTES) { return Promise.reject(new VaultError(KINDS.CONTENT, "Invalid vault key length.")); }
+		var candidates = passwordCandidates(typedPassword);
+		var wrapAad = keyWrapAad(envelope);
+
+		function attempt(i) {
+			if (i >= candidates.encodings.length) { return Promise.resolve(false); }
+			var kek = null;
+			return deriveKek(candidates.encodings[i], envelope)
+				.then(function (derived) {
+					kek = derived;
+					return aesGcmDecrypt(kek, envelope.keyWrapNonce, envelope.encryptedVaultKey, wrapAad);
+				})
+				.then(function (unwrapped) {
+					var same = bytesEqual(unwrapped, vaultKey);
+					unwrapped.fill(0);
+					return same;
+				}, function (err) {
+					// Not this encoding; the vault may have been keyed with an earlier one.
+					if (err instanceof VaultError && err.kind === KINDS.AUTH) { return attempt(i + 1); }
+					throw err;
+				})
+				.finally(function () { if (kek) { kek.fill(0); } });
+		}
+		return attempt(0).finally(function () {
+			candidates.encodings.forEach(function (b) { b.fill(0); });
+		});
 	}
 
 	function aesGcmEncrypt(keyBytes, nonce, plaintext, aad) {
@@ -696,11 +769,15 @@
 		unlock: unlock,
 		parseVault: parseVault,
 		sha256Hex: sha256Hex,
+		isBase64: isBase64,
 		base64ToBytes: base64ToBytes,
 		bytesToHex: bytesToHex,
 		bytesToBase64: bytesToBase64,
 		LIMITS: LIMITS,
+		isValidUrl: isValidUrl,
 		validateItem: validateItem,
+		estimateEnvelopeSize: estimateEnvelopeSize,
+		verifyMasterPassword: verifyMasterPassword,
 		serializeVault: serializeVault,
 		serializeEnvelope: serializeEnvelope,
 		encryptContent: encryptContent,

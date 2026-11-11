@@ -1,0 +1,42 @@
+Name ,　URL ,UserName﻿,﻿PassWord, Fields ,Fav,TYPE, TOTP , Folder , Ignored column
+﻿ 　       	 Trimmed name 	       　 ﻿, https://trim.example/ ﻿, fake.kept ,FAKE-kept,,,,,,ignored
+﻿　,https://only-space-name.example,fake.derived,FAKE-derived,,,,,,
+​᠎Zero width stays​,,fake.zero,FAKE-zero,,,,,,
+Extras are trimmed,https://extras.example,fake.extras,FAKE-extras,,,,FAKEFAKEFAKEFAKE﻿, Fake folder　,
+Extras of nothing,https://no-extras.example,fake.noextras,FAKE-noextras,,,,,﻿ ,
+,, ,,,1,,,Only a folder,ignored
+Line ends in a cell,"https://one.examplehttps://two.example
+three.example
+https://four.example",fake.lines,FAKE-lines,,,,,,
+Ended by a carriage return,https://cr.example,fake.cr,FAKE-cr,,,,,,After the carriage return,https://after-cr.example,fake.after,FAKE-after,,,,,,
+Fields on lines,https://fields.example,fake.fields,FAKE-fields,"first: FAKE-onesecond: with: FAKE-two
+ 　
+no separator in this line
+a value of nothing: 
+padded name:  FAKE-kept spaces ",,,,,
+,﻿, 　,,,,,,,
+"Favorite, written loudly",https://fav.example,fake.fav,FAKE-fav,,TRUE﻿,,,,
+Not a favorite,https://not-fav.example,fake.notfav,FAKE-notfav,,yes,,,,
+A secure note,,,,,, NOTE,,,
+Type login,https://type.example,fake.type,FAKE-type,,,Login,,,
+Control characters,"https://ctrl.example/
+https://del.example/",fake.ctrl,FAKE-ctrl,,,,,,
+🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑,https://two-hundred.example,fake.200,FAKE-200,,,,,,
+🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑🔑,https://two-hundred-and-two.example,fake.202,FAKE-202,,,,,,
+Café,https://cafe.example,fake.cafe,FAKE-cafe,,,,,,
+Café,https://cafe.example,fake.cafe,FAKE-cafe,,,,,,
+,https://fake.user:FAKE-pw@Shop.Example:8443/x?y#z,fake.shop,FAKE-shop,,,,,,
+,https://[2001:DB8::1]:8443/,fake.v6,FAKE-v6,,,,,,
+,https://[::1,fake.unclosed,FAKE-unclosed,,,,,,
+,https://BÜCHER.Example/,fake.idn,FAKE-idn,,,,,,
+,https://xn--bcher-kva.example/,fake.punycode,FAKE-punycode,,,,,,
+,https://example.com:abc/,fake.port,FAKE-port,,,,,,
+,https:///no-host,fake.fallback,FAKE-fallback,,,,,,
+,https://aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.aaaaaaa.example/,fake.long-host,FAKE-long-host,,,,,,
+,"android://com.example.app/
+https://second.example/",fake.android,FAKE-android,,,,,,
+,Example.COM:8443/login,fake.noscheme,FAKE-noscheme,,,,,,
+,, fake.spaced ,FAKE-spaced,,,,,,
+,,uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu,FAKE-long-username,,,,,,
+,https://example.com./,fake.dot,FAKE-dot,,,,,,
+,https://fake.user@host@evil.example/,fake.two-ats,FAKE-two-ats,,,,,,

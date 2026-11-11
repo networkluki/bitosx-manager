@@ -1,0 +1,436 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "bitwarden.json"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "bitwarden_json",
+        "label": "Bitwarden (JSON)",
+        "records": 16,
+        "unsupported": {
+          "secure_note": 1,
+          "card": 1,
+          "identity": 1,
+          "ssh_key": 1,
+          "bank_account": 1,
+          "drivers_license": 1,
+          "passport": 1,
+          "other": 1
+        },
+        "inTrash": 1,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 6,
+          "duplicates": 1,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 1,
+          "namesDerived": 1,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 6,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 1,
+          "folder": 2,
+          "other_address": 1,
+          "custom_field": 4
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example Mail",
+            "username": "fake.user@example.test",
+            "password": "FAKE-bw-json-pw-1",
+            "urls": [
+              "https://mail.example.com/login"
+            ],
+            "notes": "First line\nsecond line with \"quotes\"\nÜnïcödé 日本語 \uD83D\uDE00",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&issuer=Example",
+              "folder": "Work",
+              "otherAddresses": [
+                "androidapp://com.example.mail"
+              ],
+              "customFields": [
+                {
+                  "name": "PIN",
+                  "value": "0000"
+                },
+                {
+                  "name": "Security question",
+                  "value": "FAKE answer\non two lines"
+                },
+                {
+                  "name": "Newsletter",
+                  "value": "true"
+                },
+                {
+                  "name": "",
+                  "value": "FAKE value without a name"
+                }
+              ]
+            }
+          },
+          {
+            "position": 11,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Example Mail",
+            "username": "fake.user@example.test",
+            "password": "FAKE-bw-json-pw-1",
+            "urls": [
+              "https://mail.example.com/login"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Only a name",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 13,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A host without a scheme",
+            "username": "fake.third",
+            "password": "FAKE-bw-json-pw-3",
+            "urls": [
+              "https://example.net",
+              "https://second.example.net/path"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 14,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "unnamed.example.org",
+            "username": "fake.unnamed",
+            "password": "FAKE-bw-json-pw-4",
+            "urls": [
+              "https://Unnamed.Example.org:8443/account"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Private/Shops",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 15,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "With a passkey",
+            "username": "fake.passkey",
+            "password": "FAKE-bw-json-pw-5",
+            "urls": [
+              "https://passkey.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 16,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Archived",
+            "username": "fake.archived",
+            "password": "FAKE-archived-pw",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "what BitosX has no field for is copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "bitwarden_json",
+        "label": "Bitwarden (JSON)",
+        "records": 16,
+        "unsupported": {
+          "secure_note": 1,
+          "card": 1,
+          "identity": 1,
+          "ssh_key": 1,
+          "bank_account": 1,
+          "drivers_license": 1,
+          "passport": 1,
+          "other": 1
+        },
+        "inTrash": 1,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 6,
+          "duplicates": 1,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 1,
+          "namesDerived": 1,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 6,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 1,
+          "folder": 2,
+          "other_address": 1,
+          "custom_field": 4
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example Mail",
+            "username": "fake.user@example.test",
+            "password": "FAKE-bw-json-pw-1",
+            "urls": [
+              "https://mail.example.com/login"
+            ],
+            "notes": "First line\nsecond line with \"quotes\"\nÜnïcödé 日本語 \uD83D\uDE00\n\nAuthenticator key (TOTP): otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&issuer=Example\nFolder: Work\nOther address: androidapp://com.example.mail\nPIN: 0000\nSecurity question: FAKE answer\non two lines\nNewsletter: true\nField: FAKE value without a name",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&issuer=Example",
+              "folder": "Work",
+              "otherAddresses": [
+                "androidapp://com.example.mail"
+              ],
+              "customFields": [
+                {
+                  "name": "PIN",
+                  "value": "0000"
+                },
+                {
+                  "name": "Security question",
+                  "value": "FAKE answer\non two lines"
+                },
+                {
+                  "name": "Newsletter",
+                  "value": "true"
+                },
+                {
+                  "name": "",
+                  "value": "FAKE value without a name"
+                }
+              ]
+            }
+          },
+          {
+            "position": 11,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Example Mail",
+            "username": "fake.user@example.test",
+            "password": "FAKE-bw-json-pw-1",
+            "urls": [
+              "https://mail.example.com/login"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Only a name",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 13,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A host without a scheme",
+            "username": "fake.third",
+            "password": "FAKE-bw-json-pw-3",
+            "urls": [
+              "https://example.net",
+              "https://second.example.net/path"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 14,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "unnamed.example.org",
+            "username": "fake.unnamed",
+            "password": "FAKE-bw-json-pw-4",
+            "urls": [
+              "https://Unnamed.Example.org:8443/account"
+            ],
+            "notes": "Folder: Private/Shops",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Private/Shops",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 15,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "With a passkey",
+            "username": "fake.passkey",
+            "password": "FAKE-bw-json-pw-5",
+            "urls": [
+              "https://passkey.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 16,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Archived",
+            "username": "fake.archived",
+            "password": "FAKE-archived-pw",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,298 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "keepassxc.csv"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "KeePassXC (CSV)",
+        "records": 6,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "Icon",
+          "Last Modified",
+          "Created"
+        ],
+        "counts": {
+          "toAdd": 4,
+          "duplicates": 0,
+          "notImported": 1,
+          "empty": 1,
+          "httpsAdded": 1,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 4,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 1,
+          "folder": 4
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example",
+            "username": "fake.user",
+            "password": "FAKE-kpxc-pw-1",
+            "urls": [
+              "https://example.com"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Root",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Shop \"Deluxe\"",
+            "username": "fake.shopper",
+            "password": "FAKE,kpxc;pw",
+            "urls": [
+              "https://shop.example/login"
+            ],
+            "notes": "Line one\nLine two",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "otpauth://totp/Shop:fake.shopper?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Shop",
+              "folder": "Root/Internet/Shops",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Old entry",
+            "username": "fake.old",
+            "password": "FAKE-old-pw",
+            "urls": [
+              "https://old.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Root/Recycle Bin",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Only a note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "Just some text kept in the database.",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Root/Notes",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "username_too_long",
+            "name": "Long username",
+            "username": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu",
+            "password": "FAKE-long-user",
+            "urls": [
+              "https://long.example"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Root/Internet",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "what BitosX has no field for is copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "KeePassXC (CSV)",
+        "records": 6,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "Icon",
+          "Last Modified",
+          "Created"
+        ],
+        "counts": {
+          "toAdd": 4,
+          "duplicates": 0,
+          "notImported": 1,
+          "empty": 1,
+          "httpsAdded": 1,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 4,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 1,
+          "folder": 4
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Example",
+            "username": "fake.user",
+            "password": "FAKE-kpxc-pw-1",
+            "urls": [
+              "https://example.com"
+            ],
+            "notes": "Folder: Root",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Root",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Shop \"Deluxe\"",
+            "username": "fake.shopper",
+            "password": "FAKE,kpxc;pw",
+            "urls": [
+              "https://shop.example/login"
+            ],
+            "notes": "Line one\nLine two\n\nAuthenticator key (TOTP): otpauth://totp/Shop:fake.shopper?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Shop\nFolder: Root/Internet/Shops",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 1,
+            "extras": {
+              "totp": "otpauth://totp/Shop:fake.shopper?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Shop",
+              "folder": "Root/Internet/Shops",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Old entry",
+            "username": "fake.old",
+            "password": "FAKE-old-pw",
+            "urls": [
+              "https://old.example"
+            ],
+            "notes": "Folder: Root/Recycle Bin",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Root/Recycle Bin",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Only a note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "Just some text kept in the database.\n\nFolder: Root/Notes",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Root/Notes",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "username_too_long",
+            "name": "Long username",
+            "username": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu",
+            "password": "FAKE-long-user",
+            "urls": [
+              "https://long.example"
+            ],
+            "notes": "Folder: Root/Internet",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "Root/Internet",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

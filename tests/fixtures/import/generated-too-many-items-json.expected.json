@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "input": {
+    "parts": [
+      {
+        "text": "{\"items\": [{\"type\": 2, \"name\": \"fake\"}",
+        "repeat": 1
+      },
+      {
+        "text": ", {\"type\": 2, \"name\": \"fake\"}",
+        "repeat": 10000
+      },
+      {
+        "text": "]}",
+        "repeat": 1
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "refused, whatever the vault and the choices",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "refused": "too_many_entries"
+      }
+    }
+  ]
+}

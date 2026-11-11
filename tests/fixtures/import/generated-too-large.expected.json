@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "input": {
+    "parts": [
+      {
+        "text": "name,password\nfake,FAKE-pw\n",
+        "repeat": 1
+      },
+      {
+        "text": "0123456789abcde\n",
+        "repeat": 1048576
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "refused, whatever the vault and the choices",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "refused": "too_large"
+      }
+    }
+  ]
+}

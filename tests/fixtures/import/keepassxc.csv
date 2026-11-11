@@ -1,0 +1,8 @@
+"Group","Title","Username","Password","URL","Notes","TOTP","Icon","Last Modified","Created"
+"Root","Example","fake.user","FAKE-kpxc-pw-1","https://example.com","","","0","2026-01-02T03:04:05Z","2025-01-02T03:04:05Z"
+"Root/Internet/Shops","Shop ""Deluxe""","fake.shopper","FAKE,kpxc;pw","shop.example/login","Line one
+Line two","otpauth://totp/Shop:fake.shopper?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Shop","1","2026-01-02T03:04:05Z","2025-01-02T03:04:05Z"
+"Root/Recycle Bin","Old entry","fake.old","FAKE-old-pw","https://old.example","","","43","2026-01-02T03:04:05Z","2025-01-02T03:04:05Z"
+"Root/Notes","Only a note","","","","Just some text kept in the database.","","0","2026-01-02T03:04:05Z","2025-01-02T03:04:05Z"
+"Root","","","","","","","0","2026-01-02T03:04:05Z","2025-01-02T03:04:05Z"
+"Root/Internet","Long username","uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu","FAKE-long-user","https://long.example","","","0","2026-01-02T03:04:05Z","2025-01-02T03:04:05Z"

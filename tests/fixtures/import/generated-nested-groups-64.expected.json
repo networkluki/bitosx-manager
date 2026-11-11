@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "input": {
+    "parts": [
+      {
+        "text": "<KeePassFile><Root>",
+        "repeat": 1
+      },
+      {
+        "text": "<Group><Name>g</Name>",
+        "repeat": 64
+      },
+      {
+        "text": "<Entry><String><Key>Title</Key><Value>fake, 64 groups deep</Value></String></Entry>",
+        "repeat": 1
+      },
+      {
+        "text": "</Group>",
+        "repeat": 64
+      },
+      {
+        "text": "</Root></KeePassFile>",
+        "repeat": 1
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "keepass_xml",
+        "label": "KeePass 2 (XML)",
+        "records": 1,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 1,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 1,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "folder": 1
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake, 64 groups deep",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "extras": {
+              "totp": "",
+              "folder": "g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
