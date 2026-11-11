@@ -3217,23 +3217,74 @@ async function test(name, fn) {
 		await page.close();
 	});
 
-	await test("import: a hidden tab does not lock the vault while the import is open (choosing a file can hide the page); it does once it is closed", async () => {
+	await test("import: a hidden tab does not lock the vault while the file chooser is open (a phone's chooser hides the page); with a preview on screen it does, and the preview goes with it", async () => {
 		const mock = createMockApi();
 		const { page } = await openedVault(mock);
 		const hide = () => page.evaluate(() => {
 			Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
 			document.dispatchEvent(new Event("visibilitychange"));
 		});
+		const show = () => page.evaluate(() => {
+			Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
 		await page.click("#vault-import");
+		// The real click on the file input asks for the chooser; from then on hiding does not lock.
+		const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click("#import-file")]);
 		await hide();
 		assert.equal(await page.evaluate(() => window.bitosxVault.isUnlocked()), true);
-		await page.evaluate(() => { Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true }); document.dispatchEvent(new Event("visibilitychange")); });
-		await previewOf(page, "chrome.csv", importFixture("chrome.csv"));
-		await page.click("#import-cancel");
+		await show();
+		await chooser.setFiles({ name: "chrome.csv", mimeType: "application/octet-stream", buffer: importFixture("chrome.csv") });
+		await page.waitForSelector("#import-preview:not([hidden])");
+		// A file is chosen and its preview is on screen: this is an open vault like any other.
 		await hide();
 		await page.waitForSelector("#vault-unlock-form:not([hidden])");
 		assert.equal(await page.textContent("#vault-notice"), "Vault locked when the tab was hidden.");
+		assert.equal(await page.isHidden("#vault-import-panel"), true);
+		assert.equal(await page.inputValue("#import-file"), "");
 		await page.close();
+	});
+
+	await test("import: an open import panel alone does not keep a hidden tab unlocked; neither does a chooser that was called off, or one the page was looked at again after", async () => {
+		const hide = (page) => page.evaluate(() => {
+			Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
+		const show = (page) => page.evaluate(() => {
+			Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
+		const lockedByHiding = async (page) => {
+			await hide(page);
+			await page.waitForSelector("#vault-unlock-form:not([hidden])");
+			assert.equal(await page.textContent("#vault-notice"), "Vault locked when the tab was hidden.");
+		};
+
+		// The panel is open and no chooser was asked for.
+		const first = await openedVault(createMockApi());
+		await first.page.click("#vault-import");
+		await first.page.waitForSelector("#vault-import-panel:not([hidden])");
+		await lockedByHiding(first.page);
+		await first.page.close();
+
+		// The chooser was asked for and called off (the browser's cancel event).
+		const second = await openedVault(createMockApi());
+		await second.page.click("#vault-import");
+		await Promise.all([second.page.waitForEvent("filechooser"), second.page.click("#import-file")]);
+		await second.page.dispatchEvent("#import-file", "cancel");
+		await lockedByHiding(second.page);
+		await second.page.close();
+
+		// The chooser was asked for, the page was hidden and looked at again, and no file came:
+		// the next time it is hidden, it locks.
+		const third = await openedVault(createMockApi());
+		await third.page.click("#vault-import");
+		await Promise.all([third.page.waitForEvent("filechooser"), third.page.click("#import-file")]);
+		await hide(third.page);
+		assert.equal(await third.page.evaluate(() => window.bitosxVault.isUnlocked()), true);
+		await show(third.page);
+		await lockedByHiding(third.page);
+		await third.page.close();
 	});
 
 	await test("import and save: an import that would make the vault too large to store is refused as a whole; a vault that grew too large by hand is not uploaded, says why, and loses nothing", async () => {
