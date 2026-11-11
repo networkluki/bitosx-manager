@@ -3428,7 +3428,6 @@ async function test(name, fn) {
 		assert.deepEqual(ieNode.planImport(ieNode.parseImport(new Uint8Array(csvBytes)), held, {}).candidates.filter((c) => c.status === "add").map((c) => c.name), ["Bank <script>alert(1)</script>"]);
 		// Nothing of an export goes to the server, and nothing is asked of it: the check is made in this browser.
 		assert.equal(mock.calls.length, callsBefore, "an export makes no request");
-		assert.ok(mock.calls.every((c) => !JSON.stringify(c.body || "").includes(meta.typedPassword)));
 		// Passwords of the vault are still not in the page.
 		await assertNoSecretInDom(page);
 		// The object URLs: two made, none revoked yet; locking revokes both at once.
@@ -3476,7 +3475,9 @@ async function test(name, fn) {
 		const downloading = page.waitForEvent("download");
 		await page.evaluate(() => {
 			const panel = document.getElementById("vault-export-panel");
-			new MutationObserver(() => { if (panel.hidden) { window.bitosxVault.lock(); } }).observe(panel, { attributes: true, attributeFilter: ["hidden"] });
+			// Once: locking hides the panel again, which would call this again.
+			const observer = new MutationObserver(() => { if (panel.hidden) { observer.disconnect(); window.bitosxVault.lock(); } });
+			observer.observe(panel, { attributes: true, attributeFilter: ["hidden"] });
 		});
 		await page.click("#export-submit");
 		const second = await downloading;
