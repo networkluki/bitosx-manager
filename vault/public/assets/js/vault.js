@@ -8,7 +8,9 @@
 // Changes are encrypted in the browser under the same vault key (fresh nonce,
 // VaultCryptor.ReEncryptContent) and uploaded only on "Save to server", with the same
 // compare-and-set rule the desktop uses — if another device changed the vault on the server first,
-// nothing is overwritten and the user chooses.
+// nothing is overwritten and the user chooses. Logins another password manager exported can be
+// imported (import-export.js reads the file here; nothing of it is sent anywhere), and the vault can
+// be written out unencrypted for another password manager, behind the master password.
 (function () {
 	"use strict";
 
@@ -16,6 +18,7 @@
 	var ui = window.bitosxUi;
 	var cfg = window.BITOSX_CONFIG;
 	var vc = window.bitosxVaultCrypto;
+	var ie = window.bitosxImportExport;
 	var $ = ui.$;
 
 	var panel = $("vault-panel");
@@ -82,6 +85,9 @@
 		uncertainUpload = null;
 		clearIdle();
 		closeEditor();
+		closeImport();
+		closeExport();
+		revokePlainDownloads();
 		hideConflict();
 		ui.clear(itemsList);
 		countEl.textContent = "";
@@ -184,9 +190,10 @@
 	document.addEventListener("visibilitychange", function () {
 		if (document.visibilityState === "visible") { checkIdle(); return; }
 		// A hidden tab is an unattended screen: lock, as the desktop does on workstation lock —
-		// unless there are unsaved changes (also typed into the editor), which a lock would discard;
-		// the idle lock still applies.
-		if (opened && !hasUnsavedChanges()) { lock("Vault locked when the tab was hidden.", true); }
+		// unless there are unsaved changes (also typed into the editor), which a lock would discard,
+		// or an import is open: choosing a file can hide the page (a phone's file picker does), and a
+		// lock would end the import before it began. The idle lock still applies.
+		if (opened && !hasUnsavedChanges() && importPanel.hidden) { lock("Vault locked when the tab was hidden.", true); }
 	});
 
 	// ---- what the server holds ----
@@ -340,13 +347,24 @@
 		function two(n) { return (n < 10 ? "0" : "") + n; }
 		return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate());
 	}
-	function saveBytes(bytes, name) {
+	// A download is a Blob behind an object URL, which lives until it is revoked: after a minute (a
+	// browser needs it for a moment after the click). The URL of an unencrypted export is also
+	// revoked the moment the vault locks, so that nothing in plain text outlives the session.
+	var plainDownloads = [];
+	function revokeDownload(url) {
+		var at = plainDownloads.indexOf(url);
+		if (at >= 0) { plainDownloads.splice(at, 1); }
+		URL.revokeObjectURL(url);
+	}
+	function revokePlainDownloads() { plainDownloads.slice().forEach(revokeDownload); }
+	function saveBytes(bytes, name, plain) {
 		var url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+		if (plain) { plainDownloads.push(url); }
 		var a = ui.el("a", { href: url, download: name, hidden: "hidden" });
 		document.body.appendChild(a);
 		a.click();
 		a.remove();
-		setTimeout(function () { URL.revokeObjectURL(url); }, 60 * 1000);
+		setTimeout(function () { revokeDownload(url); }, 60 * 1000);
 	}
 	backupButton.addEventListener("click", function () {
 		if (backupBusy || !server) { return; }
@@ -757,6 +775,7 @@
 		closeEditor();
 		markChanged();
 		renderItems();
+		showImportPlan();
 		ui.notice(notice, "ok", (existing ? "Item updated" : "Item added") + " in this browser. Press Save to server to upload the encrypted vault.");
 	});
 
@@ -766,6 +785,7 @@
 		if (editing === id) { closeEditor(); }
 		markChanged();
 		renderItems();
+		showImportPlan();
 		ui.notice(notice, "ok", "Item deleted in this browser. Press Save to server to upload the encrypted vault.");
 	}
 
@@ -780,6 +800,11 @@
 		}
 		if (err instanceof vc.VaultError) { return err.message + " Nothing was uploaded."; }
 		return "The vault could not be saved. Nothing was uploaded.";
+	}
+
+	// 16 MiB is what this page, the desktop and the server read: a larger vault must never be stored.
+	function tooLargeToStore(when) {
+		return "The vault would be larger than " + Math.round(vc.MAX_ENVELOPE_BYTES / (1024 * 1024)) + " MiB" + when + ", which is the most BitosX can store.";
 	}
 
 	// Every item is checked before anything is encrypted, and a failure names the item.
@@ -804,6 +829,9 @@
 			return vc.encryptContent(o.envelope, o.vaultKey, plaintext).finally(function () { plaintext.fill(0); });
 		}).then(function (next) {
 			var bytes = vc.serializeEnvelope(next);
+			if (bytes.length > vc.MAX_ENVELOPE_BYTES) {
+				throw new vc.VaultError(vc.KINDS.CONTENT, tooLargeToStore("") + " Delete items or shorten their notes, and save again: your changes are still in this browser.");
+			}
 			return vc.sha256Hex(bytes).then(function (fingerprint) {
 				attempt.sent = true;
 				attempt.fingerprint = fingerprint;
@@ -965,6 +993,363 @@
 			if (server) { ui.notice(notice, "ok", "Changes discarded. Enter the master password to open the server's vault again."); }
 		});
 	});
+
+	// ---- import: a file another password manager exported (the rules are import-export.js) ----
+	// Everything in a file is untrusted: it is shown as text only, never as markup, and no address
+	// of it is opened or fetched. The preview shows names, counts and reasons — never a password, an
+	// authenticator key, the value of a custom field or notes. Nothing is added before the person
+	// confirms, and what is added is an unsaved change like one made by hand.
+	var importPanel = $("vault-import-panel");
+	var importNotice = $("vault-import-notice");
+	var importFile = $("import-file");
+	var importCount = $("import-count");
+	var importPreview = $("import-preview");
+	var importSummary = $("import-summary");
+	var importNotImported = $("import-not-imported");
+	var importNotImportedList = $("import-not-imported-list");
+	var importCopyExtras = $("import-copy-extras");
+	var importDuplicates = $("import-duplicates");
+	var importConfirm = $("import-confirm");
+	// While a file is chosen: { parsed, plan } — the logins of the file, passwords included. It
+	// exists only here, and is let go of when the import is applied or cancelled, when another file
+	// is chosen, and when the vault locks.
+	var importing = null;
+	var importReads = 0;   // changes with every file chosen and every reset; a read that finishes later is dropped
+	var LIST_LIMIT = 100;  // names shown in a list of the preview; the rest are counted
+	// How far from the limit an import has to stay. The size of the envelope can only be estimated
+	// before it is encrypted (vc.estimateEnvelopeSize); this is more than ten standard deviations.
+	var ENVELOPE_MARGIN_BYTES = 32 * 1024;
+
+	function countOf(n, one, many) { return n + " " + (n === 1 ? one : many); }
+	// Text of a file for a list: cut short for the eye (what is imported is never cut short).
+	function shortened(text, max) {
+		if (text.length <= max) { return text; }
+		var cut = max;
+		var c = text.charCodeAt(cut - 1);
+		if (c >= 0xD800 && c <= 0xDBFF) { cut--; }   // not through the middle of a character
+		return text.slice(0, cut) + "…";
+	}
+	// A piece of a file inside a sentence of the page: its own element, so that the direction of
+	// its text cannot reorder what the page says around it.
+	function fromFile(text, max, className) { return ui.el("bdi", className ? { class: className } : null, shortened(text, max)); }
+	function kindsInWords(counts, texts) {
+		return Object.keys(counts).map(function (kind) { return texts[kind] + " (" + counts[kind] + ")"; }).join(", ");
+	}
+
+	function clearImportPreview() {
+		importing = null;
+		ui.clear(importSummary);
+		ui.clear(importNotImportedList);
+		importNotImported.hidden = true;
+		importNotImported.open = false;
+		importPreview.hidden = true;
+		importCount.textContent = "";
+		importConfirm.disabled = true;
+		importConfirm.textContent = "Import";
+	}
+	function resetImport() {
+		importReads++;
+		clearImportPreview();
+		importFile.value = "";
+		importCopyExtras.checked = false;   // both choices are off unless chosen, for every file anew
+		importDuplicates.checked = false;
+		ui.markField(importFile, false);
+		importFile.setAttribute("aria-describedby", "import-file-hint");
+		ui.notice(importNotice, "ok", "");
+	}
+	function closeImport() {
+		resetImport();
+		importPanel.hidden = true;
+	}
+	function openImport() {
+		if (!opened) { return; }
+		closeExport();
+		resetImport();
+		importPanel.hidden = false;
+		importFile.focus();
+	}
+
+	function describeImportError(err) {
+		if (err instanceof ie.ImportRefused) {
+			// The fixed text of the refusal; a damaged CSV file also says where.
+			return err.message + (err.code === "invalid_csv" && err.line !== null ? " The fault is on line " + err.line + " of the file." : "");
+		}
+		if (err instanceof ie.XmlParserUnavailable) { return "This browser cannot read XML files. Nothing was imported."; }
+		return "The browser could not read the file. Nothing was imported.";
+	}
+
+	// Whether the vault could still be stored with these items. The exact size is only known once
+	// the vault is encrypted (and is checked again when it is saved); an import must not get near it.
+	function fitsInAVault(items) {
+		var characters = 0;
+		items.forEach(function (item) {
+			characters += item.name.length + (item.username ? item.username.length : 0) + (item.password ? item.password.length : 0) + (item.notes ? item.notes.length : 0);
+			item.urls.forEach(function (url) { characters += url.length; });
+		});
+		// Every character is at least a byte of the document: this much is certain without writing it.
+		if (vc.estimateEnvelopeSize(opened.envelope, characters) + ENVELOPE_MARGIN_BYTES > vc.MAX_ENVELOPE_BYTES) { return false; }
+		var plaintext;
+		try { plaintext = vc.serializeVault({ items: items }); }
+		catch (e) { return true; }   // an item the web cannot write was there before: Save to server names it
+		try { return vc.estimateEnvelopeSize(opened.envelope, plaintext.length) + ENVELOPE_MARGIN_BYTES <= vc.MAX_ENVELOPE_BYTES; }
+		finally { plaintext.fill(0); }
+	}
+
+	// Plans the import of the chosen file against the vault as it is now, with the two choices as
+	// they are now, and shows what it would do. Called again whenever either changes.
+	function showImportPlan() {
+		if (!importing || !opened) { return; }
+		var plan = ie.planImport(importing.parsed, opened.items, { copyExtrasToNotes: importCopyExtras.checked, importDuplicates: importDuplicates.checked });
+		importing.plan = plan;
+		var c = plan.counts;
+
+		ui.clear(importSummary);
+		function line(text) { var li = ui.el("li", null, text); importSummary.appendChild(li); return li; }
+		line("Format: " + plan.label + ". The file holds " + countOf(plan.records, "entry", "entries") + ".");
+		if (c.duplicates > 0) {
+			line(plan.options.importDuplicates
+				? countOf(c.duplicates, "duplicate is", "duplicates are") + " imported too."
+				: countOf(c.duplicates, "duplicate is", "duplicates are") + " skipped: the vault, or an earlier entry of the file, already has the same name, username, password and web addresses.");
+		}
+		if (c.notImported > 0) { line(c.notImported === 1 ? "1 entry is not imported; it is listed below with the reason." : c.notImported + " entries are not imported; they are listed below, each with its reason."); }
+		if (Object.keys(plan.unsupported).length > 0) { line("Not logins, and not imported: " + kindsInWords(plan.unsupported, ie.UNSUPPORTED_TEXTS) + "."); }
+		if (plan.inTrash > 0) { line("In the trash or the recycle bin of the file, and not imported: " + plan.inTrash + "."); }
+		if (c.empty > 0) { line("Entries with nothing in them, passed over: " + c.empty + "."); }
+		if (Object.keys(plan.extras).length > 0) {
+			line(plan.options.copyExtrasToNotes
+				? "Copied into each item's notes, because BitosX has no field for them: " + kindsInWords(plan.extras, ie.EXTRA_TEXTS) + "."
+				: "Left out, because BitosX has no field for them: " + kindsInWords(plan.extras, ie.EXTRA_TEXTS) + ". Tick the first box below to copy them into each item's notes instead.");
+		}
+		if (c.httpsAdded > 0) { line("https:// is put in front of " + countOf(c.httpsAdded, "address that has", "addresses that have") + " no scheme."); }
+		if (c.namesDerived > 0) { line(countOf(c.namesDerived, "entry has", "entries have") + " no name and " + (c.namesDerived === 1 ? "is" : "are") + " named after " + (c.namesDerived === 1 ? "its" : "their") + " address or username."); }
+		if (plan.ignoredColumns.length > 0) {
+			var columns = line("Columns of the file that are not read: ");
+			plan.ignoredColumns.slice(0, LIST_LIMIT).forEach(function (name, i) {
+				if (i > 0) { columns.appendChild(document.createTextNode(", ")); }
+				columns.appendChild(fromFile(name, 40));
+			});
+			columns.appendChild(document.createTextNode(plan.ignoredColumns.length > LIST_LIMIT ? ", and " + (plan.ignoredColumns.length - LIST_LIMIT) + " more." : "."));
+		}
+
+		ui.clear(importNotImportedList);
+		importNotImported.hidden = c.notImported === 0;
+		if (c.notImported > 0) {
+			$("import-not-imported-summary").textContent = countOf(c.notImported, "entry that is", "entries that are") + " not imported";
+			var listed = 0;
+			plan.candidates.forEach(function (candidate) {
+				if (candidate.status !== "not_imported" || listed >= LIST_LIMIT) { return; }
+				listed++;
+				var li = ui.el("li", null);
+				li.appendChild(fromFile(candidate.name, 80, "import-name"));
+				li.appendChild(document.createTextNode(" (entry " + candidate.position + "): " + ie.REASON_TEXTS[candidate.reason]));
+				importNotImportedList.appendChild(li);
+			});
+			if (c.notImported > listed) { importNotImportedList.appendChild(ui.el("li", null, "… and " + (c.notImported - listed) + " more.")); }
+		}
+
+		importPreview.hidden = false;
+		var blocked = c.exceedsVaultItemLimit;
+		importConfirm.disabled = c.toAdd === 0 || blocked;
+		importConfirm.textContent = c.toAdd === 0 ? "Nothing to import" : "Import " + countOf(c.toAdd, "login", "logins");
+		importCount.textContent = c.toAdd === 0
+			? "Nothing would be added to the vault."
+			: countOf(c.toAdd, "login", "logins") + " would be added to the vault in this browser (it holds " + c.vaultItemsBefore + " now). Nothing is added until you press the button below, and nothing is on the server until you then press Save to server.";
+		ui.notice(importNotice, blocked ? "err" : "ok", blocked ? ie.REFUSAL_TEXTS.vault_item_limit : "");
+	}
+
+	importFile.addEventListener("change", function () {
+		var file = importFile.files && importFile.files[0];
+		var read = ++importReads;
+		clearImportPreview();   // the logins of a file chosen earlier are let go of
+		ui.markField(importFile, false);
+		importFile.setAttribute("aria-describedby", "import-file-hint");
+		ui.notice(importNotice, "ok", "");
+		if (!file || !opened) { return; }
+		var myEpoch = epoch;
+		var g = generation();
+		function stale() { return read !== importReads || myEpoch !== epoch || g !== generation() || !opened; }
+		importCount.textContent = "Reading the file…";
+		ie.readFileBytes(file)
+			.then(function (bytes) {
+				if (stale()) { bytes.fill(0); return; }
+				var parsed;
+				try { parsed = ie.parseImport(bytes); }
+				finally { bytes.fill(0); }   // the bytes have done their job; the text they became cannot be wiped, only let go of
+				importing = { parsed: parsed, plan: null };
+				showImportPlan();
+			})
+			.catch(function (err) {
+				if (stale()) { return; }
+				clearImportPreview();
+				importFile.value = "";   // so that choosing the same file again is a change
+				ui.markField(importFile, true, importNotice);
+				ui.notice(importNotice, "err", describeImportError(err));
+			});
+	});
+	importCopyExtras.addEventListener("change", showImportPlan);
+	importDuplicates.addEventListener("change", showImportPlan);
+
+	importPanel.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		if (!opened || !importing) { return; }
+		// The vault may have changed since the preview was drawn: what is added is what is right for it now.
+		showImportPlan();
+		var plan = importing.plan;
+		var items, all;
+		try {
+			items = ie.createItems(plan, new Date());   // refuses a plan that would pass the limit on a vault
+			if (items.length === 0) { return; }
+			items.forEach(function (item) { vc.validateItem(item); });
+			all = opened.items.concat(items);
+			if (!fitsInAVault(all)) {
+				ui.notice(importNotice, "err", tooLargeToStore(" after this import") + " Nothing was imported.");
+				return;
+			}
+		} catch (err) {
+			ui.notice(importNotice, "err", err instanceof ie.ImportRefused ? err.message : "The entries of the file could not be made into items. Nothing was imported.");
+			return;
+		}
+		var c = plan.counts;
+		var left = [];
+		if (c.duplicates > 0 && !plan.options.importDuplicates) { left.push(countOf(c.duplicates, "duplicate", "duplicates") + " skipped"); }
+		if (c.notImported > 0) { left.push(countOf(c.notImported, "entry", "entries") + " not imported"); }
+		opened.items = all;
+		closeImport();   // lets go of the logins of the file and of the plan
+		markChanged();
+		renderItems();
+		ui.notice(notice, "ok", "Imported " + countOf(items.length, "login", "logins") + " into the vault in this browser" + (left.length > 0 ? " (" + left.join(", ") + ")" : "") +
+			". Nothing is on the server until you press Save to server. " + ie.TEXTS.fileStillHoldsPasswords);
+		$("vault-import").focus();
+	});
+	$("vault-import").addEventListener("click", openImport);
+	$("import-cancel").addEventListener("click", function () { closeImport(); $("vault-import").focus(); });
+
+	// ---- export: the vault, unencrypted, for another password manager ----
+	// The costliest single thing someone at an unlocked vault can do, so the unlocked session alone
+	// does not allow it: the master password is asked for again and checked here, against the key
+	// this session holds (vc.verifyMasterPassword; no request is made). A wrong password writes
+	// nothing. The file is a Blob download; nothing of it is stored or sent.
+	var exportPanel = $("vault-export-panel");
+	var exportNotice = $("vault-export-notice");
+	var exportAck = $("export-ack");
+	var exportPassword = $("export-master-password");
+	var exportSubmit = $("export-submit");
+	var exportProgress = $("export-progress");
+	var exportSeveralUrls = $("export-several-urls");
+	var exportBusy = false;
+	var exportRuns = 0;   // changes with every export and every reset; a check that finishes later writes nothing
+
+	function exportFormat() { return $("export-format-json").checked ? ie.EXPORT_JSON : ie.EXPORT_CSV; }
+	function showExportState() {
+		var none = !opened || opened.items.length === 0;
+		// A CSV file holds one address for each item: say beforehand how many items have more.
+		var several = opened ? ie.countItemsWithSeveralUrls(opened.items) : 0;
+		exportSeveralUrls.hidden = several === 0 || exportFormat() !== ie.EXPORT_CSV;
+		exportSeveralUrls.textContent = countOf(several, "item has", "items have") + " more than one address. A CSV file holds only the first of each; only JSON keeps them all.";
+		exportAck.disabled = none || exportBusy;
+		exportPassword.disabled = none || exportBusy;
+		exportSubmit.disabled = none || exportBusy || !exportAck.checked;
+	}
+	function exportIdle() {
+		exportBusy = false;
+		ui.setBusy(exportPanel, false);
+		exportProgress.textContent = "";
+		showExportState();
+	}
+	function resetExport() {
+		exportRuns++;
+		exportBusy = false;
+		exportPassword.value = "";   // what was typed does not outlive the panel
+		exportAck.checked = false;
+		$("export-format-csv").checked = true;
+		ui.setBusy(exportPanel, false);
+		ui.markField(exportPassword, false);
+		ui.notice(exportNotice, "ok", "");
+		exportProgress.textContent = "";
+		showExportState();
+	}
+	function closeExport() {
+		resetExport();
+		exportPanel.hidden = true;
+	}
+	function openExport() {
+		if (!opened) { return; }
+		closeImport();
+		resetExport();
+		exportPanel.hidden = false;
+		if (opened.items.length === 0) {
+			// Nothing to write: no file is made of an empty vault, and no password is asked for.
+			ui.notice(exportNotice, "warn", "This vault has no items, so there is nothing to export.");
+			$("export-cancel").focus();
+			return;
+		}
+		$("export-format-csv").focus();
+	}
+	$("export-format-csv").addEventListener("change", showExportState);
+	$("export-format-json").addEventListener("change", showExportState);
+	exportAck.addEventListener("change", showExportState);
+
+	exportPanel.addEventListener("submit", function (ev) {
+		ev.preventDefault();
+		if (!opened || exportBusy || !exportAck.checked || opened.items.length === 0) { return; }
+		var typed = exportPassword.value;
+		if (typed.length === 0) {
+			ui.markField(exportPassword, true, exportNotice);
+			ui.notice(exportNotice, "err", "Enter the master password of your vault.");
+			exportPassword.focus();
+			return;
+		}
+		var o = opened;
+		var run = ++exportRuns;
+		var myEpoch = epoch;
+		var g = generation();
+		var format = exportFormat();
+		function stale() { return run !== exportRuns || myEpoch !== epoch || g !== generation() || opened !== o; }
+		exportBusy = true;
+		ui.markField(exportPassword, false);
+		ui.notice(exportNotice, "ok", "");
+		ui.setBusy(exportPanel, true);
+		var p = o.envelope.kdfParameters;
+		exportProgress.textContent = "Checking the master password: Argon2id with " + Math.round(p.memoryKiB / 1024) + " MiB. In a browser this can take a while; the page is not stuck.";
+		vc.verifyMasterPassword(o.envelope, typed, o.vaultKey)
+			.then(function (correct) {
+				// Locked, signed out or cancelled while the key was derived: nothing is written.
+				if (stale()) { return; }
+				if (!correct) {
+					exportIdle();
+					ui.markField(exportPassword, true, exportNotice);
+					ui.notice(exportNotice, "err", "The master password is incorrect. Nothing was exported.");
+					exportPassword.focus();
+					return;
+				}
+				// What is written is what the check was for: the items of this moment.
+				var now = new Date();
+				var count = o.items.length;
+				var name = ie.exportFileName(format, now);
+				var bytes = ie.exportVault(o.items, format, now);
+				try { saveBytes(bytes, name, true); }
+				finally { bytes.fill(0); }   // the Blob has its own copy, which goes with its URL
+				closeExport();
+				ui.notice(notice, "warn", "Exported " + countOf(count, "login", "logins") + " to " + name + ". That file is not encrypted: it holds every password in plain text. " +
+					"Keep it only as long as you need it, and delete it afterwards.");
+				$("vault-export").focus();
+			})
+			.catch(function (err) {
+				if (stale()) { return; }
+				exportIdle();
+				ui.notice(exportNotice, "err", err && err.kind === vc.KINDS.RESOURCE
+					? "This browser could not provide the memory the vault's key derivation needs, so the master password could not be checked. Nothing was exported."
+					: "The export could not be made. Nothing was exported.");
+			})
+			.finally(function () {
+				// The password has done its job; it does not stay in the field or in this closure.
+				// (A panel that was closed meanwhile has cleared its field itself.)
+				typed = null;
+				if (run === exportRuns) { exportPassword.value = ""; }
+			});
+	});
+	$("vault-export").addEventListener("click", openExport);
+	$("export-cancel").addEventListener("click", function () { closeExport(); $("vault-export").focus(); });
 
 	// ---- following the account ----
 	document.addEventListener("bitosx:signed-in", function () { loadStatus(); });
