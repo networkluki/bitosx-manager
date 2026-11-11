@@ -642,5 +642,5 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 `web v0.8.0` (phase 11, import and export; `v0.7.0` phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
 the `?v=` cache-busting query on the stylesheet links together (the e2e hygiene test checks it). The
-desktop app (`0.11.0`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
+desktop app (`0.14.0`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
 product page for orientation only.
