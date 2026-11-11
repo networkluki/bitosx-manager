@@ -8,7 +8,7 @@ WebAssembly build the web vault needs (`vault/public/assets/vendor/hash-wasm/`, 
 | Hostname | Directory | Purpose | Talks to |
 |---|---|---|---|
 | `bitosx.se` | `www/public/` | Public product page: what BitosX is, how the vault is protected, what works today, live API status, roadmap | `api.bitosx.se` (`GET /health`, `GET /version` only) |
-| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code; since phase 8 change the account password while signed in; since phase 10 add, rename and remove passkeys and sign in with one) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set; since phase 8 with the desktop's generator, favorites and sorting, and a download of the encrypted backup | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*` including `POST /v1/account/password` and `/v1/account/passkeys*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
+| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code; since phase 8 change the account password while signed in; since phase 10 add, rename and remove passkeys and sign in with one) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set; since phase 8 with the desktop's generator, favorites and sorting, and a download of the encrypted backup; since phase 11 it imports the logins other password managers export and exports the vault unencrypted | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*` including `POST /v1/account/password` and `/v1/account/passkeys*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
 | `api.bitosx.se` | — | The account API. Lives in [`networkluki/bitosx-api`](https://github.com/networkluki/bitosx-api) and is operated alongside the desktop app; nothing here | — |
 
 The desktop app lives in [`networkluki/bitosx`](https://github.com/networkluki/bitosx).
@@ -259,6 +259,112 @@ says so wherever a passkey is offered.
   origin `https://vault.bitosx.se` (the shipped API configuration). A passkey is bound to that RP ID:
   one made on the local devstack (`localhost`) does not work in production, and the other way round.
 
+## Import and export (phase 11)
+
+Web `0.8.0`. No server change: an import adds ordinary items to the open vault, an export writes a
+file in the browser. The rules are the desktop application's `docs/IMPORT_EXPORT.md`
+(`networkluki/bitosx`), which both clients follow so that the same file gives the same items in
+both. `vault/public/assets/js/import-export.js` is that specification in JavaScript — pure
+functions, no DOM, no network, no vault — and `vault.js` is the page around it.
+
+**Import** (*Import…* in the unlocked vault). Choose a file → a preview → two choices → confirm.
+
+- **What is read**, decided from the contents, never from the file's name: CSV exported by Chrome or
+  Edge, Firefox, Bitwarden, KeePassXC and KeePass ("KeePass CSV (1.x)", with its own backslash
+  quoting), any other CSV file whose first line names a password column and at least one of name,
+  address and username (the column names of the specification's alias table; a 1Password file is
+  read this way, without a label of its own); Bitwarden's unencrypted JSON; KeePass 2 XML; BitosX's
+  own JSON export. An encrypted or password-protected Bitwarden export, a KeePass file with
+  protected values, an XML file with a document type declaration, UTF-16 text and anything that is
+  not UTF-8 are refused, each with the fixed text the specification gives it.
+- **The preview** shows the detected format, how many logins would be added, the duplicates, the
+  entries that are not imported with their name and reason, items that are not logins by kind, what
+  is in the file's trash, what BitosX has no field for by kind, how many addresses get `https://`
+  and how many names are derived, and the columns that are not read. It never shows a password, an
+  authenticator key, the value of a custom field or notes. Nothing is added before *Import N logins*.
+- **Two choices, both off unless chosen:** *Copy what BitosX has no field for into each item's notes*
+  and *Import duplicates too*. A duplicate has the same name, username, password and web addresses
+  as an item of the vault or an earlier entry of the file.
+- **What is added** are unsaved changes exactly like items added by hand — a new identifier each,
+  created and changed at the time of the import — until *Save to server*; the page says that nothing
+  is on the server before that, and afterwards reminds that the file still holds every password in
+  plain text. *Cancel*, another file, and a lock let go of the file and leave the vault as it was.
+- **Limits:** a file of at most 16 MiB (its size is asked before anything is read, and at most the
+  limit and one byte are read), at most 10,000 entries in a file, at most 10,000 items in the vault
+  afterwards, and the vault's own limits for an item (name 1–200, username 320, password 4096,
+  notes 16384, 64 addresses of 2048, absolute http or https). **Nothing is ever cut short:** an entry
+  that breaks a limit is not imported and is listed with the reason; a file or an import that breaks
+  one is refused as a whole.
+- **Not imported:** authenticator (TOTP) keys, custom fields, folder and group names and addresses
+  that are not http(s) (kept as text in the notes if the first choice is made, never otherwise);
+  everything that is not a login (secure notes, cards, identities, SSH keys, …); items in the
+  trash or the recycle bin; an entry's history, passkeys, attachments, tags, icons, expiry dates and
+  the times an entry was created and changed.
+
+**Export** (*Export…*). CSV in Chrome's layout (`name,url,username,password,note`, one address for
+each item — the panel says how many items have more) or BitosX's JSON (everything an item holds).
+The specification's warning, the box *I understand that this file is not encrypted*, and the
+**master password once more**: it is checked in this browser — the key is derived as at unlock and
+the envelope's vault key is unwrapped and compared with the key the session holds
+(`verifyMasterPassword`); no request is made. A wrong password writes nothing. The file is a `Blob`
+download named `BitosX-export-YYYY-MM-DD.csv` or `.json`; its object URL is revoked after a minute,
+and at once when the vault locks; the password field is cleared on every path. Values are written
+exactly as they are: nothing is put in front of one that a spreadsheet program would take for a
+formula (a password with a quote mark in front of it is another password), which is why the warning
+says not to open the file in such a program. **An empty vault** has nothing to export: the panel
+says so, asks for no password and writes no file.
+
+**How untrusted input is handled.** Everything of a file is shown with `textContent`, each piece in
+an element of its own (`<bdi>`), and no address of a file is opened or fetched while it is read.
+`JSON.parse` accepts three things the specification refuses — more than 64 levels, a name twice in
+one object, half of a surrogate pair — so a pass over the text finds those first, without recursion.
+KeePass XML is read with the browser's own `DOMParser`; `<!DOCTYPE` anywhere in the text is refused
+before the parser sees it, so no entity is ever expanded. Trimming, lower-casing and splitting into
+lines are written out character by character: `trim()`, `toLowerCase()` and a split at `\r?\n` do
+other things than the specification says. The items that are added are copies, so that they do not
+keep the text of the file alive in memory; the bytes of the file are wiped once they are parsed (the
+text they became can only be let go of, as everywhere on this page). The Content-Security-Policy is
+unchanged.
+
+**A vault that is too large.** The envelope may be 16 MiB — more is refused by this page, the
+desktop and the server — which is about 11 MiB of items. Its size can only be estimated before it is
+encrypted (`estimateEnvelopeSize`: Base64 writes `+` for one value in 64, which the envelope's JSON
+writes as six bytes, and how many there are is new with every save). An import that would bring the
+estimate within 32 KiB of the limit is refused as a whole: *The vault would be larger than 16 MiB
+after this import, which is the most BitosX can store. Nothing was imported.* And every save checks
+the bytes it is about to send: a vault that grew too large by hand is not uploaded, the page says
+why, and the changes stay in the browser until items are deleted or shortened. While testing this a
+defect of earlier versions surfaced and was fixed: a vault of more than a few MiB could not be
+opened or backed up in the browser at all, because the Base64 check was a pattern that overflows the
+JavaScript engine's stack on a string of several million characters (`isBase64` is a loop now).
+
+**Where this client differs from the desktop.** For every conformance fixture the results are
+identical. Beyond the fixtures, measured against the desktop's own library (built from its sources
+in a scratch directory; 4,500 generated CSV files and 4,500 generated JSON files gave identical
+results):
+
+- *XML with two faults.* The desktop reads a document forward and reports the first fault; a
+  parsed document can only be damaged. A file that has, say, a protected value and further down a
+  tag that is never closed is `invalid_xml` here and `protected_values` there (the specification,
+  §15.3, says so). 2,400 generated KeePass files in Chromium: 2,360 identical, 40 of this kind.
+- *Chromium's own limits and leniencies.* Its XML parser refuses nesting beyond 5,000 elements by
+  itself (`invalid_xml` here, `nested_too_deeply` on the desktop; from 101 to 5,000 both say
+  `nested_too_deeply`); it reads a document that declares `version="1.1"` as XML 1.0 (the desktop
+  refuses it), and refuses an element named `xmlns:…` and an encoding name that is not a name (the
+  desktop reads both). A well-formed file that contains an element named `parsererror` in the XHTML
+  or Mozilla namespace is taken for the parser's own error report and refused.
+- *A console message for a damaged XML file.* Chromium's error document carries inline styles; it
+  inherits this page's policy, which refuses them, and Chromium says so on the console twice
+  (`Refused to apply inline style …`). Nothing of the file is in the message, and the policy is
+  doing what it should.
+- *Addresses.* After the specification's shared host rule (§7.3) the two URL parsers still disagree
+  about three kinds of web address besides the known invalid-Punycode kind: a host with a part that
+  starts with `-` or `_`, or is longer than 63 characters, where the desktop refuses some shapes
+  (`https://1.-a/`, `https://a.b.-c/`) and this page accepts them; a backslash in the user-info part
+  (`https://u\@example.com/`: refused there, accepted here); and hosts with unusual characters
+  outside ASCII (zero-width joiners, a soft hyphen, full-width dots), which the specification
+  leaves to each client. Ordinary addresses, ports, paths and queries agreed in every case tried.
+
 ## What phase 1 was
 
 Phase 1 used **only endpoints the API already implemented** (`bitosx-api/docs/API.md`):
@@ -288,6 +394,9 @@ Phases as presented on the product page, and where each stands:
 9. **Phase 9:** tested for real and ready to deploy — the live suite (Verification, below) runs the
    web vault against the real API and a MariaDB database; the API repository gets the local live stack,
    CI and its production deployment files.
+10. **Phase 10:** passkeys, above — merged.
+11. **Phase 11:** import and export, above — this repository and `networkluki/bitosx` (the desktop
+    wrote the specification and the conformance fixtures); the API is not changed.
 
 ## Deployment prerequisites outside this repository
 
@@ -332,8 +441,8 @@ Phases as presented on the product page, and where each stands:
   handled by JavaScript; `form-action 'none'` means a native submit can never put a password in a URL.
   The policy is set both as a response header (`_headers`, Cloudflare) and as a `<meta>` tag (so the
   GitHub Pages preview is covered; `frame-ancestors` only applies via the header).
-- **No HTML from data.** Everything from the network or the URL is rendered with `textContent` or
-  `createElement`; `innerHTML` is not used.
+- **No HTML from data.** Everything from the network, the URL or an imported file is rendered with
+  `textContent` or `createElement`; `innerHTML` is not used.
 - **Responses are untrusted input.** Bodies are size-capped (64 KiB; 23 MiB for the one envelope
   download), must be JSON, and every field the UI shows is type- and format-checked (UUIDs, ISO
   dates, booleans, hex fingerprints, strict Base64) before use.
@@ -361,6 +470,15 @@ disappears is up to the browser: the fields carry `autocomplete="off"` and the i
 extensions read, which is all a page can do (not verified per browser). The back/forward-cache test
 dispatches the real `pagehide`/`pageshow` events with `persisted: true`, because the Chromium under test
 does not cache pages. The
+Import and export were run in Chromium only (headless, 141): how Firefox and Safari parse XML with
+`DOMParser` and report a damaged file (the code looks for their `parsererror` element as documented,
+untested), how they decode with `TextDecoder`, whether their URL parsers agree with Chromium's on
+unusual addresses, and how soon after the click they let a download's object URL be revoked (Chromium
+keeps the download whole even when it is revoked at once, measured) are **not verified**. Nor is a
+phone: the vault does not lock on a hidden tab while the import panel is open, because a file picker
+is assumed to hide the page there — assumed, not seen. No real export of Chrome, Firefox, Bitwarden,
+KeePassXC or KeePass was imported: the fixtures are written after their source code, by the desktop
+side. A vault near 16 MiB opens and saves in the tests, slowly (a few seconds of a busy page). The
 `Strict-Transport-Security` header in `_headers` is set without `includeSubDomains`; whether to
 enable HSTS zone-wide (with subdomains) is a Cloudflare decision that affects `api.bitosx.se` too.
 
@@ -400,6 +518,10 @@ node --test tests/vault-crypto.test.js
 # The passkey JSON conversion (the fallback for browsers without parse*FromJSON / toJSON) and the
 # mapping of the browser's WebAuthn errors.
 node --test tests/webauthn.test.js
+# Import and export: every conformance fixture of the desktop that needs no XML parser (35 of 44;
+# the other nine reach DOMParser and run in Chromium, below), and the rules one by one — the CSV
+# reader, the strict JSON check, the address rules, normalisation, duplicates, limits, the exports.
+node --test tests/import-export.test.js
 
 # End-to-end in headless Chromium against the in-process mock API (needs the `playwright` package
 # and a Chromium it can find; PLAYWRIGHT_BROWSERS_PATH if it is not the default location).
@@ -411,6 +533,15 @@ The e2e run serves both sites locally, intercepts `https://api.bitosx.se/**` ins
 `tests/mock-api.js` (so the real `config.js` origin and CSP `connect-src` are exercised), and fails on
 any console error, page error, CSP violation, inline script/style attribute, a drift between the two
 copies of `bitosx.css`, or a page whose version is not the one in this README.
+
+**Import and export in the mocked suite.** `tests/fixtures/import` is the desktop's fixture
+directory, byte for byte (its README names the commit; `.gitattributes` keeps Git from converting
+line ends there). The suite holds the page's own `import-export.js` to **all 44** expected files
+inside Chromium, KeePass 2 XML included, and drives the flows: preview → unsaved → save, cancel,
+duplicates, extras into the notes, every refusal with its text, a vault at 10,000 items and at
+16 MiB, markup in a file shown as text, and the export with its box, its master password, its file
+names and its object URLs. A test that feeds the page a damaged XML file expects the two console
+messages described above, and counts them.
 
 **CORS is enforced by the harness.** Playwright answers every CORS preflight of an intercepted
 request itself and allows everything, so the browser's own check never sees a policy. The route
@@ -464,8 +595,12 @@ with the passkey alone (the vault still asks for its master password) → a seco
 used from a page whose browser JSON helpers are removed (the page's own conversion, accepted by the
 API) → a passkey of another authenticator, never registered, refused → rename (a real preflight for
 `POST .../rename`; no `PATCH` is ever sent) → both removed with the password and a code → the removed
-passkey refused, and the second step no longer offers one. It runs in a few minutes, mostly waiting for
-TOTP steps.
+passkey refused, and the second step no longer offers one. Since phase 11, after the edit: a
+conformance fixture imported through the page (nothing is sent while it is read) → *Save to server*
+(a real `PUT`) → reload, sign in again, re-open: the logins are there, and the server's copy opens
+under Node with exactly the items the desktop makes of that file → an export that refuses the account
+password and, with the master password, downloads the vault's items without asking the API anything.
+It runs in a few minutes, mostly waiting for TOTP steps.
 
 **The page origin is `http://localhost:8788`** (the devstack's default since phase 10: `localhost` is a
 valid WebAuthn RP ID, an IP address is not, so the API's RP ID there is `localhost`). The browser's
@@ -503,7 +638,7 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 ## Versioning
 
-`web v0.7.0` (phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
+`web v0.8.0` (phase 11, import and export; `v0.7.0` phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
 the `?v=` cache-busting query on the stylesheet links together (the e2e hygiene test checks it). The
 desktop app (`0.11.0`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
 product page for orientation only.

@@ -13,7 +13,7 @@
     <title>BitosX — Your Security</title>
     <link rel="canonical" href="https://bitosx.se/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.7.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.8.0" />
     <meta name="theme-color" content="#26292E" />
     <!-- Theme applied before first paint (avoids a flash of the wrong theme) -->
     <script src="/assets/js/theme-init.js"></script>
@@ -213,8 +213,12 @@ encrypted vault — the only thing written to disk</pre>
             <div><p><strong>Tested for real, ready to deploy.</strong> Until now every client was tested against a stand-in for the server. Now the whole chain runs against the real API and a MariaDB database, the one production uses: the web vault in a real browser, with the browser's own CORS checks, and the desktop app's client go through registration, email verification, two-factor sign-in, encrypted sync, password change and reset, and account deletion, in CI. The API gets its production deployment files — a locked-down service, the web server in front, a deploy script that backs up the database before it migrates and switches back to the previous release if the new one does not come up healthy — and checks that a production-configured server behaves as documented. Plus a window icon for the desktop app and smaller fixes.</p></div>
           </li>
           <li>
-            <div class="phase">Phase 10<small>in review</small></div>
+            <div class="phase">Phase 10<small>built</small></div>
             <div><p><strong>Passkeys.</strong> Sign in to vault.bitosx.se with a passkey — your device's screen lock, a password manager or a security key, through WebAuthn — as the second step after the account password, or on its own without email and password. Passkeys come on top of two-factor authentication, never instead of it: they need it to be on, and the desktop app keeps signing in with the authenticator code. The server keeps only public keys and checks every signature, its counter and the site it was made for. A passkey opens the account, not the vault: the vault master password stays what it always was, yours alone and never on the server.</p></div>
+          </li>
+          <li>
+            <div class="phase">Phase 11<small>in review</small></div>
+            <div><p><strong>Import and export.</strong> Bring your logins over from another password manager: the desktop app and the web vault read what Chrome, Edge, Firefox, Bitwarden, KeePassXC and KeePass export, any other CSV file with a header line, and BitosX's own export. You see what an import would do before anything is added — how many logins, which duplicates are skipped, what is left out and why — and nothing is ever cut short to make it fit. The file is read on your own device: in the web vault it never leaves the browser, and the server still sees only the encrypted vault. And the way out is just as open: export the vault as CSV or JSON for another password manager, after a plain warning and the master password once more, because such a file holds every password unencrypted. Both clients follow one written specification and are held to the same test files, so the same file gives the same items in both.</p></div>
           </li>
         </ol>
       </div>
@@ -222,7 +226,7 @@ encrypted vault — the only thing written to disk</pre>
   </main>
 
   <footer>
-    <div class="footer-version">web v0.7.0 · app v0.13.0 · api v0.1.0</div>
+    <div class="footer-version">web v0.8.0 · app v0.14.0 · api v0.1.0</div>
     <div class="footer-links">
       <a href="https://github.com/networkluki/bitosx" target="_blank" rel="noopener noreferrer">bitosx</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">bitosx-api</a>
