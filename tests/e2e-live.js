@@ -669,7 +669,7 @@ async function check(name, fn) {
 		await vaultStatusLoaded();
 		assert.equal(await page.isVisible("#vault-unlock-form"), true, "the vault is closed");
 		await unlock();
-		assert.equal(await page.locator("#vault-items .vault-item").count(), 3);
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 3 + importedNames.length, "the vault as it was left: its three items and the imported logins");
 		await page.click("#vault-lock");
 	});
 	await step("a second passkey through the page's own JSON conversion (no parseCreationOptionsFromJSON / toJSON), accepted by the real API and used alone", async () => {
