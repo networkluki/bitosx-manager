@@ -2656,6 +2656,911 @@ async function test(name, fn) {
 		await page.close();
 	});
 
+	// ------------------------------------------- phase 11: import and export
+	console.log("vault.bitosx.se — import and export");
+	const conformance = require("./import-conformance.js");
+	const ieNode = require("../vault/public/assets/js/import-export.js")(vcNode);
+	const importFixture = (name) => fs.readFileSync(path.join(conformance.DIRECTORY, name));
+	// A damaged XML file makes Chromium's XML parser build its error document, which carries inline
+	// styles; the document inherits this page's policy, which refuses them and says so on the console.
+	// Nothing of the file is in that message. A test that feeds the page a damaged XML file expects it.
+	const STYLE_REFUSED = /^Refused to apply inline style because it violates the following Content Security Policy directive: "style-src 'self'"/;
+	async function chooseImportFile(page, name, content) {
+		await page.setInputFiles("#import-file", { name, mimeType: "application/octet-stream", buffer: Buffer.isBuffer(content) ? content : Buffer.from(content, "utf8") });
+	}
+	async function previewOf(page, name, content) {
+		await chooseImportFile(page, name, content);
+		await page.waitForSelector("#import-preview:not([hidden])");
+		return {
+			count: await page.textContent("#import-count"),
+			lines: await page.locator("#import-summary li").allTextContents(),
+			button: await page.textContent("#import-confirm"),
+			disabled: await page.isDisabled("#import-confirm")
+		};
+	}
+	const vaultState = (page) => page.evaluate(() => ({
+		items: document.querySelectorAll("#vault-items .vault-item").length,
+		count: document.getElementById("vault-count").textContent,
+		unsaved: window.bitosxVault.hasUnsavedChanges(),
+		dirtyShown: !document.getElementById("vault-dirty").hidden,
+		saveDisabled: document.getElementById("vault-save").disabled
+	}));
+	const UNTOUCHED = { items: 3, count: "3 items", unsaved: false, dirtyShown: false, saveDisabled: true };
+	const csvFile = (rows, header) => (header || "name,url,username,password,note") + "\n" + rows.join("\n") + "\n";
+	// Records what the page does with object URLs, so that a test can see a download's URL revoked.
+	const watchObjectUrls = (page) => page.addInitScript(() => {
+		window.__urls = { created: [], revoked: [] };
+		const create = URL.createObjectURL.bind(URL), revoke = URL.revokeObjectURL.bind(URL);
+		URL.createObjectURL = (blob) => { const url = create(blob); window.__urls.created.push(url); return url; };
+		URL.revokeObjectURL = (url) => { window.__urls.revoked.push(url); return revoke(url); };
+	});
+
+	await test("import: every conformance fixture gives in Chromium exactly what the desktop makes of it — all 44 files, KeePass XML through DOMParser", async () => {
+		const mock = createMockApi();
+		const page = await newPage(mock);
+		const refusedStyles = [];
+		page.expectedConsole = STYLE_REFUSED;
+		page.on("console", (m) => { if (m.type() === "error" && STYLE_REFUSED.test(m.text())) { refusedStyles.push(m.text()); } });
+		const requests = [];
+		await page.goto(`${vault.origin}/`);
+		page.on("request", (r) => requests.push(r.url()));
+		let files = 0, cases = 0, xmlFiles = 0, damagedXml = 0;
+		const outcomes = {};
+		for (const name of conformance.expectedFiles()) {
+			const expected = conformance.readExpected(name);
+			const out = await page.evaluate(conformance.runFixture, { input: conformance.inputForPage(expected.input), cases: expected.cases.map((c) => ({ vault: c.vault, options: c.options })) });
+			assert.ok(!out.needsXmlParser, `${name}: the page has an XML parser`);
+			assert.equal(out.results.length, expected.cases.length, name);
+			expected.cases.forEach((c, i) => {
+				assert.deepStrictEqual(out.results[i], c.result, `${name}, case "${c.name}"`);
+				cases++;
+				const outcome = c.result.refused || c.result.format;
+				outcomes[outcome] = (outcomes[outcome] || 0) + 1;
+				if (c.result.refused === "invalid_xml") { damagedXml++; }
+			});
+			files++;
+			const start = (expected.input.file ? importFixture(expected.input.file).toString("latin1") : expected.input.parts[0].text).trimStart();
+			if (start.startsWith("<")) { xmlFiles++; }
+		}
+		assert.equal(files, 44);
+		assert.equal(cases, 55);
+		assert.equal(xmlFiles, 11, "the XML fixtures: nine that reach the parser, two refused before it");
+		assert.ok(outcomes.keepass_xml >= 3 && outcomes.nested_too_deeply >= 2 && outcomes.protected_values >= 1 && outcomes.doctype >= 2 && outcomes.too_many_entries >= 3, JSON.stringify(outcomes));
+		// Exactly the two messages Chromium's error document causes for each damaged XML file, and no other.
+		assert.equal(damagedXml, 1);
+		assert.equal(refusedStyles.length, 2 * damagedXml, refusedStyles.join("\n"));
+		// Reading a file fetches nothing: not an address of a file, not a document type, nothing.
+		assert.deepEqual(requests, []);
+		await page.close();
+	});
+
+	await test("import: what Chromium's own parser does with XML the fixtures do not hold — hostile markup runs nothing and fetches nothing; its limits are known", async () => {
+		const mock = createMockApi();
+		const page = await newPage(mock);
+		page.expectedConsole = STYLE_REFUSED;
+		await page.goto(`${vault.origin}/`);
+		const requests = [];
+		page.on("request", (r) => requests.push(r.url()));
+		const entry = "<Root><Group><Entry><String><Key>Title</Key><Value>fake</Value></String></Entry></Group></Root>";
+		const deep = (n) => "<KeePassFile><Meta>" + "<a>".repeat(n - 2) + "</a>".repeat(n - 2) + "</Meta></KeePassFile>";
+		const documents = {
+			// Elements of a web page inside the file: nothing of them runs or loads.
+			hostile: "<KeePassFile><script xmlns=\"http://www.w3.org/1999/xhtml\">window.__importRan = 1;</script><img xmlns=\"http://www.w3.org/1999/xhtml\" src=\"https://tracker.example/x.png\" onerror=\"window.__importRan = 2\"/>"
+				+ "<link xmlns=\"http://www.w3.org/1999/xhtml\" rel=\"stylesheet\" href=\"https://tracker.example/x.css\"/><iframe xmlns=\"http://www.w3.org/1999/xhtml\" src=\"https://tracker.example/\"/>"
+				+ "<svg xmlns=\"http://www.w3.org/2000/svg\" onload=\"window.__importRan = 3\"><image href=\"https://tracker.example/y.png\"/></svg><?xml-stylesheet href=\"https://tracker.example/z.css\"?>" + entry + "</KeePassFile>",
+			// An entity is never expanded: a declaration is refused on the text, a reference without one is damaged XML.
+			doctype: "<!DOCTYPE lolz [<!ENTITY lol \"lol\"><!ENTITY lol2 \"&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;\">]><KeePassFile><Meta><x>&lol2;</x></Meta></KeePassFile>",
+			external: "<!DOCTYPE KeePassFile SYSTEM \"https://tracker.example/evil.dtd\" [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><KeePassFile><Meta><x>&xxe;</x></Meta></KeePassFile>",
+			entityWithoutDeclaration: "<KeePassFile><Meta><x>&xxe;</x></Meta></KeePassFile>",
+			// The specification's limit is 100 levels; Chromium's parser has one of its own at 5,000.
+			levels100: deep(100), levels101: deep(101), levels5000: deep(5000), levels5001: deep(5001),
+			// Two faults: the desktop reads forward and reports the first; a parsed document can only be damaged.
+			twoFaults: "<KeePassFile><Meta><Binary Protected=\"True\">AAAA</Binary></Meta><Root><Group>",
+			protectedOnly: "<KeePassFile><Meta><Binary Protected=\"True\">AAAA</Binary></Meta><Root><Group/></Root></KeePassFile>",
+			// What only looks like the parser's error report.
+			errorLookalike: "<KeePassFile><parsererror/>" + entry + "</KeePassFile>",
+			errorLookalikeXhtml: "<KeePassFile><parsererror xmlns=\"http://www.w3.org/1999/xhtml\"/>" + entry + "</KeePassFile>",
+			version11: "<?xml version=\"1.1\"?><KeePassFile>" + entry + "</KeePassFile>"
+		};
+		const outcome = await page.evaluate((docs) => {
+			const ie = window.bitosxImportExport;
+			const out = {};
+			for (const [name, xml] of Object.entries(docs)) {
+				try { const p = ie.parseImport(new TextEncoder().encode(xml)); out[name] = "read " + p.records; }
+				catch (e) { out[name] = e instanceof ie.ImportRefused ? e.code : "threw " + e.name; }
+			}
+			return out;
+		}, documents);
+		assert.deepEqual(outcome, {
+			hostile: "read 1", doctype: "doctype", external: "doctype", entityWithoutDeclaration: "invalid_xml",
+			levels100: "read 0", levels101: "nested_too_deeply", levels5000: "nested_too_deeply",
+			levels5001: "invalid_xml",            // the desktop: nested_too_deeply
+			twoFaults: "invalid_xml",             // the desktop: protected_values
+			protectedOnly: "protected_values",
+			errorLookalike: "read 1",
+			errorLookalikeXhtml: "invalid_xml",   // the desktop reads it
+			version11: "read 1"                   // the desktop: invalid_xml
+		});
+		await new Promise((r) => setTimeout(r, 300));
+		assert.deepEqual(requests, [], "nothing of a file is fetched");
+		assert.equal(await page.evaluate(() => window.__importRan), undefined, "nothing of a file runs");
+		await page.close();
+	});
+
+	await test("import: this page's own exports of the fixture vault read back, in Chromium, to the candidates of the desktop's two exports", async () => {
+		const mock = createMockApi();
+		const page = await newPage(mock);
+		await page.goto(`${vault.origin}/`);
+		const exported = JSON.parse(importFixture("bitosx-export.json").toString("utf8"));
+		const files = await page.evaluate((items) => {
+			const ie = window.bitosxImportExport;
+			// What the page holds after it opened a vault the desktop wrote with these items.
+			const held = items.map((it, i) => ({
+				id: "0b1705e0-0000-4000-8000-" + String(i + 1).padStart(12, "0"), type: "login", name: it.name, username: it.username || null, password: it.password || null,
+				urls: it.urls, notes: it.notes || null, favorite: it.favorite, createdAt: new Date(it.createdAt), createdAtText: it.createdAt.replace(/Z$/, "+00:00"),
+				updatedAt: new Date(it.updatedAt), updatedAtText: it.updatedAt.replace(/Z$/, "+00:00")
+			}));
+			const base64 = (bytes) => { let s = ""; bytes.forEach((b) => { s += String.fromCharCode(b); }); return btoa(s); };
+			return { csv: base64(ie.exportCsv(held)), json: base64(ie.exportJson(held, new Date("2026-11-10T12:00:00Z"))) };
+		}, exported.items);
+		for (const format of ["csv", "json"]) {
+			const expected = conformance.readExpected(`bitosx-export.${format}.expected.json`);
+			const out = await page.evaluate(conformance.runFixture, { input: { base64: files[format] }, cases: expected.cases.map((c) => ({ vault: c.vault, options: c.options })) });
+			expected.cases.forEach((c, i) => assert.deepStrictEqual(out.results[i], c.result, `${format}, case "${c.name}"`));
+		}
+		assert.deepEqual(Buffer.from(files.csv, "base64"), importFixture("bitosx-export.csv"), "the CSV is the desktop's, byte for byte");
+		assert.deepEqual(JSON.parse(Buffer.from(files.json, "base64").toString("utf8")), exported, "the JSON says what the desktop's says");
+		await page.close();
+	});
+
+	await test("import: choose a file -> a preview, nothing added -> confirm -> unsaved items, like ones added by hand -> Save to server; the reminder to delete the file", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		// The words both clients use.
+		assert.equal((await page.textContent("label:has(#import-copy-extras)")).trim(), ieNode.TEXTS.optionCopyExtrasToNotes);
+		assert.equal((await page.textContent("label:has(#import-duplicates)")).trim(), ieNode.TEXTS.optionImportDuplicates);
+		assert.equal(await page.isHidden("#vault-import-panel"), true);
+		await page.click("#vault-import");
+		await page.waitForSelector("#vault-import-panel:not([hidden])");
+		assert.equal(await page.evaluate(() => document.activeElement.id), "import-file", "focus goes to the file field");
+		assert.equal(await page.isHidden("#import-preview"), true);
+		assert.equal(await page.isDisabled("#import-confirm"), true);
+		assert.equal(await page.textContent("label[for=import-file]"), "File to import (at most 16 MiB)");
+
+		const preview = await previewOf(page, "Chrome Passwords.csv", importFixture("chrome.csv"));
+		assert.equal(preview.count, "6 logins would be added to the vault in this browser (it holds 3 now). Nothing is added until you press the button below, and nothing is on the server until you then press Save to server.");
+		assert.deepEqual(preview.lines, [
+			"Format: Chrome or Edge (CSV). The file holds 9 entries.",
+			"1 duplicate is skipped: the vault, or an earlier entry of the file, already has the same name, username, password and web addresses.",
+			"2 entries are not imported; they are listed below, each with its reason.",
+			"Left out, because BitosX has no field for them: addresses that are not web addresses (1). Tick the first box below to copy them into each item's notes instead."
+		]);
+		assert.equal(preview.button, "Import 6 logins");
+		assert.equal(preview.disabled, false);
+		// Both choices are off unless chosen.
+		assert.equal(await page.isChecked("#import-copy-extras"), false);
+		assert.equal(await page.isChecked("#import-duplicates"), false);
+		// The entries that are not imported, by name and reason — behind a disclosure, closed at first.
+		assert.equal(await page.textContent("#import-not-imported-summary"), "2 entries that are not imported");
+		assert.equal(await page.evaluate(() => document.getElementById("import-not-imported").open), false);
+		await page.click("#import-not-imported-summary");
+		assert.deepEqual(await page.locator("#import-not-imported-list li").allTextContents(), [
+			"too-long.example (entry 8): The password is longer than 4096 characters.",
+			"moved.example (entry 9): The row has more values than the file has columns."
+		]);
+		// A preview shows names, counts and reasons: no password, no notes, no username of the file.
+		const shown = await page.content();
+		for (const secret of ["FAKE-chrome-pw-1", "FAKE,pw", "FAKE-android-pw", "First line", "fake.shopper", "pppppppp", "Ünïcödé"]) { assert.ok(!shown.includes(secret), `the preview shows ${secret}`); }
+		// Nothing was added, and nothing left the browser.
+		assert.deepEqual(await vaultState(page), UNTOUCHED);
+		assert.equal(callsTo(mock, "/v1/sync/envelope", "PUT"), 0);
+		const callsBefore = mock.calls.length;
+
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		assert.equal(await page.textContent("#vault-notice"), "Imported 6 logins into the vault in this browser (1 duplicate skipped, 2 entries not imported). Nothing is on the server until you press Save to server. " + ieNode.TEXTS.fileStillHoldsPasswords);
+		assert.match(await page.textContent("#vault-notice"), /The file you imported still holds every password in plain text\. Delete it when you no longer need it\.$/);
+		assert.deepEqual(await vaultState(page), { items: 9, count: "9 items", unsaved: true, dirtyShown: true, saveDisabled: false });
+		assert.equal(await page.evaluate(() => document.activeElement.id), "vault-import", "focus returns to the button that opened the panel");
+		assert.equal(mock.calls.length, callsBefore, "importing made no request");
+		// The file field no longer holds the file, and the passwords of the file are not in the page: an imported item is like any other.
+		assert.equal(await page.inputValue("#import-file"), "");
+		const after = await page.content();
+		for (const secret of ["FAKE-chrome-pw-1", "FAKE,pw", "FAKE-android-pw", "FAKE-lösenord-åäö"]) { assert.ok(!after.includes(secret), `the page shows ${secret}`); }
+		assert.deepEqual((await page.locator(".vault-item__name").allTextContents()).map((n) => n.trim()).sort(),
+			["Bank <script>alert(1)</script>", "GitHub ★", "Wi-Fi café", "bücher.example", "com.example.app", "empty-password.example", "example.com", "intranet.example", "shop.example"].sort());
+		// Still nothing on the server.
+		assert.equal((await serverItems(mock, accountId, meta.typedPassword)).length, 3);
+
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		assert.equal(callsTo(mock, "/v1/sync/envelope", "PUT"), 1);
+		assert.deepEqual(await vaultState(page), { items: 9, count: "9 items", unsaved: false, dirtyShown: false, saveDisabled: true });
+		// What the server holds opens with the master password and has the logins of the file, exactly.
+		const stored = await serverItems(mock, accountId, meta.typedPassword);
+		assert.equal(stored.length, 9);
+		const expected = conformance.readExpected("chrome.csv.expected.json").cases[0].result.candidates.filter((c) => c.status === "add");
+		assert.deepEqual(stored.slice(3).map((i) => [i.name, i.username || "", i.password || "", [...i.urls], i.notes || "", i.favorite]),
+			expected.map((c) => [c.name, c.username, c.password, c.urls, c.notes, c.favorite]));
+		const shop = stored.find((i) => i.name === "shop.example");
+		assert.equal(shop.password, "FAKE,pw \"with\" quotes");
+		assert.equal(shop.notes, "First line\nsecond line, with a comma\nthird line");
+		assert.equal(stored.find((i) => i.name === "empty-password.example").password, null, "an empty value is stored as none");
+		// New identifiers, and the time of the import — never anything from the file.
+		const ids = new Set(stored.map((i) => i.id));
+		assert.equal(ids.size, 9);
+		for (const item of stored.slice(3)) {
+			assert.match(item.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+			assert.equal(item.createdAt.getTime(), item.updatedAt.getTime());
+			assert.ok(Math.abs(item.createdAt.getTime() - Date.now()) < 5 * 60 * 1000);
+		}
+		assert.equal(new Set(stored.slice(3).map((i) => i.createdAt.getTime())).size, 1, "one import, one time");
+		await page.close();
+	});
+
+	await test("import: Cancel, another file, and locking each let go of the file and leave the vault untouched", async () => {
+		const mock = createMockApi();
+		const { page, meta } = await openedVault(mock);
+		await page.click("#vault-import");
+		await previewOf(page, "firefox.csv", importFixture("firefox.csv"));
+		await page.check("#import-copy-extras");
+		await page.check("#import-duplicates");
+		await page.click("#import-cancel");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		assert.equal(await page.evaluate(() => document.activeElement.id), "vault-import");
+		assert.deepEqual(await vaultState(page), UNTOUCHED);
+		// Opened again, nothing of the earlier file is left: no preview, no file, both choices off.
+		await page.click("#vault-import");
+		assert.equal(await page.isHidden("#import-preview"), true);
+		assert.equal(await page.inputValue("#import-file"), "");
+		assert.equal(await page.textContent("#import-count"), "");
+		assert.equal(await page.locator("#import-summary li").count(), 0);
+		assert.equal(await page.isChecked("#import-copy-extras"), false);
+		assert.equal(await page.isChecked("#import-duplicates"), false);
+		assert.equal(await page.isDisabled("#import-confirm"), true);
+		// Another file replaces the one before it: the preview is of that file alone.
+		assert.match((await previewOf(page, "a.csv", importFixture("keepassxc.csv"))).lines[0], /^Format: KeePassXC \(CSV\)/);
+		assert.match((await previewOf(page, "b.json", importFixture("bitwarden.json"))).lines[0], /^Format: Bitwarden \(JSON\)/);
+		// A file that is refused after one that was read takes the preview away.
+		await chooseImportFile(page, "c.csv", "");
+		await page.waitForSelector("#vault-import-notice.err");
+		assert.equal(await page.isHidden("#import-preview"), true);
+		assert.equal(await page.isDisabled("#import-confirm"), true);
+		assert.equal(await page.textContent("#import-confirm"), "Import");
+		// Export closes the import, and the other way round: one of the two at a time.
+		await previewOf(page, "b.json", importFixture("bitwarden.json"));
+		await page.click("#vault-export");
+		assert.equal(await page.isHidden("#vault-import-panel"), true);
+		assert.equal(await page.isHidden("#vault-export-panel"), false);
+		await page.click("#vault-import");
+		assert.equal(await page.isHidden("#vault-export-panel"), true);
+		assert.equal(await page.isHidden("#import-preview"), true, "the file chosen before is gone");
+		// Locking with a preview open: the panel is closed and the vault is as it was.
+		await previewOf(page, "b.json", importFixture("bitwarden.json"));
+		await page.click("#vault-lock");
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.isHidden("#vault-import-panel"), true);
+		assert.equal(await page.locator("#import-summary li").count(), 0);
+		assert.ok(!(await page.content()).includes("Example Mail"), "no name of the file is left in the page");
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		assert.deepEqual(await vaultState(page), UNTOUCHED);
+		assert.equal(await page.isHidden("#vault-import-panel"), true);
+		assert.equal(callsTo(mock, "/v1/sync/envelope", "PUT"), 0);
+		await page.close();
+	});
+
+	await test("import: duplicates are skipped by default and imported on opt-in; the preview follows the vault as it changes", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		// The vault's GitHub and Wi-Fi items, a third that differs in its password only, one twice in the file.
+		const file = csvFile([
+			"GitHub,https://github.com,octocat@example.com,P@ssw0rd-Strong-123,other notes do not matter",
+			"Wi-Fi café,,,ñandú-Ωmega-🔐,",
+			"GitHub,https://github.com,octocat@example.com,another-password,",
+			"New,https://new.example/,fake.user,FAKE-new-pw,",
+			"New,https://new.example/,fake.user,FAKE-new-pw,the same again"
+		]);
+		await page.click("#vault-import");
+		let preview = await previewOf(page, "dupes.csv", file);
+		assert.match(preview.count, /^2 logins would be added/);
+		assert.equal(preview.lines[1], "3 duplicates are skipped: the vault, or an earlier entry of the file, already has the same name, username, password and web addresses.");
+		assert.equal(preview.button, "Import 2 logins");
+		await page.check("#import-duplicates");
+		assert.match(await page.textContent("#import-count"), /^5 logins would be added/);
+		assert.equal(await page.locator("#import-summary li").nth(1).textContent(), "3 duplicates are imported too.");
+		assert.equal(await page.textContent("#import-confirm"), "Import 5 logins");
+		await page.uncheck("#import-duplicates");
+		assert.match(await page.textContent("#import-count"), /^2 logins would be added/);
+		// The vault changes while the preview is open (an item is deleted by hand): the preview is of the vault as it is now.
+		const wifi = page.locator('.vault-item[data-item-id="33333333-3333-4333-8333-333333333333"]');
+		await wifi.locator("button[data-delete]").click();
+		await wifi.locator("button[data-delete]").click();
+		await page.waitForFunction(() => document.querySelectorAll("#vault-items .vault-item").length === 2);
+		assert.match(await page.textContent("#import-count"), /^3 logins would be added to the vault in this browser \(it holds 2 now\)/);
+		assert.equal(await page.locator("#import-summary li").nth(1).textContent(), "2 duplicates are skipped: the vault, or an earlier entry of the file, already has the same name, username, password and web addresses.");
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		assert.match(await page.textContent("#vault-notice"), /^Imported 3 logins into the vault in this browser \(2 duplicates skipped\)\./);
+		assert.equal((await vaultState(page)).items, 5);
+		// With the box ticked the duplicates are added as well.
+		await page.click("#vault-import");
+		preview = await previewOf(page, "dupes.csv", file);
+		assert.equal(preview.count, "Nothing would be added to the vault.");
+		assert.equal(preview.button, "Nothing to import");
+		assert.equal(preview.disabled, true);
+		assert.equal(preview.lines[1], "5 duplicates are skipped: the vault, or an earlier entry of the file, already has the same name, username, password and web addresses.");
+		await page.check("#import-duplicates");
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		assert.match(await page.textContent("#vault-notice"), /^Imported 5 logins into the vault in this browser\. Nothing is on the server/);
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const stored = await serverItems(mock, accountId, meta.typedPassword);
+		assert.deepEqual(stored.map((i) => i.name).sort(), ["Bank <script>alert(1)</script>", "GitHub", "GitHub", "GitHub", "GitHub", "New", "New", "New", "Wi-Fi café", "Wi-Fi café"].sort());
+		assert.equal(new Set(stored.map((i) => i.id)).size, 10, "every item has an identifier of its own");
+		await page.close();
+	});
+
+	await test("import: what BitosX has no field for is left out by default and copied into the notes on opt-in", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		await page.click("#vault-import");
+		const preview = await previewOf(page, "bitwarden.json", importFixture("bitwarden.json"));
+		const expected = conformance.readExpected("bitwarden.json.expected.json").cases[0].result;
+		assert.match(preview.count, new RegExp("^" + expected.counts.toAdd + " logins would be added"));
+		assert.deepEqual(Object.keys(expected.unsupported), Object.keys(ieNode.UNSUPPORTED_TEXTS), "the fixture has an item of every kind");
+		assert.ok(preview.lines.includes("Not logins, and not imported: " + Object.keys(expected.unsupported).map((k) => ieNode.UNSUPPORTED_TEXTS[k] + " (" + expected.unsupported[k] + ")").join(", ") + "."), preview.lines.join("\n"));
+		assert.ok(preview.lines.some((l) => l.startsWith("Not logins, and not imported: secure notes (1), cards (1), identities (1), SSH keys (1), bank accounts (1), driver's licences (1), passports (1), other items (")));
+		assert.ok(preview.lines.includes("In the trash or the recycle bin of the file, and not imported: 1."));
+		const leftOut = preview.lines.find((l) => l.startsWith("Left out, because BitosX has no field for them: "));
+		assert.equal(leftOut, "Left out, because BitosX has no field for them: authenticator keys (TOTP) (" + expected.extras.totp + "), folder or group names (" + expected.extras.folder + "), addresses that are not web addresses ("
+			+ expected.extras.other_address + "), custom fields (" + expected.extras.custom_field + "). Tick the first box below to copy them into each item's notes instead.");
+		assert.ok(preview.lines.some((l) => /^https:\/\/ is put in front of \d+ address(es)? that ha(s|ve) no scheme\.$/.test(l)));
+		assert.ok(preview.lines.some((l) => /^\d+ entr(y has|ies have) no name and (is|are) named after (its|their) address or username\.$/.test(l)));
+		await page.check("#import-copy-extras");
+		assert.ok((await page.locator("#import-summary li").allTextContents()).some((l) => l.startsWith("Copied into each item's notes, because BitosX has no field for them: authenticator keys (TOTP) (")));
+		// Neither an authenticator key nor the value of a custom field is shown in the preview.
+		const copied = conformance.readExpected("bitwarden.json.expected.json").cases.find((c) => c.options.copyExtrasToNotes && !c.options.importDuplicates && c.vault.length === 0);
+		assert.ok(copied, "the fixture has a case that copies the extras");
+		const withTotp = copied.result.candidates.find((c) => c.status === "add" && c.extras.totp.length > 0);
+		assert.ok(!(await page.content()).includes(withTotp.extras.totp));
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const stored = (await serverItems(mock, accountId, meta.typedPassword)).slice(3);
+		const added = copied.result.candidates.filter((c) => c.status === "add");
+		assert.deepEqual(stored.map((i) => [i.name, i.notes || ""]), added.map((c) => [c.name, c.notes]));
+		assert.match(stored.find((i) => i.name === withTotp.name).notes, /Authenticator key \(TOTP\): /);
+		assert.ok(stored.some((i) => /(^|\n)Folder: /.test(i.notes || "")) && stored.some((i) => /(^|\n)Other address: /.test(i.notes || "")));
+		// Left out by default: the same file again, without the box, into a vault without those items.
+		const second = createMockApi();
+		const other = await openedVault(second);
+		await other.page.click("#vault-import");
+		await previewOf(other.page, "bitwarden.json", importFixture("bitwarden.json"));
+		await other.page.click("#import-confirm");
+		await other.page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		await other.page.click("#vault-save");
+		await other.page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const plain = (await serverItems(second, other.accountId, other.meta.typedPassword)).slice(3);
+		assert.deepEqual(plain.map((i) => [i.name, i.notes || ""]), expected.candidates.filter((c) => c.status === "add").map((c) => [c.name, c.notes]));
+		assert.ok(plain.every((i) => !/Authenticator key|Folder: |Other address: /.test(i.notes || "")));
+		await other.page.close();
+		await page.close();
+	});
+
+	await test("import: every kind of refusal shows its fixed text, and changes nothing", async () => {
+		const mock = createMockApi();
+		const { page } = await openedVault(mock);
+		page.expectedConsole = STYLE_REFUSED;   // the damaged XML file among them
+		await page.click("#vault-import");
+		const seen = new Set();
+		for (const name of conformance.expectedFiles()) {
+			const expected = conformance.readExpected(name);
+			const result = expected.cases[0].result;
+			if (!result.refused) { continue; }
+			await chooseImportFile(page, name.replace(/\.expected\.json$/, ""), Buffer.from(conformance.inputBytes(expected.input)));
+			const text = ieNode.REFUSAL_TEXTS[result.refused] + (result.refused === "invalid_csv" ? " The fault is on line " + result.line + " of the file." : "");
+			await page.waitForFunction((want) => document.getElementById("vault-import-notice").textContent === want, text, { timeout: 30000 }).catch(async () => {
+				assert.equal(await page.textContent("#vault-import-notice"), text, name);
+			});
+			assert.match(await page.getAttribute("#vault-import-notice", "class"), /\berr\b/, name);
+			assert.equal(await page.getAttribute("#vault-import-notice", "role"), "alert");
+			assert.equal(await page.getAttribute("#import-file", "aria-invalid"), "true", name);
+			assert.equal(await page.getAttribute("#import-file", "aria-describedby"), "vault-import-notice", name);
+			assert.equal(await page.isHidden("#import-preview"), true, name);
+			assert.equal(await page.isDisabled("#import-confirm"), true, name);
+			assert.equal(await page.textContent("#import-count"), "", name);
+			assert.equal(await page.inputValue("#import-file"), "", name);
+			assert.deepEqual(await vaultState(page), UNTOUCHED, name);
+			seen.add(result.refused);
+		}
+		// Every refusal of a file there is; the one about the vault is below.
+		assert.deepEqual([...seen].sort(), Object.keys(ieNode.REFUSAL_TEXTS).filter((k) => k !== "vault_item_limit").sort());
+		assert.equal(callsTo(mock, "/v1/sync/envelope", "PUT"), 0);
+		// A file the size limit refuses is never read: the page asks for its size, and for nothing else of it.
+		const reads = await page.evaluate(async () => {
+			let read = 0;
+			const big = { size: 16 * 1024 * 1024 + 1, slice() { read++; return new Blob([]); } };
+			try { await window.bitosxImportExport.readFileBytes(big); } catch (e) { return { read, code: e.code }; }
+			return { read, code: null };
+		});
+		assert.deepEqual(reads, { read: 0, code: "too_large" });
+		// After all that, a good file is still read.
+		assert.equal((await previewOf(page, "ok.csv", importFixture("keepass1.csv"))).lines[0], "Format: KeePass 1.x (CSV). The file holds 3 entries.");
+		assert.equal(await page.getAttribute("#import-file", "aria-invalid"), "false");
+		assert.equal(await page.textContent("#vault-import-notice"), "");
+		await page.close();
+	});
+
+	await test("import: a vault that would pass 10,000 items is refused as a whole, with the text of that refusal; one that just fits is imported", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", PASSWORD);
+		const { bytes, meta } = fixture("small");
+		const env = vcNode.parseEnvelope(new Uint8Array(bytes));
+		const o = await vcNode.unlock(env, meta.typedPassword);
+		const at = new Date("2026-10-01T09:00:00Z");
+		const items = [];
+		for (let i = 0; i < 9998; i++) {
+			items.push({ id: "00000000-0000-4000-8000-" + String(i).padStart(12, "0"), type: "login", name: "Item " + i, username: null, password: null, urls: [], notes: null, favorite: false, createdAt: at, updatedAt: at });
+		}
+		mock.seedEnvelope(accountId, Buffer.from(vcNode.serializeEnvelope(await vcNode.encryptContent(env, o.vaultKey, vcNode.serializeVault({ items })))));
+		const page = await newPage(mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await page.click("#vault-import");
+		// Three new logins and one the vault has: 9,998 + 3 is one too many.
+		const three = csvFile(["a,,,FAKE-1,", "b,,,FAKE-2,", "c,,,FAKE-3,", "Item 7,,,,"]);
+		const preview = await previewOf(page, "three.csv", three);
+		assert.match(preview.count, /^3 logins would be added to the vault in this browser \(it holds 9998 now\)/);
+		assert.equal(preview.disabled, true);
+		assert.equal(await page.textContent("#vault-import-notice"), ieNode.REFUSAL_TEXTS.vault_item_limit);
+		assert.match(await page.getAttribute("#vault-import-notice", "class"), /\berr\b/);
+		assert.equal(await page.textContent("#vault-count"), "9998 items");
+		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), false);
+		// With the duplicate imported too it is four too many; without the third login it fits exactly.
+		await page.check("#import-duplicates");
+		assert.equal(await page.isDisabled("#import-confirm"), true);
+		await page.uncheck("#import-duplicates");
+		const two = await previewOf(page, "two.csv", csvFile(["a,,,FAKE-1,", "b,,,FAKE-2,", "Item 7,,,,"]));
+		assert.equal(two.disabled, false);
+		assert.equal(await page.textContent("#vault-import-notice"), "");
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		assert.equal(await page.textContent("#vault-count"), "10000 items");
+		// Full: a file with one more login is refused, and so is one more by hand (as before).
+		await page.click("#vault-import");
+		assert.equal((await previewOf(page, "one.csv", csvFile(["z,,,FAKE-9,"]))).disabled, true);
+		assert.equal(await page.textContent("#vault-import-notice"), ieNode.REFUSAL_TEXTS.vault_item_limit);
+		await page.click("#import-cancel");
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent), null, { timeout: 60000 });
+		assert.equal((await serverItems(mock, accountId, meta.typedPassword)).length, 10000);
+		await page.close();
+	});
+
+	await test("import: text of a file is shown as text — markup in a name, a column or an address is never markup, and no address of a file is opened", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		const requests = [];
+		page.on("request", (r) => { if (!r.url().startsWith(API_ORIGIN)) { requests.push(r.url()); } });
+		const img = "<img src=https://tracker.example/x.png onerror=\"window.__xss=1\">";
+		const script = "<script>window.__xss=2</script>";
+		const file = "name,url,username,password,note,\"<b onmouseover=window.__xss=3>col</b>\",\"" + "c".repeat(300) + "\"\n"
+			+ "\"" + img.replace(/"/g, "\"\"") + "\",https://tracker.example/login,fake.user,FAKE-markup-pw,\"<i>note</i> " + script + "\",,\n"
+			+ "\"" + script + "\",\"javascript:window.__xss=4\",fake.user," + "p".repeat(4097) + ",,,\n"
+			+ "\"" + "N".repeat(500) + "\",https://tracker.example/,fake.user,FAKE-pw,,,\n"
+			+ "\"‮gnp.exe\",\"data:text/html,<script>window.__xss=5</script>\",fake.user,FAKE-rtl-pw,,,\n";
+		await page.click("#vault-import");
+		const preview = await previewOf(page, "<svg onload=window.__xss=6>.csv", file);
+		assert.match(preview.count, /^2 logins would be added/);
+		// The ignored columns are named as text, the long one cut short for the eye.
+		assert.equal(preview.lines[preview.lines.length - 1], "Columns of the file that are not read: <b onmouseover=window.__xss=3>col</b>, " + "c".repeat(40) + "….");
+		await page.click("#import-not-imported-summary");
+		assert.deepEqual(await page.locator("#import-not-imported-list li").allTextContents(), [
+			script + " (entry 2): The password is longer than 4096 characters.",
+			"N".repeat(80) + "… (entry 3): The name is longer than 200 characters."
+		]);
+		assert.equal(await page.locator("#vault-import-panel img, #vault-import-panel script, #vault-import-panel b, #vault-import-panel i, #vault-import-panel svg").count(), 0);
+		// A name of the file sits in an element of its own, so that its direction cannot reorder the page's words.
+		assert.equal(await page.locator("#import-not-imported-list li bdi.import-name").count(), 2);
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		const names = (await page.locator(".vault-item__name").allTextContents()).map((n) => n.trim());
+		assert.ok(names.includes(img) && names.includes("‮gnp.exe"), names.join(" | "));
+		assert.equal(await page.locator("#vault-items img, #vault-items script, #vault-items i").count(), 0);
+		assert.ok((await page.locator(".vault-notes").allTextContents()).includes("<i>note</i> " + script));
+		// An address that is not http or https is no address of the item, so it is never a link.
+		assert.equal(await page.locator("#vault-items a[href^='javascript:'], #vault-items a[href^='data:']").count(), 0);
+		assert.equal(await page.locator("#vault-items a.vault-url[href='https://tracker.example/login']").count(), 1, "a web address is a link, as for any item");
+		assert.equal(await page.evaluate(() => window.__xss), undefined);
+		await new Promise((r) => setTimeout(r, 300));
+		assert.deepEqual(requests, [], "no address of the file was opened or fetched");
+		// Saved and read back, the text is what the file held.
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const stored = await serverItems(mock, accountId, meta.typedPassword);
+		assert.deepEqual(stored.slice(3).map((i) => [i.name, [...i.urls], i.notes]), [[img, ["https://tracker.example/login"], "<i>note</i> " + script], ["‮gnp.exe", [], null]]);
+		await page.close();
+	});
+
+	await test("import: KeePass 2 XML and a damaged XML file through the page, and a file whose name lies about what it is", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		const styleMessages = [];
+		page.on("console", (m) => { if (m.type() === "error" && STYLE_REFUSED.test(m.text())) { styleMessages.push(m.text()); } });
+		await page.click("#vault-import");
+		// The format is decided from the contents: a KeePass file named .csv is read as KeePass XML.
+		const expected = conformance.readExpected("keepass.xml.expected.json").cases[0].result;
+		const preview = await previewOf(page, "passwords.csv", importFixture("keepass.xml"));
+		assert.equal(preview.lines[0], "Format: KeePass 2 (XML). The file holds " + expected.records + " entries.");
+		assert.match(preview.count, new RegExp("^" + expected.counts.toAdd + " logins would be added"));
+		assert.ok(preview.lines.includes("In the trash or the recycle bin of the file, and not imported: " + expected.inTrash + "."));
+		assert.equal(styleMessages.length, 0, "a well-formed file causes no message");
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const stored = (await serverItems(mock, accountId, meta.typedPassword)).slice(3);
+		assert.deepEqual(stored.map((i) => [i.name, i.username || "", i.password || "", [...i.urls], i.notes || ""]),
+			expected.candidates.filter((c) => c.status === "add").map((c) => [c.name, c.username, c.password, c.urls, c.notes]));
+		// A damaged file: refused with its text; Chromium's error document trips the style policy twice, and that is all.
+		page.expectedConsole = STYLE_REFUSED;
+		await page.click("#vault-import");
+		await chooseImportFile(page, "damaged.xml", importFixture("refused-damaged.xml"));
+		await page.waitForSelector("#vault-import-notice.err");
+		assert.equal(await page.textContent("#vault-import-notice"), ieNode.REFUSAL_TEXTS.invalid_xml);
+		assert.equal(styleMessages.length, 2);
+		assert.ok(styleMessages.every((m) => !/FAKE|KeePass|Group/.test(m)), "nothing of the file is in the message");
+		await page.close();
+	});
+
+	await test("import: a hidden tab does not lock the vault while the import is open (choosing a file can hide the page); it does once it is closed", async () => {
+		const mock = createMockApi();
+		const { page } = await openedVault(mock);
+		const hide = () => page.evaluate(() => {
+			Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
+		await page.click("#vault-import");
+		await hide();
+		assert.equal(await page.evaluate(() => window.bitosxVault.isUnlocked()), true);
+		await page.evaluate(() => { Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true }); document.dispatchEvent(new Event("visibilitychange")); });
+		await previewOf(page, "chrome.csv", importFixture("chrome.csv"));
+		await page.click("#import-cancel");
+		await hide();
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.textContent("#vault-notice"), "Vault locked when the tab was hidden.");
+		await page.close();
+	});
+
+	await test("import and save: an import that would make the vault too large to store is refused as a whole; a vault that grew too large by hand is not uploaded, says why, and loses nothing", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", PASSWORD);
+		const { bytes, meta } = fixture("small");
+		const env = vcNode.parseEnvelope(new Uint8Array(bytes));
+		const o = await vcNode.unlock(env, meta.typedPassword);
+		const at = new Date("2026-10-01T09:00:00Z");
+		const LIMIT = vcNode.MAX_ENVELOPE_BYTES;
+		assert.equal(LIMIT, 16 * 1024 * 1024);
+		// A vault whose envelope is expected to be 100 KiB under the limit: items with notes as long as notes may be.
+		const items = [];
+		const item = (i, notes) => ({ id: "00000000-0000-4000-8000-" + String(i).padStart(12, "0"), type: "login", name: "Large " + i, username: null, password: null, urls: [], notes, favorite: false, createdAt: at, updatedAt: at });
+		const sizeWith = (list) => vcNode.estimateEnvelopeSize(env, vcNode.serializeVault({ items: list }).length);
+		const full = "n".repeat(16384);
+		while (sizeWith(items.concat([item(items.length, full)])) < LIMIT - 100 * 1024) { items.push(item(items.length, full)); }
+		let last = 16384;
+		while (sizeWith(items.concat([item(items.length, "n".repeat(last))])) >= LIMIT - 100 * 1024) { last -= 512; }
+		items.push(item(items.length, "n".repeat(last)));
+		const seeded = Buffer.from(vcNode.serializeEnvelope(await vcNode.encryptContent(env, o.vaultKey, vcNode.serializeVault({ items }))));
+		assert.ok(seeded.length < LIMIT - 80 * 1024 && seeded.length > LIMIT - 130 * 1024, `the vault's envelope is ${seeded.length} bytes`);
+		mock.seedEnvelope(accountId, seeded);
+		const page = await newPage(mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])", { timeout: 60000 });
+		const held = items.length;
+		assert.equal(await page.textContent("#vault-count"), held + " items");
+
+		// 1. An import of 12 logins with full notes (some 280 KiB more) is refused as a whole.
+		const big = csvFile(Array.from({ length: 12 }, (_, i) => "Imported " + i + ",,,FAKE-pw," + full));
+		await page.click("#vault-import");
+		const preview = await previewOf(page, "big.csv", big);
+		assert.match(preview.count, /^12 logins would be added/);
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-notice.err");
+		assert.equal(await page.textContent("#vault-import-notice"), "The vault would be larger than 16 MiB after this import, which is the most BitosX can store. Nothing was imported.");
+		assert.equal(await page.isHidden("#vault-import-panel"), false, "the preview stays, for another choice");
+		assert.equal(await page.textContent("#vault-count"), held + " items");
+		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), false);
+		// An import that fits is still taken: two small logins.
+		await previewOf(page, "small.csv", csvFile(["Small 1,,,FAKE-1,", "Small 2,,,FAKE-2,"]));
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		assert.equal(await page.textContent("#vault-count"), (held + 2) + " items");
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent), null, { timeout: 60000 });
+		assert.ok(mock.envelopes.get(accountId).bytes.length <= LIMIT);
+
+		// 2. By hand there is no estimate to stop at: ten more items with full notes pass the limit.
+		for (let i = 0; i < 10; i++) {
+			await page.click("#vault-add");
+			await page.fill("#edit-name", "By hand " + i);
+			await page.fill("#edit-notes", full);
+			await page.click("#edit-save");
+			await page.waitForSelector("#vault-editor", { state: "hidden" });
+		}
+		const puts = callsTo(mock, "/v1/sync/envelope", "PUT");
+		await page.click("#vault-save");
+		await page.waitForSelector("#vault-notice.err", { timeout: 60000 });
+		assert.equal(await page.textContent("#vault-notice"), "The vault would be larger than 16 MiB, which is the most BitosX can store. Delete items or shorten their notes, and save again: your changes are still in this browser. Nothing was uploaded.");
+		assert.equal(callsTo(mock, "/v1/sync/envelope", "PUT"), puts, "nothing was sent");
+		// Nothing is lost: the items are still here, still unsaved, and the page is not stuck.
+		assert.equal(await page.textContent("#vault-count"), (held + 12) + " items");
+		assert.deepEqual(await page.evaluate(() => [window.bitosxVault.hasUnsavedChanges(), document.getElementById("vault-dirty").hidden, document.getElementById("vault-save").disabled]), [true, false, false]);
+		// With seven of them deleted again the vault fits, and is saved.
+		await page.fill("#vault-search", "By hand");
+		for (let i = 0; i < 7; i++) {
+			const first = page.locator("#vault-items .vault-item").first();
+			await first.locator("button[data-delete]").click();
+			await first.locator("button[data-delete]").click();
+			await page.waitForFunction((n) => document.querySelectorAll("#vault-items .vault-item").length === n, 9 - i);
+		}
+		await page.fill("#vault-search", "");
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 3/.test(document.getElementById("vault-notice").textContent), null, { timeout: 60000 });
+		const stored = mock.envelopes.get(accountId).bytes;
+		assert.ok(stored.length <= LIMIT && stored.length > LIMIT - 60 * 1024, `the stored envelope is ${stored.length} bytes`);
+		assert.equal((await serverItems(mock, accountId, meta.typedPassword)).length, held + 5);
+		await page.close();
+	});
+
+	await test("export: the warning, the box and the master password come first; a wrong password writes nothing; CSV and JSON are downloaded under their dated names", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", PASSWORD);
+		const { bytes, meta } = fixture("small");
+		mock.seedEnvelope(accountId, bytes);
+		const context = await browser.newContext({ acceptDownloads: true });
+		const page = await context.newPage();
+		watchConsole(page, errors);
+		await watchObjectUrls(page);
+		await routeApi(page, mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		const downloads = [];
+		page.on("download", (d) => downloads.push(d));
+		const callsBefore = mock.calls.length;
+
+		await page.click("#vault-export");
+		await page.waitForSelector("#vault-export-panel:not([hidden])");
+		assert.equal(await page.evaluate(() => document.activeElement.id), "export-format-csv");
+		// The words both clients use, and the state the panel starts in.
+		assert.equal(await page.textContent("#export-warning"), ieNode.TEXTS.exportWarning);
+		assert.equal((await page.textContent("label:has(#export-ack)")).trim(), ieNode.TEXTS.exportAcknowledgement);
+		assert.equal(await page.isChecked("#export-format-csv"), true);
+		assert.equal(await page.isChecked("#export-ack"), false);
+		assert.equal(await page.isDisabled("#export-submit"), true, "the box has to be ticked first");
+		assert.equal(await page.getAttribute("#export-master-password", "type"), "password");
+		assert.equal(await page.getAttribute("#export-master-password", "autocomplete"), "off");
+		assert.equal(await page.getAttribute("#export-master-password", "data-lpignore"), "true");
+		// One item of this vault has two addresses, which a CSV file cannot hold: said before choosing.
+		assert.equal(await page.textContent("#export-several-urls"), "1 item has more than one address. A CSV file holds only the first of each; only JSON keeps them all.");
+		assert.equal(await page.isHidden("#export-several-urls"), false);
+		await page.check("#export-format-json");
+		assert.equal(await page.isHidden("#export-several-urls"), true);
+		await page.check("#export-format-csv");
+
+		// The box alone is not enough: no password, no export.
+		await page.fill("#export-master-password", meta.typedPassword);
+		assert.equal(await page.isDisabled("#export-submit"), true);
+		await page.press("#export-master-password", "Enter");
+		await page.fill("#export-master-password", "");
+		await page.check("#export-ack");
+		assert.equal(await page.isDisabled("#export-submit"), false);
+		await page.click("#export-submit");
+		assert.equal(await page.textContent("#vault-export-notice"), "Enter the master password of your vault.");
+		assert.equal(await page.getAttribute("#export-master-password", "aria-invalid"), "true");
+		// A wrong master password: nothing is written, the field is cleared, and the panel stays for another try.
+		await page.fill("#export-master-password", "definitely not it");
+		await page.click("#export-submit");
+		await page.waitForFunction(() => /incorrect/.test(document.getElementById("vault-export-notice").textContent));
+		assert.equal(await page.textContent("#vault-export-notice"), "The master password is incorrect. Nothing was exported.");
+		assert.equal(await page.getAttribute("#vault-export-notice", "role"), "alert");
+		assert.equal(await page.inputValue("#export-master-password"), "", "what was typed is cleared");
+		assert.equal(await page.getAttribute("#export-master-password", "aria-invalid"), "true");
+		assert.equal(await page.isHidden("#vault-export-panel"), false);
+		assert.equal(await page.isChecked("#export-ack"), true);
+		assert.equal(await page.isDisabled("#export-submit"), false, "the form is not left busy");
+		// The account password is not the master password either.
+		await page.fill("#export-master-password", "another wrong one");
+		await page.press("#export-master-password", "Enter");
+		await page.waitForFunction(() => document.getElementById("export-master-password").value === "" && !document.getElementById("export-submit").disabled);
+		await new Promise((r) => setTimeout(r, 300));
+		assert.equal(downloads.length, 0, "a wrong password exports nothing");
+		assert.deepEqual(await page.evaluate(() => window.__urls.created), [], "not even a Blob was made");
+
+		// The right one: a CSV file, named for today.
+		const today = await page.evaluate(() => { const d = new Date(); const two = (n) => (n < 10 ? "0" : "") + n; return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()); });
+		await page.fill("#export-master-password", meta.typedPassword);
+		const [csv] = await Promise.all([page.waitForEvent("download"), page.click("#export-submit")]);
+		assert.equal(csv.suggestedFilename(), "BitosX-export-" + today + ".csv");
+		await page.waitForSelector("#vault-export-panel", { state: "hidden" });
+		assert.equal(await page.textContent("#vault-notice"), "Exported 3 logins to BitosX-export-" + today + ".csv. That file is not encrypted: it holds every password in plain text. Keep it only as long as you need it, and delete it afterwards.");
+		assert.match(await page.getAttribute("#vault-notice", "class"), /\bwarn\b/);
+		assert.equal(await page.evaluate(() => document.activeElement.id), "vault-export");
+		assert.equal(await page.inputValue("#export-master-password"), "", "the password does not stay in the field");
+		assert.equal(await page.isChecked("#export-ack"), false, "the next export is asked about again");
+		const items = await serverItems(mock, accountId, meta.typedPassword);
+		const csvBytes = fs.readFileSync(await csv.path());
+		assert.deepEqual(csvBytes, Buffer.from(ieNode.exportCsv(items)), "exactly the vault's items, in Chrome's layout");
+		assert.equal(csvBytes.toString("utf8"),
+			"name,url,username,password,note\r\n" +
+			"\"GitHub\",\"https://github.com\",\"octocat@example.com\",\"P@ssw0rd-Strong-123\",\"\"\r\n" +
+			"\"Bank <script>alert(1)</script>\",\"https://bank.example\",\"alice\",\"hunter2 & \"\"quotes\"\" <b>\",\"Security question: first pet.\nSecond line & <i>markup</i>\"\r\n" +
+			"\"Wi-Fi café\",\"\",\"\",\"ñandú-Ωmega-🔐\",\"\"\r\n");
+
+		// JSON: everything an item holds, with the times the desktop wrote.
+		await page.click("#vault-export");
+		assert.equal(await page.isChecked("#export-format-csv"), true, "the panel starts as it always does");
+		await page.check("#export-format-json");
+		await page.check("#export-ack");
+		await page.fill("#export-master-password", meta.typedPassword);
+		const [json] = await Promise.all([page.waitForEvent("download"), page.press("#export-master-password", "Enter")]);
+		assert.equal(json.suggestedFilename(), "BitosX-export-" + today + ".json");
+		const doc = JSON.parse(fs.readFileSync(await json.path(), "utf8"));
+		assert.deepEqual(Object.keys(doc), ["format", "version", "exportedAt", "items"]);
+		assert.equal(doc.format, "bitosx-export");
+		assert.equal(doc.version, 1);
+		assert.match(doc.exportedAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+		assert.ok(Math.abs(new Date(doc.exportedAt).getTime() - Date.now()) < 5 * 60 * 1000);
+		assert.deepEqual(doc.items, [
+			{ type: "login", name: "GitHub", username: "octocat@example.com", password: "P@ssw0rd-Strong-123", urls: ["https://github.com"], notes: "", favorite: true, createdAt: "2026-10-01T09:00:00Z", updatedAt: "2026-10-02T09:00:00Z" },
+			{ type: "login", name: "Bank <script>alert(1)</script>", username: "alice", password: "hunter2 & \"quotes\" <b>", urls: ["https://bank.example", "https://login.bank.example/portal"],
+				notes: "Security question: first pet.\nSecond line & <i>markup</i>", favorite: false, createdAt: "2026-10-01T09:00:00Z", updatedAt: "2026-10-01T09:00:00Z" },
+			{ type: "login", name: "Wi-Fi café", username: "", password: "ñandú-Ωmega-🔐", urls: [], notes: "", favorite: false, createdAt: "2026-10-03T09:00:00Z", updatedAt: "2026-10-03T09:00:00Z" }
+		]);
+		// Both files read back with this importer: into the vault they came from the JSON adds nothing, the CSV the item with two addresses.
+		const held = items.map((i) => ({ name: i.name, username: i.username, password: i.password, urls: i.urls }));
+		assert.deepEqual(ieNode.planImport(ieNode.parseImport(new Uint8Array(fs.readFileSync(await json.path()))), held, {}).counts.toAdd, 0);
+		assert.deepEqual(ieNode.planImport(ieNode.parseImport(new Uint8Array(csvBytes)), held, {}).candidates.filter((c) => c.status === "add").map((c) => c.name), ["Bank <script>alert(1)</script>"]);
+		// Nothing of an export goes to the server, and nothing is asked of it: the check is made in this browser.
+		assert.equal(mock.calls.length, callsBefore, "an export makes no request");
+		assert.ok(mock.calls.every((c) => !JSON.stringify(c.body || "").includes(meta.typedPassword)));
+		// Passwords of the vault are still not in the page.
+		await assertNoSecretInDom(page);
+		// The object URLs: two made, none revoked yet; locking revokes both at once.
+		assert.equal(await page.evaluate(() => window.__urls.created.length), 2);
+		assert.deepEqual(await page.evaluate(() => window.__urls.revoked), []);
+		await page.click("#vault-lock");
+		assert.deepEqual(await page.evaluate(() => window.__urls.revoked.slice().sort()), await page.evaluate(() => window.__urls.created.slice().sort()));
+		await context.close();
+	});
+
+	await test("export: the object URL is revoked a minute after the download; the downloaded file is complete even when the vault locks at once", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", PASSWORD);
+		const { bytes, meta } = fixture("small");
+		mock.seedEnvelope(accountId, bytes);
+		const context = await browser.newContext({ acceptDownloads: true });
+		const page = await context.newPage();
+		watchConsole(page, errors);
+		await page.clock.install();
+		await watchObjectUrls(page);
+		await routeApi(page, mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		const exportOnce = async () => {
+			await page.click("#vault-export");
+			await page.check("#export-format-json");
+			await page.check("#export-ack");
+			await page.fill("#export-master-password", meta.typedPassword);
+			const [download] = await Promise.all([page.waitForEvent("download"), page.click("#export-submit")]);
+			return download;
+		};
+		const first = await exportOnce();
+		await page.waitForSelector("#vault-export-panel", { state: "hidden" });
+		assert.equal(await page.evaluate(() => window.__urls.revoked.length), 0);
+		await page.clock.fastForward("00:59");
+		assert.equal(await page.evaluate(() => window.__urls.revoked.length), 0);
+		await page.clock.fastForward("00:02");
+		assert.deepEqual(await page.evaluate(() => window.__urls.revoked), await page.evaluate(() => window.__urls.created));
+		assert.equal(JSON.parse(fs.readFileSync(await first.path(), "utf8")).items.length, 3);
+		// Locked in the same breath as the download: the URL is revoked at once, and the file is whole all the same.
+		await page.click("#vault-export");
+		await page.check("#export-ack");
+		await page.fill("#export-master-password", meta.typedPassword);
+		const downloading = page.waitForEvent("download");
+		await page.evaluate(() => {
+			const panel = document.getElementById("vault-export-panel");
+			new MutationObserver(() => { if (panel.hidden) { window.bitosxVault.lock(); } }).observe(panel, { attributes: true, attributeFilter: ["hidden"] });
+		});
+		await page.click("#export-submit");
+		const second = await downloading;
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.evaluate(() => window.__urls.revoked.length), 2);
+		assert.equal(fs.readFileSync(await second.path(), "utf8").split("\r\n").length, 5, "the header, three items, and the end of the last line");
+		await context.close();
+	});
+
+	await test("export: an empty vault has nothing to export; locking and cancelling clear what was typed; a check that finishes after the lock writes nothing", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", PASSWORD);
+		const { bytes, meta } = fixture("small");
+		const env = vcNode.parseEnvelope(new Uint8Array(bytes));
+		const o = await vcNode.unlock(env, meta.typedPassword);
+		mock.seedEnvelope(accountId, Buffer.from(vcNode.serializeEnvelope(await vcNode.encryptContent(env, o.vaultKey, vcNode.serializeVault({ items: [] })))));
+		const context = await browser.newContext({ acceptDownloads: true });
+		const page = await context.newPage();
+		watchConsole(page, errors);
+		await watchObjectUrls(page);
+		await routeApi(page, mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		const downloads = [];
+		page.on("download", (d) => downloads.push(d));
+		// Nothing to export: no file is made of an empty vault, and no password is asked for.
+		await page.click("#vault-export");
+		assert.equal(await page.textContent("#vault-export-notice"), "This vault has no items, so there is nothing to export.");
+		assert.match(await page.getAttribute("#vault-export-notice", "class"), /\bwarn\b/);
+		assert.deepEqual(await page.evaluate(() => ["export-ack", "export-master-password", "export-submit"].map((id) => document.getElementById(id).disabled)), [true, true, true]);
+		assert.equal(await page.evaluate(() => document.activeElement.id), "export-cancel");
+		await page.evaluate(() => document.getElementById("vault-export-panel").requestSubmit());
+		await page.click("#export-cancel");
+		assert.equal(await page.isHidden("#vault-export-panel"), true);
+		// With one item there is something to export.
+		await page.click("#vault-add");
+		await page.fill("#edit-name", "Mine");
+		await page.fill("#edit-password", "FAKE-mine-pw");
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		await page.click("#vault-export");
+		assert.equal(await page.textContent("#vault-export-notice"), "");
+		// Cancel clears what was typed and ticked.
+		await page.check("#export-ack");
+		await page.fill("#export-master-password", "typed and then cancelled");
+		await page.click("#export-cancel");
+		assert.equal(await page.evaluate(() => document.activeElement.id), "vault-export");
+		await page.click("#vault-export");
+		assert.equal(await page.inputValue("#export-master-password"), "");
+		assert.equal(await page.isChecked("#export-ack"), false);
+		assert.equal(await page.isDisabled("#export-submit"), true);
+		// The export of unsaved items is what the vault holds at that moment (the item added by hand).
+		await page.check("#export-ack");
+		await page.fill("#export-master-password", meta.typedPassword);
+		const [download] = await Promise.all([page.waitForEvent("download"), page.click("#export-submit")]);
+		assert.equal(fs.readFileSync(await download.path(), "utf8"), "name,url,username,password,note\r\n\"Mine\",\"\",\"\",\"FAKE-mine-pw\",\"\"\r\n");
+		// Locking closes the panel and clears it; a check of the password that is still running then writes nothing.
+		await page.click("#vault-export");
+		await page.check("#export-ack");
+		await page.fill("#export-master-password", meta.typedPassword);
+		await page.evaluate(() => {
+			// The key derivation of this check is held back until the test lets it go.
+			const real = window.hashwasm.argon2id;
+			window.__release = null;
+			window.hashwasm.argon2id = (options) => new Promise((resolve) => { window.__release = () => resolve(real(options)); });
+		});
+		await page.click("#export-submit");
+		await page.waitForFunction(() => typeof window.__release === "function");
+		assert.equal(await page.isDisabled("#export-submit"), true, "busy while the password is checked");
+		assert.match(await page.textContent("#export-progress"), /^Checking the master password: Argon2id with 1 MiB\./);
+		await page.click("#vault-lock");
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.isHidden("#vault-export-panel"), true);
+		assert.equal(await page.inputValue("#export-master-password"), "");
+		assert.equal(await page.isChecked("#export-ack"), false);
+		await page.evaluate(() => { const release = window.__release; window.hashwasm.argon2id = undefined; release(); });
+		await new Promise((r) => setTimeout(r, 500));
+		assert.equal(downloads.length, 1, "only the export before the lock was written");
+		assert.equal(await page.evaluate(() => window.__urls.created.length), 1);
+		assert.equal(await page.textContent("#vault-notice"), "Vault locked.");
+		await context.close();
+	});
+
 	// ------------------------------------------------------------- hygiene
 	console.log("hygiene");
 	await test("no console errors, page errors or CSP violations in any flow", async () => {
