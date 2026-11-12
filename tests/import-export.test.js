@@ -48,6 +48,7 @@ const NEEDS_XML_PARSER = [
 	"generated-nested-groups-65.expected.json",
 	"generated-too-many-entries-xml.expected.json",
 	"keepass-line-ends.xml.expected.json",
+	"keepass-totp.xml.expected.json",
 	"keepass.xml.expected.json",
 	"refused-damaged.xml.expected.json",
 	"refused-not-keepass.xml.expected.json",
@@ -57,7 +58,7 @@ const NEEDS_XML_PARSER = [
 test("conformance: the fixture directory is complete (every input belongs to exactly one expected file)", () => {
 	const all = fs.readdirSync(conformance.DIRECTORY).filter((n) => n !== "README.md");
 	const expectedFiles = conformance.expectedFiles();
-	assert.equal(expectedFiles.length, 44);
+	assert.equal(expectedFiles.length, 48);   // 44, and since phase 12 four with authenticator keys
 	const inputs = all.filter((n) => !n.endsWith(conformance.EXPECTED_SUFFIX)).sort();
 	const named = expectedFiles.map((n) => conformance.readExpected(n).input.file).filter((n) => typeof n === "string").sort();
 	assert.deepEqual(named, inputs);
@@ -854,7 +855,9 @@ test("bitosx: logins are read leniently, members it does not know are ignored, a
 	assert.deepEqual(p.unsupported, { other: 6 });
 	assert.equal(p.inTrash, 0);
 	assert.deepEqual(p.entries, [
-		{ position: 1, name: " Example ", username: " u ", password: " p ", notes: " n ", favorite: true, addresses: ["https://example.com/", "", " example.org "], totp: "", folder: "", customFields: [], problem: null },
+		// "totp" is a member it knows since phase 12, and a string is not a key: the entry is not
+		// imported (totp_invalid); the other unknown members are still ignored.
+		{ position: 1, name: " Example ", username: " u ", password: " p ", notes: " n ", favorite: true, addresses: ["https://example.com/", "", " example.org "], totp: "", folder: "", customFields: [], problem: null, totpInvalid: true },
 		{ position: 2, name: "", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "", customFields: [], problem: null },
 		{ position: 3, name: "", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "", customFields: [], problem: null }
 	]);
@@ -976,7 +979,9 @@ test("xml: entries are read from the strings of every Entry directly inside a Gr
 	assert.deepEqual(parsed.ignoredColumns, []);
 	assert.deepEqual(parsed.entries, [
 		{ position: 1, name: " Example ", username: " fake.user ", password: "   ", notes: "line one\nline two", favorite: false, addresses: ["example.com"], totp: "", folder: "",
-			customFields: [{ name: "otp", value: "otpauth://totp/x?secret=FAKE" }, { name: "Custom", value: " value " }, { name: "Empty", value: "" }, { name: "NoValue", value: "" }], problem: null },
+			// "otp" holds a link whose key is too short: it stays a custom field, and the entry says why it is no key.
+			customFields: [{ name: "otp", value: "otpauth://totp/x?secret=FAKE" }, { name: "Custom", value: " value " }, { name: "Empty", value: "" }, { name: "NoValue", value: "" }], problem: null,
+			totpRefusal: "secret_too_short" },
 		{ position: 2, name: "pre <cdata> post", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "Internet",
 			customFields: [{ name: "title", value: "lower case key" }], problem: null },
 		{ position: 3, name: "deep one", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "Internet/Deep", customFields: [], problem: null }
@@ -1382,11 +1387,12 @@ test("the plan: extras, added https:// and derived names are counted over the en
 		"other,c.example,u,p,,,,\"a: 1\nb: 2\""
 	];
 	const p = plan(csv(rows, header));
-	assert.deepEqual(p.counts, { toAdd: 2, duplicates: 1, notImported: 1, empty: 0, httpsAdded: 3, namesDerived: 1, vaultItemsBefore: 0, vaultItemsAfter: 2, exceedsVaultItemLimit: false });
+	// "S" is no authenticator key (too short): it stays an extra, and is counted as a key that could not be read.
+	assert.deepEqual(p.counts, { toAdd: 2, duplicates: 1, notImported: 1, empty: 0, httpsAdded: 3, namesDerived: 1, totpKeys: 0, totpUnreadable: 1, vaultItemsBefore: 0, vaultItemsAfter: 2, exceedsVaultItemLimit: false });
 	assert.deepEqual(Object.entries(p.extras), [["totp", 1], ["folder", 1], ["other_address", 1], ["custom_field", 3]]);
 	// With the duplicates imported too, theirs count as well.
 	const all = plan(csv(rows, header), [], { importDuplicates: true });
-	assert.deepEqual([all.counts.toAdd, all.counts.httpsAdded, all.counts.namesDerived], [3, 5, 2]);
+	assert.deepEqual([all.counts.toAdd, all.counts.httpsAdded, all.counts.namesDerived, all.counts.totpUnreadable], [3, 5, 2, 2]);
 	assert.deepEqual(all.extras, { totp: 2, folder: 2, other_address: 2, custom_field: 4 });
 	// A kind with none is absent.
 	assert.deepEqual(plan(csv(["n,,u,p,,,F,"], header)).extras, { folder: 1 });
@@ -1572,6 +1578,7 @@ test("export csv: Chrome's layout, every value quoted, quotes doubled, CR LF aft
 test("export json: the format, the members in their order, empty strings for what an item does not have", () => {
 	const items = [
 		item({ name: "Example", username: "fake.user@example.test", password: "FAKE-pw", urls: ["https://example.com/login"], favorite: true,
+			totp: Object.freeze({ secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", algorithm: "SHA256", digits: 8, period: 60 }),
 			createdAt: new Date("2025-01-02T03:04:05.123Z"), createdAtText: "2025-01-02T03:04:05.1234567+00:00", updatedAt: new Date("2026-02-03T04:05:06Z"), updatedAtText: "2026-02-03T04:05:06+00:00" }),
 		item({ name: "Only a name" })
 	];
@@ -1589,6 +1596,12 @@ test("export json: the format, the members in their order, empty strings for wha
       "urls": [
         "https://example.com/login"
       ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA256",
+        "digits": 8,
+        "period": 60
+      },
       "notes": "",
       "favorite": true,
       "createdAt": "2025-01-02T03:04:05.1234567Z",
@@ -1600,6 +1613,7 @@ test("export json: the format, the members in their order, empty strings for wha
       "username": "",
       "password": "",
       "urls": [],
+      "totp": null,
       "notes": "",
       "favorite": false,
       "createdAt": "2025-03-04T05:06:07Z",
@@ -1668,6 +1682,7 @@ function fixtureVaultItems() {
 		id: "0b1705e0-0000-4000-8000-" + String(i + 1).padStart(12, "0"), type: "login", name: it.name,
 		username: it.username === "" ? null : it.username, password: it.password === "" ? null : it.password, urls: Object.freeze(it.urls.slice()),
 		notes: it.notes === "" ? null : it.notes, favorite: it.favorite,
+		totp: it.totp == null ? null : Object.freeze({ secret: it.totp.secret, algorithm: it.totp.algorithm, digits: it.totp.digits, period: it.totp.period }),
 		// The vault's document says "+00:00" where the export says "Z".
 		createdAt: new Date(it.createdAt), createdAtText: it.createdAt.replace(/Z$/, "+00:00"),
 		updatedAt: new Date(it.updatedAt), updatedAtText: it.updatedAt.replace(/Z$/, "+00:00")
@@ -1742,7 +1757,9 @@ test("texts: every code has its fixed text, and a refusal carries the code, the 
 		for (const [code, words] of Object.entries(table)) { assert.ok(typeof words === "string" && words.length > 0, code); }
 	}
 	assert.equal(Object.keys(ie.REFUSAL_TEXTS).length, 16);
-	assert.equal(Object.keys(ie.REASON_TEXTS).length, 10);
+	assert.equal(Object.keys(ie.REASON_TEXTS).length, 11);   // totp_invalid since phase 12
+	assert.equal(ie.REASON_TEXTS.totp_invalid, "The authenticator key in the file is not valid.");
+	assert.equal(ie.EXTRA_TEXTS.totp, "authenticator keys that could not be read");
 	assert.deepEqual(Object.keys(ie.EXTRA_TEXTS), ["totp", "folder", "other_address", "custom_field"]);
 	assert.deepEqual(Object.keys(ie.UNSUPPORTED_TEXTS), ["secure_note", "card", "identity", "ssh_key", "bank_account", "drivers_license", "passport", "other"]);
 	const r = refusal("name,password\n\"FAKE-secret-marker");
@@ -1763,4 +1780,148 @@ test("the vault's own rule for an address is one function, which its validation 
 	const base = { id: "0b1705e0-0000-4000-8000-000000000001", name: "n", username: null, password: null, notes: null, favorite: false, createdAt: new Date(), updatedAt: new Date() };
 	vc.validateItem(Object.assign({}, base, { urls: ["https://example.com"] }));
 	assert.throws(() => vc.validateItem(Object.assign({}, base, { urls: ["http://intranet.42"] })), (e) => e instanceof vc.VaultError && e.message === "'http://intranet.42' is not a valid absolute http(s) URL.");
+});
+
+// ------------------------------------------------- authenticator keys (phase 12)
+// docs/TOTP.md §8 and IMPORT_EXPORT.md: a key an entry holds is read by the rules of TOTP.md §3;
+// a key that is read is stored with the item and is no longer an extra; one that is refused stays
+// an extra as before and is counted as a key that could not be read.
+const RFC_KEY = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+const keyOf = (secret, algorithm = "SHA1", digits = 6, period = 30) => ({ secret, algorithm, digits, period });
+
+test("authenticator keys from a CSV cell: read ones go with the item; refused ones stay an extra, are counted, and copied into the notes on opt-in", () => {
+	const header = "name,url,username,password,totp";
+	const rows = [
+		`a,https://a.example,u,p,${RFC_KEY.toLowerCase()}`,
+		`b,https://b.example,u,p,"otpauth://totp/x?secret=${RFC_KEY}&algorithm=SHA512&digits=8&period=60"`,
+		"c,https://c.example,u,p,otpauth://hotp/x?secret=" + RFC_KEY,
+		"d,https://d.example,u,p,\"  FAKE  \"",
+		"e,https://e.example,u,p,\" \t \""
+	];
+	const p = plan(csv(rows, header));
+	assert.deepEqual(p.candidates.map((c) => [c.totp && { ...c.totp }, c.totpRefused, c.extras.totp]), [
+		[keyOf(RFC_KEY), null, ""],
+		[keyOf(RFC_KEY, "SHA512", 8, 60), null, ""],
+		[null, "hotp_not_supported", "otpauth://hotp/x?secret=" + RFC_KEY],
+		[null, "secret_too_short", "FAKE"],
+		[null, null, ""]
+	]);
+	assert.equal(p.counts.totpKeys, 2);
+	assert.equal(p.counts.totpUnreadable, 2);
+	assert.deepEqual(p.extras, { totp: 2 });
+	const copied = plan(csv(rows, header), [], { copyExtrasToNotes: true });
+	assert.equal(copied.candidates[3].notes, "Authenticator key (TOTP): FAKE");
+	assert.equal(copied.candidates[0].notes, "", "a key that was read is not copied into the notes");
+	// The items carry the keys, and the vault accepts them.
+	const items = ie.createItems(p, at);
+	assert.deepEqual(items.map((i) => i.totp && { ...i.totp }), [keyOf(RFC_KEY), keyOf(RFC_KEY, "SHA512", 8, 60), null, null, null]);
+	items.forEach((i) => vc.validateItem(i));
+	// An entry with nothing but a key is not empty.
+	const lone = plan(csv([`,,,,${RFC_KEY}`], header));
+	assert.equal(lone.counts.empty, 0);
+	assert.equal(only(lone.candidates).name, "Untitled");
+	// Duplicates do not compare the key.
+	const twice = plan(csv([`a,https://a.example,u,p,${RFC_KEY}`, "a,https://a.example,u,p,JBSWY3DPEHPK3PXP"], header));
+	assert.equal(twice.counts.duplicates, 1);
+});
+
+test("authenticator keys from Bitwarden's login.totp: read by the same rules", () => {
+	const p = plan(bitwarden([login(`"login": {"totp": "otpauth://totp/x?secret=${RFC_KEY}&period=45"}`), login("\"login\": {\"totp\": \"steam://FAKE\"}")].join(",")));
+	assert.deepEqual({ ...p.candidates[0].totp }, keyOf(RFC_KEY, "SHA1", 6, 45));
+	assert.equal(p.candidates[1].totpRefused, "steam_not_supported");
+	assert.equal(p.candidates[1].extras.totp, "steam://FAKE");
+});
+
+test("authenticator keys from BitosX's own export: absent or null is none, a valid key is read exactly, anything else is not imported (totp_invalid, checked last)", () => {
+	const bitosx = (totp, extra) => `{"format": "bitosx-export", "version": 1, "items": [{"type": "login", "name": "x"${totp === undefined ? "" : ", \"totp\": " + totp}${extra || ""}}]}`;
+	const one = (totp, extra) => only(plan(bitosx(totp, extra)).candidates);
+	assert.equal(one(undefined).totp, null);
+	assert.equal(one("null").totp, null);
+	assert.equal(one("null").status, "add");
+	const good = `{"secret": "${RFC_KEY}", "algorithm": "SHA256", "digits": 7, "period": 300}`;
+	assert.deepEqual({ ...one(good).totp }, keyOf(RFC_KEY, "SHA256", 7, 300));
+	assert.deepEqual({ ...one(`{"period": 30.0, "digits": 6e0, "algorithm": "SHA1", "secret": "${RFC_KEY}"}`).totp }, keyOf(RFC_KEY), "numbers any way JSON writes them, members in any order");
+	for (const bad of [
+		`"${RFC_KEY}"`, "{}", "[]", "true", "1",
+		`{"secret": "${RFC_KEY}", "algorithm": "SHA1", "digits": 6}`,
+		`{"secret": "${RFC_KEY}", "algorithm": "SHA1", "digits": 6, "period": 30, "issuer": "x"}`,
+		`{"secret": "${RFC_KEY}", "algorithm": "sha1", "digits": 6, "period": 30}`,
+		`{"secret": "${RFC_KEY.toLowerCase()}", "algorithm": "SHA1", "digits": 6, "period": 30}`,
+		`{"secret": "${RFC_KEY} ", "algorithm": "SHA1", "digits": 6, "period": 30}`,
+		`{"secret": "AAAA", "algorithm": "SHA1", "digits": 6, "period": 30}`,
+		`{"secret": "${RFC_KEY}", "algorithm": "SHA1", "digits": "6", "period": 30}`,
+		`{"secret": "${RFC_KEY}", "algorithm": "SHA1", "digits": 9, "period": 30}`,
+		`{"secret": "${RFC_KEY}", "algorithm": "SHA1", "digits": 6, "period": 0}`,
+		`{"secret": "${RFC_KEY}", "algorithm": "SHA1", "digits": 6, "period": 30.5}`,
+		`{"secret": null, "algorithm": "SHA1", "digits": 6, "period": 30}`
+	]) {
+		const c = one(bad);
+		assert.deepEqual([c.status, c.reason, c.totp], ["not_imported", "totp_invalid", null], bad);
+	}
+	// Checked after every other reason.
+	assert.equal(one("\"x\"", `, "username": "${"u".repeat(321)}"`).reason, "username_too_long");
+	// The message never quotes the file.
+	assert.equal(ie.REASON_TEXTS.totp_invalid, "The authenticator key in the file is not valid.");
+});
+
+test("KeePass 2 TimeOtp strings: the parts of the key, read by the rules for a secret; the defaults, and every refusal", () => {
+	const kp = (secret, algorithm = null, length = null, period = null) => {
+		const r = vc.readKeePass2TotpKey(secret, algorithm, length, period);
+		return r.key ? { ...r.key } : r.refusal;
+	};
+	assert.deepEqual(kp(RFC_KEY), keyOf(RFC_KEY));
+	assert.deepEqual(kp(` ${RFC_KEY.toLowerCase()} `, " HMAC-SHA-256 ", " 8 ", " 60 "), keyOf(RFC_KEY, "SHA256", 8, 60));
+	assert.deepEqual(kp(RFC_KEY, "HMAC-SHA-512", "7", "300"), keyOf(RFC_KEY, "SHA512", 7, 300));
+	assert.deepEqual(kp(RFC_KEY, "", "", ""), keyOf(RFC_KEY));
+	assert.deepEqual(kp(RFC_KEY, "HMAC-SHA-1"), keyOf(RFC_KEY));
+	assert.equal(kp("  "), null);
+	assert.equal(kp("A".repeat(2049)), "too_long");
+	assert.equal(kp("otpauth://totp/x?secret=" + RFC_KEY), "invalid_secret");   // a link is not a TimeOtp secret
+	assert.equal(kp("AAAA"), "secret_too_short");
+	for (const a of ["SHA1", "hmac-sha-1", "HMAC-SHA1", "HMAC-SHA-384"]) { assert.equal(kp(RFC_KEY, a), "unsupported_algorithm", a); }
+	for (const l of ["5", "9", "06", "six"]) { assert.equal(kp(RFC_KEY, null, l), "unsupported_digits", l); }
+	for (const t of ["0", "301", "030", "-30", "30s"]) { assert.equal(kp(RFC_KEY, null, null, t), "unsupported_period", t); }
+});
+
+test("xml: an authenticator key in an entry's strings — otp first, then TimeOtp-Secret-Base32 — leaves the custom fields; one that is refused stays there", () => {
+	let n = 0;
+	const entry = (...strings) => E("Entry", S("Title", "t" + (++n)), ...strings);   // titles of their own: no duplicates
+	const { parsed } = readFake(E("KeePassFile", E("Root", E("Group",
+		entry(S("otp", `otpauth://totp/x?secret=${RFC_KEY}&digits=8`), S("TimeOtp-Secret-Base32", "JBSWY3DPEHPK3PXP"), S("Other", "o")),
+		entry(S("TimeOtp-Secret-Base32", RFC_KEY), S("TimeOtp-Algorithm", "HMAC-SHA-256"), S("TimeOtp-Period", "60"), S("TimeOtp-Length", "7"), S("Other", "o")),
+		entry(S("TimeOtp-Secret", "plain secret"), S("TimeOtp-Secret-Base32", RFC_KEY)),
+		entry(S("otp", "  "), S("TimeOtp-Secret-Base32", RFC_KEY), S("TimeOtp-Secret-Base32", "second one stays")),
+		entry(S("otp", "steam://FAKE")),
+		entry(S("TimeOtp-Secret-Base32", RFC_KEY), S("TimeOtp-Length", "9")),
+		entry(S(" otp ", RFC_KEY), S("OTP", RFC_KEY))
+	))));
+	const e = parsed.entries;
+	assert.deepEqual({ ...e[0].totpKey }, keyOf(RFC_KEY, "SHA1", 8, 30));
+	assert.deepEqual(e[0].customFields, [{ name: "TimeOtp-Secret-Base32", value: "JBSWY3DPEHPK3PXP" }, { name: "Other", value: "o" }]);
+	assert.deepEqual({ ...e[1].totpKey }, keyOf(RFC_KEY, "SHA256", 7, 60));
+	assert.deepEqual(e[1].customFields, [{ name: "Other", value: "o" }]);
+	assert.equal(e[2].totpKey, undefined, "KeePass would use TimeOtp-Secret first, which is not read here");
+	assert.equal(e[2].customFields.length, 2);
+	assert.deepEqual({ ...e[3].totpKey }, keyOf(RFC_KEY));
+	assert.deepEqual(e[3].customFields, [{ name: "otp", value: "  " }, { name: "TimeOtp-Secret-Base32", value: "second one stays" }]);
+	assert.equal(e[4].totpRefusal, "steam_not_supported");
+	assert.deepEqual(e[4].customFields, [{ name: "otp", value: "steam://FAKE" }]);
+	assert.equal(e[5].totpRefusal, "unsupported_digits");
+	assert.equal(e[5].customFields.length, 2);
+	assert.equal(e[6].totpKey, undefined, "names are matched as written");
+	// In the plan: a refused key is counted, its strings are custom fields as before.
+	const p = ie.planImport(parsed, [], {});
+	assert.equal(p.counts.totpKeys, 3);
+	assert.equal(p.counts.totpUnreadable, 2);
+	assert.equal(p.extras.totp, undefined);
+});
+
+test("export: the key is written after the addresses, and BitosX's export reads it back to the same key", () => {
+	const keyed = item({ name: "Keyed", totp: Object.freeze(keyOf(RFC_KEY, "SHA512", 8, 60)) });
+	const back = only(plan(text(ie.exportJson([keyed], at))).candidates);
+	assert.deepEqual({ ...back.totp }, keyOf(RFC_KEY, "SHA512", 8, 60));
+	assert.equal(back.status, "add");
+	// CSV has no column for it: unchanged.
+	assert.equal(text(ie.exportCsv([keyed])), text(ie.exportCsv([item({ name: "Keyed" })])));
+	assert.equal(ie.countItemsWithTotp([keyed, item({ name: "plain" })]), 1);
 });

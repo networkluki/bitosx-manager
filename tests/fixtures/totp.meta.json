@@ -1,0 +1,79 @@
+{
+  "note": "ForTesting profile (1 MiB); ASCII password; canonical encoding. Content schema version 2: three logins with authenticator keys of different algorithms, digits and periods, and one without. totpCodes: the codes the desktop makes for each key.",
+  "typedPassword": "correct horse battery",
+  "passwordBytesHex": "636f727265637420686f7273652062617474657279",
+  "fingerprint": "8ca6f293f559a0ea8c212a91f6d7495c058f8b4f889b65787d1fb3feaf3282d5",
+  "sizeBytes": 2622,
+  "kdf": {
+    "MemoryKiB": 1024,
+    "Iterations": 1,
+    "DegreeOfParallelism": 1,
+    "KeyLengthBytes": 32
+  },
+  "plaintextUtf8": "{\u0022schemaVersion\u0022:2,\u0022items\u0022:[{\u0022type\u0022:\u0022login\u0022,\u0022Username\u0022:\u0022fake.user@example.test\u0022,\u0022Password\u0022:\u0022FAKE-mail-pw\u0022,\u0022Urls\u0022:[\u0022https://mail.example.test/\u0022],\u0022Totp\u0022:{\u0022Secret\u0022:\u0022GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ\u0022,\u0022Algorithm\u0022:\u0022SHA1\u0022,\u0022Digits\u0022:6,\u0022Period\u0022:30},\u0022Id\u0022:\u002244444444-4444-4444-8444-444444444441\u0022,\u0022Name\u0022:\u0022FAKE Mail (SHA1, 6 digits, 30 s)\u0022,\u0022Favorite\u0022:false,\u0022CreatedAt\u0022:\u00222026-11-01T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-11-02T09:00:00\u002B00:00\u0022},{\u0022type\u0022:\u0022login\u0022,\u0022Username\u0022:\u0022fake.saver\u0022,\u0022Password\u0022:\u0022FAKE-bank-pw \\u0026 \\u0022quotes\\u0022\u0022,\u0022Urls\u0022:[\u0022https://bank.example.test/login\u0022],\u0022Totp\u0022:{\u0022Secret\u0022:\u0022GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA\u0022,\u0022Algorithm\u0022:\u0022SHA256\u0022,\u0022Digits\u0022:8,\u0022Period\u0022:60},\u0022Id\u0022:\u002244444444-4444-4444-8444-444444444442\u0022,\u0022Name\u0022:\u0022FAKE Bank \\u003Cb\\u003E(SHA256, 8 digits, 60 s)\\u003C/b\\u003E\u0022,\u0022Notes\u0022:\u0022Two-step sign-in set up 2026-11-01.\u0022,\u0022Favorite\u0022:true,\u0022CreatedAt\u0022:\u00222026-11-01T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-11-01T09:00:00\u002B00:00\u0022},{\u0022type\u0022:\u0022login\u0022,\u0022Username\u0022:\u0022fake.cloud\u0022,\u0022Password\u0022:\u0022FAKE-cloud-pw\u0022,\u0022Urls\u0022:[],\u0022Totp\u0022:{\u0022Secret\u0022:\u0022JBSWY3DPEHPK3PXP\u0022,\u0022Algorithm\u0022:\u0022SHA512\u0022,\u0022Digits\u0022:7,\u0022Period\u0022:45},\u0022Id\u0022:\u002244444444-4444-4444-8444-444444444443\u0022,\u0022Name\u0022:\u0022FAKE Cloud (SHA512, 7 digits, 45 s)\u0022,\u0022Favorite\u0022:false,\u0022CreatedAt\u0022:\u00222026-11-03T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-11-03T09:00:00\u002B00:00\u0022},{\u0022type\u0022:\u0022login\u0022,\u0022Password\u0022:\u0022FAKE-wifi-\\u00F1and\\u00FA\u0022,\u0022Urls\u0022:[],\u0022Id\u0022:\u002244444444-4444-4444-8444-444444444444\u0022,\u0022Name\u0022:\u0022FAKE Wi-Fi caf\\u00E9 (no key)\u0022,\u0022Favorite\u0022:false,\u0022CreatedAt\u0022:\u00222026-11-04T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-11-04T09:00:00\u002B00:00\u0022}]}",
+  "totpCodes": [
+    {
+      "id": "44444444-4444-4444-8444-444444444441",
+      "unixSeconds": 1794787200,
+      "code": "849526",
+      "display": "849 526",
+      "secondsLeft": 30
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444441",
+      "unixSeconds": 1794787229,
+      "code": "849526",
+      "display": "849 526",
+      "secondsLeft": 1
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444441",
+      "unixSeconds": 1794787259,
+      "code": "349805",
+      "display": "349 805",
+      "secondsLeft": 1
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444442",
+      "unixSeconds": 1794787200,
+      "code": "49299477",
+      "display": "4929 9477",
+      "secondsLeft": 60
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444442",
+      "unixSeconds": 1794787229,
+      "code": "49299477",
+      "display": "4929 9477",
+      "secondsLeft": 31
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444442",
+      "unixSeconds": 1794787259,
+      "code": "49299477",
+      "display": "4929 9477",
+      "secondsLeft": 1
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444443",
+      "unixSeconds": 1794787200,
+      "code": "4696603",
+      "display": "469 6603",
+      "secondsLeft": 45
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444443",
+      "unixSeconds": 1794787229,
+      "code": "4696603",
+      "display": "469 6603",
+      "secondsLeft": 16
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444443",
+      "unixSeconds": 1794787259,
+      "code": "5178517",
+      "display": "517 8517",
+      "secondsLeft": 31
+    }
+  ]
+}

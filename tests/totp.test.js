@@ -462,3 +462,33 @@ function decodeForReference(secret) {
 	for (let i = 0; i + 8 <= bits.length; i += 8) { out.push(parseInt(bits.slice(i, i + 8), 2)); }
 	return out;
 }
+
+// ------------------------------------------- the desktop's encrypted vault with keys
+// tests/fixtures/totp.vault.json and totp.meta.json are copies of the desktop's
+// tests/fixtures/web/ (docs/TOTP.md §7.3): an envelope written by the desktop's own code, content
+// schema 2, three logins with keys and one without, and the codes the desktop makes for each key.
+test("totp.vault.json: the desktop's vault with keys opens here, is read as schema 2, gives the desktop's codes, and is written back byte for byte", async () => {
+	const hashwasm = require("../vault/public/assets/vendor/hash-wasm/argon2.umd.min.js");
+	const vcFull = factory(hashwasm, globalThis.crypto);
+	const fix = path.join(__dirname, "fixtures");
+	const bytes = new Uint8Array(fs.readFileSync(path.join(fix, "totp.vault.json")));
+	const meta = JSON.parse(fs.readFileSync(path.join(fix, "totp.meta.json"), "utf8"));
+	assert.equal(meta.sizeBytes, bytes.length);
+	assert.equal(await vcFull.sha256Hex(bytes), meta.fingerprint);
+	const opened = await vcFull.unlock(vcFull.parseEnvelope(bytes), meta.typedPassword);
+	assert.equal(Buffer.from(opened.plaintext).toString("utf8"), meta.plaintextUtf8);
+	const vault = vcFull.parseVault(opened.plaintext);
+	assert.equal(vault.schemaVersion, 2);
+	assert.equal(vault.items.length, 4);
+	const keyed = vault.items.filter((i) => i.totp !== null);
+	assert.deepEqual(keyed.map((i) => [i.totp.algorithm, i.totp.digits, i.totp.period]).sort(), [["SHA1", 6, 30], ["SHA256", 8, 60], ["SHA512", 7, 45]]);
+	assert.ok(meta.totpCodes.length >= 9);
+	for (const c of meta.totpCodes) {
+		const item = vault.items.find((i) => i.id === c.id);
+		const result = await vcFull.totpCode(item.totp, c.unixSeconds);
+		assert.deepEqual([result.code, vcFull.formatTotpCode(result.code), result.secondsLeft], [c.code, c.display, c.secondsLeft], `${c.id} at ${c.unixSeconds}`);
+	}
+	// Written as the desktop writes it.
+	assert.equal(Buffer.from(vcFull.serializeVault(vault)).toString("utf8"), meta.plaintextUtf8);
+	assert.deepEqual(Buffer.from(vcFull.serializeEnvelope(vcFull.parseEnvelope(bytes))), Buffer.from(bytes));
+});

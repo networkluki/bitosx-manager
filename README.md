@@ -295,14 +295,28 @@ functions, no DOM, no network, no vault — and `vault.js` is the page around it
   notes 16384, 64 addresses of 2048, absolute http or https). **Nothing is ever cut short:** an entry
   that breaks a limit is not imported and is listed with the reason; a file or an import that breaks
   one is refused as a whole.
-- **Not imported:** authenticator (TOTP) keys, custom fields, folder and group names and addresses
-  that are not http(s) (kept as text in the notes if the first choice is made, never otherwise);
+- **Authenticator keys** (since web 0.9.0, phase 12): a key in a CSV `totp`, `login_totp` or `otpauth`
+  column, Bitwarden's `login.totp`, KeePassXC's `otp` string, KeePass 2's `TimeOtp-Secret-Base32`
+  with `TimeOtp-Algorithm`, `-Length` and `-Period`, or BitosX's own JSON export is read by the rules
+  of *Authenticator codes* below and goes with the item. A key that cannot be read (a `hotp` or Steam
+  link, a key that is too short, …) is not stored: its text is treated as before, as something
+  BitosX has no field for, and the preview counts it as an authenticator key that could not be
+  read. KeePass 2 secrets kept as UTF-8, hex or Base64, and KeePassXC's older `TOTP Seed` strings,
+  stay custom fields. In BitosX's own export, a `totp` that is not exactly a valid key makes the
+  entry *not imported* ("The authenticator key in the file is not valid."): an own export is never
+  guessed at. Duplicates are still told by name, username, password and addresses only.
+- **Not imported:** custom fields, folder and group names, addresses that are not http(s) and
+  authenticator keys that could not be read (kept as text in the notes if the first choice is made,
+  never otherwise);
   everything that is not a login (secure notes, cards, identities, SSH keys, …); items in the
   trash or the recycle bin; an entry's history, passkeys, attachments, tags, icons, expiry dates and
   the times an entry was created and changed.
 
 **Export** (*Export…*). CSV in Chrome's layout (`name,url,username,password,note`, one address for
-each item — the panel says how many items have more) or BitosX's JSON (everything an item holds).
+each item and no authenticator key — the panel says how many items have more addresses, and how many
+have a key) or BitosX's JSON (everything an item holds; since web 0.9.0 each item's `"totp"` after
+`"urls"`, an object or `null`, with `version` still 1: BitosX ≤ 0.14.1 and web ≤ 0.8.1 read such a
+file and drop the keys).
 The specification's warning, the box *I understand that this file is not encrypted*, and the
 **master password once more**: it is checked in this browser — the key is derived as at unlock and
 the envelope's vault key is unwrapped and compared with the key the session holds
@@ -409,9 +423,14 @@ ietf.org were not reachable from where this was built), to an independent implem
 `node:crypto` (1,836 combinations of algorithm, digits, period, secret length and time), and to the
 desktop's shared fixtures, copied byte for byte into `tests/fixtures/totp`: all 91 texts give the
 desktop's key, refusal or no key, all 40 keys and times the desktop's code, display and seconds left.
-The mocked suite drives the editor (every kind of refusal, *Save item* blocked, masked, Show), the code
-view at a fixed clock (the next step, the countdown, *Copy*), saving as schema 2 and back to 1, and
-locking (no HMAC is computed while locked); the live suite adds a key in the page, saves it to the
+The desktop's encrypted vault with keys (`tests/fixtures/totp.vault.json`, written by the desktop's own
+code, copied unchanged) opens under Node and in Chromium, reads as schema 2, is written back byte for
+byte, and shows at each moment of its meta file the desktop's code, display and seconds left. The
+import and export changes are held to the desktop's 48 conformance fixtures (the four new ones with
+keys among them), under Node and in Chromium. The mocked suite drives the editor (every kind of
+refusal, *Save item* blocked, masked, Show), the code view at a fixed clock (the next step, the
+countdown, *Copy*), saving as schema 2 and back to 1, locking (no HMAC is computed while locked),
+an import with keys and with keys that cannot be read, and the CSV export's note; the live suite adds a key in the page, saves it to the
 real API and, signed in again in another browser profile with its clock held at a fixed instant,
 gets the code computed in Node for that instant. **Not verified:** browsers other than headless
 Chromium; a real desktop opening a browser-written version 2 vault through `api.bitosx.se` (the
@@ -576,8 +595,8 @@ node --test tests/vault-crypto.test.js
 # The passkey JSON conversion (the fallback for browsers without parse*FromJSON / toJSON) and the
 # mapping of the browser's WebAuthn errors.
 node --test tests/webauthn.test.js
-# Import and export: every conformance fixture of the desktop that needs no XML parser (35 of 44;
-# the other nine reach DOMParser and run in Chromium, below), and the rules one by one — the CSV
+# Import and export: every conformance fixture of the desktop that needs no XML parser (38 of 48;
+# the other ten reach DOMParser and run in Chromium, below), and the rules one by one — the CSV
 # reader, the strict JSON check, the address rules, normalisation, duplicates, limits, the exports.
 node --test tests/import-export.test.js
 # Authenticator codes: RFC 6238 Appendix B, an independent implementation over node:crypto, the
@@ -598,7 +617,7 @@ copies of `bitosx.css`, or a page whose version is not the one in this README.
 
 **Import and export in the mocked suite.** `tests/fixtures/import` is the desktop's fixture
 directory, byte for byte (its README names the commit; `.gitattributes` keeps Git from converting
-line ends there). The suite holds the page's own `import-export.js` to **all 44** expected files
+line ends there). The suite holds the page's own `import-export.js` to **all 48** expected files
 inside Chromium, KeePass 2 XML included, and drives the flows: preview → unsaved → save, cancel,
 duplicates, extras into the notes, every refusal with its text, a vault at 10,000 items and at
 16 MiB, markup in a file shown as text, and the export with its box, its master password, its file

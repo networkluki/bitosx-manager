@@ -1,0 +1,958 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "keepass-totp.xml"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "keepass_xml",
+        "label": "KeePass 2 (XML)",
+        "records": 15,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 15,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 1,
+          "totpKeys": 8,
+          "totpUnreadable": 4,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 15,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "custom_field": 15
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp link, SHA512, 7 digits",
+            "username": "fake.user1",
+            "password": "FAKE-pw-1",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA512",
+              "digits": 7,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp link for HOTP",
+            "username": "fake.user2",
+            "password": "FAKE-pw-2",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "hotp_not_supported",
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "otp",
+                  "value": "otpauth://hotp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&counter=1"
+                }
+              ]
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp, KeePassXC Steam",
+            "username": "fake.user3",
+            "password": "FAKE-pw-3",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_digits",
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "otp",
+                  "value": "otpauth://totp/FAKE:fake.user3?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=30&digits=5&issuer=FAKE&encoder=steam"
+                }
+              ]
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp",
+            "username": "fake.user4",
+            "password": "FAKE-pw-4",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA256",
+              "digits": 8,
+              "period": 60
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "FAKE other field",
+                  "value": "FAKE value"
+                }
+              ]
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp, defaults",
+            "username": "fake.user5",
+            "password": "FAKE-pw-5",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp, 5 digits",
+            "username": "fake.user6",
+            "password": "FAKE-pw-6",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_digits",
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Base32",
+                  "value": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                },
+                {
+                  "name": "TimeOtp-Length",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          {
+            "position": 7,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp, algorithm as a link spells it",
+            "username": "fake.user7",
+            "password": "FAKE-pw-7",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_algorithm",
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Base32",
+                  "value": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                },
+                {
+                  "name": "TimeOtp-Algorithm",
+                  "value": "SHA256"
+                }
+              ]
+            }
+          },
+          {
+            "position": 8,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp in hexadecimal: not read",
+            "username": "fake.user8",
+            "password": "FAKE-pw-8",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Hex",
+                  "value": "3132333435363738393031323334353637383930"
+                }
+              ]
+            }
+          },
+          {
+            "position": 9,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 UTF-8 and Base32: KeePass uses UTF-8, not read",
+            "username": "fake.user9",
+            "password": "FAKE-pw-9",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret",
+                  "value": "FAKE-utf8-secret"
+                },
+                {
+                  "name": "TimeOtp-Secret-Base32",
+                  "value": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                }
+              ]
+            }
+          },
+          {
+            "position": 10,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 Base64 and Base32: Base32 comes first",
+            "username": "fake.user10",
+            "password": "FAKE-pw-10",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Base64",
+                  "value": "MTIzNDU2Nzg5MDEyMzQ1Njc4OTA="
+                }
+              ]
+            }
+          },
+          {
+            "position": 11,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePassXC legacy: not read",
+            "username": "fake.user11",
+            "password": "FAKE-pw-11",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TOTP Seed",
+                  "value": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                },
+                {
+                  "name": "TOTP Settings",
+                  "value": "30;6"
+                }
+              ]
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp and TimeOtp: otp counts",
+            "username": "fake.user12",
+            "password": "FAKE-pw-12",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Base32",
+                  "value": "JBSWY3DPEHPK3PXP"
+                }
+              ]
+            }
+          },
+          {
+            "position": 13,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp twice: the first counts",
+            "username": "fake.user13",
+            "password": "FAKE-pw-13",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "JBSWY3DPEHPK3PXP",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "otp",
+                  "value": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                }
+              ]
+            }
+          },
+          {
+            "position": 14,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp blank, TimeOtp read",
+            "username": "fake.user14",
+            "password": "FAKE-pw-14",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 15,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.user15",
+            "username": "fake.user15",
+            "password": "FAKE-pw-15",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "what BitosX has no field for is copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "keepass_xml",
+        "label": "KeePass 2 (XML)",
+        "records": 15,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 15,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 1,
+          "totpKeys": 8,
+          "totpUnreadable": 4,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 15,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "custom_field": 15
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp link, SHA512, 7 digits",
+            "username": "fake.user1",
+            "password": "FAKE-pw-1",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA512",
+              "digits": 7,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp link for HOTP",
+            "username": "fake.user2",
+            "password": "FAKE-pw-2",
+            "urls": [],
+            "notes": "otp: otpauth://hotp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&counter=1",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "hotp_not_supported",
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "otp",
+                  "value": "otpauth://hotp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&counter=1"
+                }
+              ]
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp, KeePassXC Steam",
+            "username": "fake.user3",
+            "password": "FAKE-pw-3",
+            "urls": [],
+            "notes": "otp: otpauth://totp/FAKE:fake.user3?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=30&digits=5&issuer=FAKE&encoder=steam",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_digits",
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "otp",
+                  "value": "otpauth://totp/FAKE:fake.user3?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=30&digits=5&issuer=FAKE&encoder=steam"
+                }
+              ]
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp",
+            "username": "fake.user4",
+            "password": "FAKE-pw-4",
+            "urls": [],
+            "notes": "FAKE other field: FAKE value",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA256",
+              "digits": 8,
+              "period": 60
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "FAKE other field",
+                  "value": "FAKE value"
+                }
+              ]
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp, defaults",
+            "username": "fake.user5",
+            "password": "FAKE-pw-5",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp, 5 digits",
+            "username": "fake.user6",
+            "password": "FAKE-pw-6",
+            "urls": [],
+            "notes": "TimeOtp-Secret-Base32: GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ\nTimeOtp-Length: 5",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_digits",
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Base32",
+                  "value": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                },
+                {
+                  "name": "TimeOtp-Length",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          {
+            "position": 7,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp, algorithm as a link spells it",
+            "username": "fake.user7",
+            "password": "FAKE-pw-7",
+            "urls": [],
+            "notes": "TimeOtp-Secret-Base32: GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ\nTimeOtp-Algorithm: SHA256",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_algorithm",
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Base32",
+                  "value": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                },
+                {
+                  "name": "TimeOtp-Algorithm",
+                  "value": "SHA256"
+                }
+              ]
+            }
+          },
+          {
+            "position": 8,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 TimeOtp in hexadecimal: not read",
+            "username": "fake.user8",
+            "password": "FAKE-pw-8",
+            "urls": [],
+            "notes": "TimeOtp-Secret-Hex: 3132333435363738393031323334353637383930",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Hex",
+                  "value": "3132333435363738393031323334353637383930"
+                }
+              ]
+            }
+          },
+          {
+            "position": 9,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 UTF-8 and Base32: KeePass uses UTF-8, not read",
+            "username": "fake.user9",
+            "password": "FAKE-pw-9",
+            "urls": [],
+            "notes": "TimeOtp-Secret: FAKE-utf8-secret\nTimeOtp-Secret-Base32: GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret",
+                  "value": "FAKE-utf8-secret"
+                },
+                {
+                  "name": "TimeOtp-Secret-Base32",
+                  "value": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                }
+              ]
+            }
+          },
+          {
+            "position": 10,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePass 2 Base64 and Base32: Base32 comes first",
+            "username": "fake.user10",
+            "password": "FAKE-pw-10",
+            "urls": [],
+            "notes": "TimeOtp-Secret-Base64: MTIzNDU2Nzg5MDEyMzQ1Njc4OTA=",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Base64",
+                  "value": "MTIzNDU2Nzg5MDEyMzQ1Njc4OTA="
+                }
+              ]
+            }
+          },
+          {
+            "position": 11,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE KeePassXC legacy: not read",
+            "username": "fake.user11",
+            "password": "FAKE-pw-11",
+            "urls": [],
+            "notes": "TOTP Seed: GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ\nTOTP Settings: 30;6",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TOTP Seed",
+                  "value": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                },
+                {
+                  "name": "TOTP Settings",
+                  "value": "30;6"
+                }
+              ]
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp and TimeOtp: otp counts",
+            "username": "fake.user12",
+            "password": "FAKE-pw-12",
+            "urls": [],
+            "notes": "TimeOtp-Secret-Base32: JBSWY3DPEHPK3PXP",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "TimeOtp-Secret-Base32",
+                  "value": "JBSWY3DPEHPK3PXP"
+                }
+              ]
+            }
+          },
+          {
+            "position": 13,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp twice: the first counts",
+            "username": "fake.user13",
+            "password": "FAKE-pw-13",
+            "urls": [],
+            "notes": "otp: otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "JBSWY3DPEHPK3PXP",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "otp",
+                  "value": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+                }
+              ]
+            }
+          },
+          {
+            "position": 14,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE otp blank, TimeOtp read",
+            "username": "fake.user14",
+            "password": "FAKE-pw-14",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 15,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.user15",
+            "username": "fake.user15",
+            "password": "FAKE-pw-15",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

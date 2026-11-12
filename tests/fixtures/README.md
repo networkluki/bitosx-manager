@@ -13,6 +13,7 @@ the desktop does.
 | `small` | 1 MiB, t=1, p=1 (the desktop's test profile) | canonical encoding of an ASCII password | the fast round trip; tamper and wrong-password cases are derived from it |
 | `unicode-canonical` | 1 MiB, t=1, p=1 | canonical encoding (spaces → U+0020, NFC) of a non-ASCII password typed in NFC | the password must open it however it is typed |
 | `unicode-legacy-nfd` | 1 MiB, t=1, p=1 | the raw NFD bytes, as desktop versions before 0.6.0 keyed vaults | the legacy candidates still open it |
+| `totp` | 1 MiB, t=1, p=1 | canonical encoding of `correct horse battery` | phase 12: content schema 2, three logins with authenticator keys (SHA1/6/30, SHA256/8/60, SHA512/7/45) and one without; the meta file also holds `totpCodes`, each key's code at three moments, made by the desktop's `TotpGenerator`. A copy of the desktop's `tests/fixtures/web/` (docs/TOTP.md §7.3), byte for byte |
 | `strong` | 256 MiB, t=3, p=4 (what the desktop creates new vaults with) | canonical encoding | the opt-in slow test (`BITOSX_TEST_SLOW=1`, `BITOSX_E2E_SLOW=1`) |
 
 `argon2id-vectors.json` holds Argon2id outputs computed with the desktop's KDF

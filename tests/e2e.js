@@ -2896,6 +2896,41 @@ async function test(name, fn) {
 		await page.close();
 	});
 
+	await test("authenticator codes: the desktop's own vault with keys (tests/fixtures/totp.vault.json) opens and shows, at each moment of its meta file, the desktop's code and seconds left", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const { bytes, meta } = fixture("totp");
+		mock.seedEnvelope(accountId, bytes);
+		const moments = [...new Set(meta.totpCodes.map((c) => c.unixSeconds))].sort((a, b) => a - b);
+		// The page's clock starts a little before the first moment, and the mock server's runs with it.
+		const start = moments[0] * 1000 - 90 * 1000;
+		mock.clock.offsetMs = start - Date.now();
+		const page = await newPage(mock, { beforeRoute: (p) => p.clock.install({ time: start }) });
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 4);
+		assert.equal(await page.locator("dd[data-totp]").count(), 3, "three items have a key, one has none");
+		assert.equal(await page.locator('.vault-item[data-item-id="44444444-4444-4444-8444-444444444444"] dd[data-totp]').count(), 0);
+		// Names are text, never markup.
+		assert.equal(await page.locator("#vault-items .vault-item__name b").count(), 0);
+		for (const at of moments) {
+			await page.clock.pauseAt(at * 1000);
+			for (const c of meta.totpCodes.filter((x) => x.unixSeconds === at)) {
+				await page.waitForFunction(([id, display, left]) => {
+					const dd = document.querySelector(`.vault-item[data-item-id="${id}"] dd[data-totp]`);
+					return dd && dd.querySelector(".vault-totp-code").textContent === display && dd.querySelector(".vault-totp-left").textContent === left;
+				}, [c.id, c.display, c.secondsLeft + (c.secondsLeft === 1 ? " second left" : " seconds left")]);
+			}
+		}
+		// Copy gives the digits alone, and the keys are nowhere in the page.
+		const html = await page.content();
+		for (const s of ["GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", "JBSWY3DPEHPK3PXP"]) { assert.ok(!html.includes(s), "a key in the DOM"); }
+		await page.click("#vault-lock");
+		assert.equal(await page.locator(".vault-totp-code").count(), 0);
+		await page.close();
+	});
+
 	console.log("vault.bitosx.se — import and export");
 	const conformance = require("./import-conformance.js");
 	const ieNode = require("../vault/public/assets/js/import-export.js")(vcNode);
@@ -2934,7 +2969,7 @@ async function test(name, fn) {
 		URL.revokeObjectURL = (url) => { window.__urls.revoked.push(url); return revoke(url); };
 	});
 
-	await test("import: every conformance fixture gives in Chromium exactly what the desktop makes of it — all 44 files, KeePass XML through DOMParser", async () => {
+	await test("import: every conformance fixture gives in Chromium exactly what the desktop makes of it — all 48 files, KeePass XML through DOMParser", async () => {
 		const mock = createMockApi();
 		const page = await newPage(mock);
 		const refusedStyles = [];
@@ -2961,9 +2996,9 @@ async function test(name, fn) {
 			const start = (expected.input.file ? importFixture(expected.input.file).toString("latin1") : expected.input.parts[0].text).trimStart();
 			if (start.startsWith("<")) { xmlFiles++; }
 		}
-		assert.equal(files, 44);
-		assert.equal(cases, 55);
-		assert.equal(xmlFiles, 11, "the XML fixtures: nine that reach the parser, two refused before it");
+		assert.equal(files, 48);
+		assert.equal(cases, 64);   // 55, and since phase 12 the cases of the four fixtures with authenticator keys
+		assert.equal(xmlFiles, 12, "the XML fixtures: ten that reach the parser (keepass-totp.xml since phase 12), two refused before it");
 		assert.ok(outcomes.keepass_xml >= 3 && outcomes.nested_too_deeply >= 2 && outcomes.protected_values >= 1 && outcomes.doctype >= 2 && outcomes.too_many_entries >= 3, JSON.stringify(outcomes));
 		// Exactly the two messages Chromium's error document causes for each damaged XML file, and no other.
 		assert.equal(damagedXml, 1);
@@ -3036,7 +3071,7 @@ async function test(name, fn) {
 			// What the page holds after it opened a vault the desktop wrote with these items.
 			const held = items.map((it, i) => ({
 				id: "0b1705e0-0000-4000-8000-" + String(i + 1).padStart(12, "0"), type: "login", name: it.name, username: it.username || null, password: it.password || null,
-				urls: it.urls, notes: it.notes || null, favorite: it.favorite, createdAt: new Date(it.createdAt), createdAtText: it.createdAt.replace(/Z$/, "+00:00"),
+				urls: it.urls, notes: it.notes || null, favorite: it.favorite, totp: it.totp || null, createdAt: new Date(it.createdAt), createdAtText: it.createdAt.replace(/Z$/, "+00:00"),
 				updatedAt: new Date(it.updatedAt), updatedAtText: it.updatedAt.replace(/Z$/, "+00:00")
 			}));
 			const base64 = (bytes) => { let s = ""; bytes.forEach((b) => { s += String.fromCharCode(b); }); return btoa(s); };
@@ -3253,17 +3288,24 @@ async function test(name, fn) {
 		assert.ok(preview.lines.some((l) => l.startsWith("Not logins, and not imported: secure notes (1), cards (1), identities (1), SSH keys (1), bank accounts (1), driver's licences (1), passports (1), other items (")));
 		assert.ok(preview.lines.includes("In the trash or the recycle bin of the file, and not imported: 1."));
 		const leftOut = preview.lines.find((l) => l.startsWith("Left out, because BitosX has no field for them: "));
-		assert.equal(leftOut, "Left out, because BitosX has no field for them: authenticator keys (TOTP) (" + expected.extras.totp + "), folder or group names (" + expected.extras.folder + "), addresses that are not web addresses ("
+		// Since phase 12 the file's authenticator key is read, so it is no longer among what BitosX has no field for.
+		assert.deepEqual(Object.keys(expected.extras), ["folder", "other_address", "custom_field"]);
+		assert.equal(leftOut, "Left out, because BitosX has no field for them: folder or group names (" + expected.extras.folder + "), addresses that are not web addresses ("
 			+ expected.extras.other_address + "), custom fields (" + expected.extras.custom_field + "). Tick the first box below to copy them into each item's notes instead.");
+		assert.equal(expected.counts.totpKeys, 1);
+		assert.ok(preview.lines.includes("1 login brings its authenticator key along: the code is shown once it is imported."), preview.lines.join("\n"));
 		assert.ok(preview.lines.some((l) => /^https:\/\/ is put in front of \d+ address(es)? that ha(s|ve) no scheme\.$/.test(l)));
 		assert.ok(preview.lines.some((l) => /^\d+ entr(y has|ies have) no name and (is|are) named after (its|their) address or username\.$/.test(l)));
 		await page.check("#import-copy-extras");
-		assert.ok((await page.locator("#import-summary li").allTextContents()).some((l) => l.startsWith("Copied into each item's notes, because BitosX has no field for them: authenticator keys (TOTP) (")));
+		assert.ok((await page.locator("#import-summary li").allTextContents()).some((l) => l.startsWith("Copied into each item's notes, because BitosX has no field for them: folder or group names (")));
 		// Neither an authenticator key nor the value of a custom field is shown in the preview.
 		const copied = conformance.readExpected("bitwarden.json.expected.json").cases.find((c) => c.options.copyExtrasToNotes && !c.options.importDuplicates && c.vault.length === 0);
 		assert.ok(copied, "the fixture has a case that copies the extras");
-		const withTotp = copied.result.candidates.find((c) => c.status === "add" && c.extras.totp.length > 0);
-		assert.ok(!(await page.content()).includes(withTotp.extras.totp));
+		const withTotp = copied.result.candidates.find((c) => c.status === "add" && c.totp !== null);
+		const withField = copied.result.candidates.find((c) => c.status === "add" && c.extras.customFields.length > 0);
+		const content = await page.content();
+		assert.ok(!content.includes(withTotp.totp.secret));
+		assert.ok(!content.includes(withField.extras.customFields[0].value));
 		await page.click("#import-confirm");
 		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
 		await page.click("#vault-save");
@@ -3271,7 +3313,8 @@ async function test(name, fn) {
 		const stored = (await serverItems(mock, accountId, meta.typedPassword)).slice(3);
 		const added = copied.result.candidates.filter((c) => c.status === "add");
 		assert.deepEqual(stored.map((i) => [i.name, i.notes || ""]), added.map((c) => [c.name, c.notes]));
-		assert.match(stored.find((i) => i.name === withTotp.name).notes, /Authenticator key \(TOTP\): /);
+		// The key goes with the item, not into its notes.
+		assert.deepEqual({ ...stored.find((i) => i.name === withTotp.name).totp }, withTotp.totp);
 		assert.ok(stored.some((i) => /(^|\n)Folder: /.test(i.notes || "")) && stored.some((i) => /(^|\n)Other address: /.test(i.notes || "")));
 		// Left out by default: the same file again, without the box, into a vault without those items.
 		const second = createMockApi();
@@ -3286,6 +3329,57 @@ async function test(name, fn) {
 		assert.deepEqual(plain.map((i) => [i.name, i.notes || ""]), expected.candidates.filter((c) => c.status === "add").map((c) => [c.name, c.notes]));
 		assert.ok(plain.every((i) => !/Authenticator key|Folder: |Other address: /.test(i.notes || "")));
 		await other.page.close();
+		await page.close();
+	});
+
+	await test("import: authenticator keys — read ones go with the items and give codes; ones that cannot be read are counted, left out, or copied into the notes on opt-in", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		await page.click("#vault-import");
+		const name = "bitwarden-totp.json";
+		const expectedFile = conformance.readExpected(name + ".expected.json");
+		const first = expectedFile.cases.find((c) => !c.options.copyExtrasToNotes && !c.options.importDuplicates && c.vault.length === 0).result;
+		const preview = await previewOf(page, name, importFixture(name));
+		const keys = first.counts.totpKeys, unreadable = first.counts.totpUnreadable;
+		assert.ok(keys >= 1 && unreadable >= 1);
+		assert.ok(preview.lines.includes(`${keys} login${keys === 1 ? " brings its" : "s bring their"} authenticator key along: the code is shown once it is imported.`), preview.lines.join("\n"));
+		assert.ok(preview.lines.includes(`${unreadable} authenticator key${unreadable === 1 ? "" : "s"} could not be read, and ${unreadable === 1 ? "its login is" : "their logins are"} imported without one: the text is left out unless you tick the first box below.`), preview.lines.join("\n"));
+		assert.ok(preview.lines.some((l) => l.startsWith("Left out, because BitosX has no field for them: authenticator keys that could not be read (" + first.extras.totp + ")")));
+		// No key, and no text of one, is in the page.
+		const content = await page.content();
+		for (const c of first.candidates) {
+			if (c.totp) { assert.ok(!content.includes(c.totp.secret)); }
+			if (c.extras.totp) { assert.ok(!content.includes(c.extras.totp)); }
+		}
+		await page.check("#import-copy-extras");
+		assert.ok((await page.locator("#import-summary li").allTextContents()).some((l) => / could not be read, .* the text is copied into the notes\.$/.test(l)));
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		// The imported items with a key show a code at once.
+		const codes = await page.locator("#vault-items dd[data-totp]").count();
+		assert.equal(codes, keys);
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const copied = expectedFile.cases.find((c) => c.options.copyExtrasToNotes && !c.options.importDuplicates && c.vault.length === 0).result;
+		const stored = (await serverItems(mock, accountId, meta.typedPassword)).slice(3);
+		const added = copied.candidates.filter((c) => c.status === "add");
+		assert.deepEqual(stored.map((i) => [i.name, i.notes || "", i.totp && { ...i.totp }]), added.map((c) => [c.name, c.notes, c.totp]));
+		assert.ok(stored.some((i) => /(^|\n)Authenticator key \(TOTP\): /.test(i.notes || "")));
+		await page.close();
+	});
+
+	await test("export: the CSV note says how many items have an authenticator key, which only JSON keeps", async () => {
+		const mock = createMockApi();
+		const { meta } = await keyedVault(mock, KEYED);
+		const page = await newPage(mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await page.click("#vault-export");
+		assert.equal(await page.isHidden("#export-totp"), false);
+		assert.equal(await page.textContent("#export-totp"), "2 items have an authenticator key. A CSV file does not hold authenticator keys; only JSON keeps them.");
+		await page.check("#export-format-json");
+		assert.equal(await page.isHidden("#export-totp"), true);
 		await page.close();
 	});
 
@@ -3707,10 +3801,10 @@ async function test(name, fn) {
 		assert.match(doc.exportedAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
 		assert.ok(Math.abs(new Date(doc.exportedAt).getTime() - Date.now()) < 5 * 60 * 1000);
 		assert.deepEqual(doc.items, [
-			{ type: "login", name: "GitHub", username: "octocat@example.com", password: "P@ssw0rd-Strong-123", urls: ["https://github.com"], notes: "", favorite: true, createdAt: "2026-10-01T09:00:00Z", updatedAt: "2026-10-02T09:00:00Z" },
-			{ type: "login", name: "Bank <script>alert(1)</script>", username: "alice", password: "hunter2 & \"quotes\" <b>", urls: ["https://bank.example", "https://login.bank.example/portal"],
+			{ type: "login", name: "GitHub", username: "octocat@example.com", password: "P@ssw0rd-Strong-123", urls: ["https://github.com"], totp: null, notes: "", favorite: true, createdAt: "2026-10-01T09:00:00Z", updatedAt: "2026-10-02T09:00:00Z" },
+			{ type: "login", name: "Bank <script>alert(1)</script>", username: "alice", password: "hunter2 & \"quotes\" <b>", urls: ["https://bank.example", "https://login.bank.example/portal"], totp: null,
 				notes: "Security question: first pet.\nSecond line & <i>markup</i>", favorite: false, createdAt: "2026-10-01T09:00:00Z", updatedAt: "2026-10-01T09:00:00Z" },
-			{ type: "login", name: "Wi-Fi café", username: "", password: "ñandú-Ωmega-🔐", urls: [], notes: "", favorite: false, createdAt: "2026-10-03T09:00:00Z", updatedAt: "2026-10-03T09:00:00Z" }
+			{ type: "login", name: "Wi-Fi café", username: "", password: "ñandú-Ωmega-🔐", urls: [], totp: null, notes: "", favorite: false, createdAt: "2026-10-03T09:00:00Z", updatedAt: "2026-10-03T09:00:00Z" }
 		]);
 		// Both files read back with this importer: into the vault they came from the JSON adds nothing, the CSV the item with two addresses.
 		const held = items.map((i) => ({ name: i.name, username: i.username, password: i.password, urls: i.urls }));

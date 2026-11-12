@@ -563,6 +563,36 @@
 		return totpResult(totpKey(secret.secret, algorithm, digits, period), null);
 	}
 
+	// The key KeePass 2 keeps in an entry's strings (IMPORT_EXPORT.md §5.3): TimeOtp-Secret-Base32
+	// and, each optional (null when the entry has no such string), TimeOtp-Algorithm
+	// (HMAC-SHA-1, HMAC-SHA-256, HMAC-SHA-512), TimeOtp-Length and TimeOtp-Period. The secret is
+	// read by the first two steps of reading a text and by the base32 rules; the other three are
+	// trimmed, and empty means the default.
+	function readKeePass2TotpKey(secretBase32, algorithm, length, period) {
+		if (secretBase32.length > TOTP_MAX_TEXT) { return totpResult(null, "too_long"); }
+		var trimmed = trimText(secretBase32);
+		if (trimmed.length === 0) { return totpResult(null, null); }
+		var secret = readBase32Secret(trimmed);
+		if (secret.refusal) { return totpResult(null, secret.refusal); }
+		var algorithmText = trimText(algorithm === null ? "" : algorithm);
+		var algorithmName = algorithmText === "" || algorithmText === "HMAC-SHA-1" ? "SHA1"
+			: algorithmText === "HMAC-SHA-256" ? "SHA256" : algorithmText === "HMAC-SHA-512" ? "SHA512" : null;
+		if (algorithmName === null) { return totpResult(null, "unsupported_algorithm"); }
+		var digits = 6;
+		var lengthText = trimText(length === null ? "" : length);
+		if (lengthText.length > 0) {
+			if (lengthText !== "6" && lengthText !== "7" && lengthText !== "8") { return totpResult(null, "unsupported_digits"); }
+			digits = Number(lengthText);
+		}
+		var periodValue = 30;
+		var periodText = trimText(period === null ? "" : period);
+		if (periodText.length > 0) {
+			if (!isPlainNumber(periodText) || periodText.length > 3 || Number(periodText) > TOTP_MAX_PERIOD) { return totpResult(null, "unsupported_period"); }
+			periodValue = Number(periodText);
+		}
+		return totpResult(totpKey(secret.secret, algorithmName, digits, periodValue), null);
+	}
+
 	function readTotpKey(text) {
 		if (typeof text !== "string") { return totpResult(null, "invalid_secret"); }
 		if (text.length > TOTP_MAX_TEXT) { return totpResult(null, "too_long"); }
@@ -1092,6 +1122,7 @@
 		isValidTotpKey: isValidTotpKey,
 		TOTP_REFUSALS: TOTP_REFUSALS,
 		readTotpKey: readTotpKey,
+		readKeePass2TotpKey: readKeePass2TotpKey,
 		TOTP_REFUSAL_TEXTS: TOTP_REFUSAL_TEXTS,
 		totpKeyText: totpKeyText,
 		totpCode: totpCode,

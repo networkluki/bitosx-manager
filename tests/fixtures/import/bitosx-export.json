@@ -11,6 +11,12 @@
       "urls": [
         "https://mail.example.com/login"
       ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
       "notes": "The address book is shared.",
       "favorite": true,
       "createdAt": "2025-03-04T05:06:07Z",
@@ -25,6 +31,12 @@
         "https://first.example.org/",
         "https://second.example.org/sign-in?next=%2Fhome"
       ],
+      "totp": {
+        "secret": "JBSWY3DPEHPK3PXP",
+        "algorithm": "SHA256",
+        "digits": 8,
+        "period": 60
+      },
       "notes": "",
       "favorite": false,
       "createdAt": "2025-03-05T05:06:07.1234567Z",
@@ -38,6 +50,7 @@
       "urls": [
         "https://example.net/?ids=1,2,3"
       ],
+      "totp": null,
       "notes": "line one\nline two\r\nline three, with a \"quote\"",
       "favorite": false,
       "createdAt": "2025-03-06T05:06:07.2469134Z",
@@ -51,6 +64,7 @@
       "urls": [
         "https://xn--bcher-kva.example/"
       ],
+      "totp": null,
       "notes": "Notes with an emoji \uD83D\uDE00 and a no-break\u00A0space.",
       "favorite": false,
       "createdAt": "2025-03-07T05:06:07.3703701Z",
@@ -62,6 +76,7 @@
       "username": "",
       "password": "",
       "urls": [],
+      "totp": null,
       "notes": "",
       "favorite": false,
       "createdAt": "2025-03-08T05:06:07.4938268Z",
@@ -75,6 +90,7 @@
       "urls": [
         "https://example.com/spaces"
       ],
+      "totp": null,
       "notes": "  notes with spaces around them  ",
       "favorite": false,
       "createdAt": "2025-03-09T05:06:07.6172835Z",
@@ -88,6 +104,7 @@
       "urls": [
         "https://example.com/formula"
       ],
+      "totp": null,
       "notes": "@note -x",
       "favorite": true,
       "createdAt": "2025-03-10T05:06:07.7407402Z",
@@ -99,6 +116,7 @@
       "username": "DOMAIN\\fake.user",
       "password": "FAKE\\pw\\\\two",
       "urls": [],
+      "totp": null,
       "notes": "C:\\Users\\fake\\file.txt",
       "favorite": false,
       "createdAt": "2025-03-11T05:06:07.8641969Z",

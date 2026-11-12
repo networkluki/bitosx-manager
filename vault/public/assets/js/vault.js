@@ -1233,6 +1233,11 @@
 				? "Copied into each item's notes, because BitosX has no field for them: " + kindsInWords(plan.extras, ie.EXTRA_TEXTS) + "."
 				: "Left out, because BitosX has no field for them: " + kindsInWords(plan.extras, ie.EXTRA_TEXTS) + ". Tick the first box below to copy them into each item's notes instead.");
 		}
+		if (c.totpKeys > 0) { line(countOf(c.totpKeys, "login brings its", "logins bring their") + " authenticator key along: the code is shown once it is imported."); }
+		if (c.totpUnreadable > 0) {
+			line(countOf(c.totpUnreadable, "authenticator key", "authenticator keys") + " could not be read, and " + (c.totpUnreadable === 1 ? "its login is" : "their logins are") +
+				" imported without one: the text is " + (plan.options.copyExtrasToNotes ? "copied into the notes." : "left out unless you tick the first box below."));
+		}
 		if (c.httpsAdded > 0) { line("https:// is put in front of " + countOf(c.httpsAdded, "address that has", "addresses that have") + " no scheme."); }
 		if (c.namesDerived > 0) { line(countOf(c.namesDerived, "entry has", "entries have") + " no name and " + (c.namesDerived === 1 ? "is" : "are") + " named after " + (c.namesDerived === 1 ? "its" : "their") + " address or username."); }
 		if (plan.ignoredColumns.length > 0) {
@@ -1353,6 +1358,7 @@
 	var exportSubmit = $("export-submit");
 	var exportProgress = $("export-progress");
 	var exportSeveralUrls = $("export-several-urls");
+	var exportTotp = $("export-totp");
 	var exportBusy = false;
 	var exportRuns = 0;   // changes with every export and every reset; a check that finishes later writes nothing
 
@@ -1363,6 +1369,10 @@
 		var several = opened ? ie.countItemsWithSeveralUrls(opened.items) : 0;
 		exportSeveralUrls.hidden = several === 0 || exportFormat() !== ie.EXPORT_CSV;
 		exportSeveralUrls.textContent = countOf(several, "item has", "items have") + " more than one address. A CSV file holds only the first of each; only JSON keeps them all.";
+		// Authenticator keys, like the other addresses, are only in the JSON file.
+		var keyed = opened ? ie.countItemsWithTotp(opened.items) : 0;
+		exportTotp.hidden = keyed === 0 || exportFormat() !== ie.EXPORT_CSV;
+		exportTotp.textContent = countOf(keyed, "item has", "items have") + " an authenticator key. A CSV file does not hold authenticator keys; only JSON keeps them.";
 		exportAck.disabled = none || exportBusy;
 		exportPassword.disabled = none || exportBusy;
 		exportSubmit.disabled = none || exportBusy || !exportAck.checked;

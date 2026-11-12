@@ -1,0 +1,14 @@
+name,url,username,password,totp
+"FAKE base32",https://one.example.test/,fake.one,FAKE-pw-1,GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ
+"FAKE groups in lower case",https://two.example.test/,fake.two,FAKE-pw-2,"gezd gnbv gy3t qojq gezd gnbv gy3t qojq"
+"FAKE link SHA256",https://three.example.test/,fake.three,FAKE-pw-3,otpauth://totp/FAKE:fake.three?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&algorithm=SHA256&digits=8&period=60&issuer=FAKE
+"FAKE link SHA512 7 digits",https://four.example.test/,fake.four,FAKE-pw-4,"  OTPAUTH://TOTP/x?SECRET=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&Algorithm=sha512&digits=7  "
+"FAKE hotp",https://five.example.test/,fake.five,FAKE-pw-5,otpauth://hotp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&counter=3
+"FAKE steam",https://six.example.test/,fake.six,FAKE-pw-6,steam://FAKEFAKEFAKEFAKE
+"FAKE too short",https://seven.example.test/,fake.seven,FAKE-pw-7,FAKEFAKE
+"FAKE not base32",https://eight.example.test/,fake.eight,FAKE-pw-8,FAKE-0189-FAKE-FAKE
+"FAKE link without secret",https://nine.example.test/,fake.nine,FAKE-pw-9,otpauth://totp/FAKE?issuer=FAKE
+"FAKE white space only",https://ten.example.test/,fake.ten,FAKE-pw-10," 	 "
+,,,,GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ
+,,fake.only.a.bad.key,,otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=0
+"FAKE base32",https://one.example.test/,fake.one,FAKE-pw-1,JBSWY3DPEHPK3PXP
