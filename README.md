@@ -8,7 +8,7 @@ WebAssembly build the web vault needs (`vault/public/assets/vendor/hash-wasm/`, 
 | Hostname | Directory | Purpose | Talks to |
 |---|---|---|---|
 | `bitosx.se` | `www/public/` | Public product page: what BitosX is, how the vault is protected, what works today, live API status, roadmap | `api.bitosx.se` (`GET /health`, `GET /version` only) |
-| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code; since phase 8 change the account password while signed in; since phase 10 add, rename and remove passkeys and sign in with one) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set; since phase 8 with the desktop's generator, favorites and sorting, and a download of the encrypted backup; since phase 11 it imports the logins other password managers export and exports the vault unencrypted | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*` including `POST /v1/account/password` and `/v1/account/passkeys*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
+| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code; since phase 8 change the account password while signed in; since phase 10 add, rename and remove passkeys and sign in with one) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set; since phase 8 with the desktop's generator, favorites and sorting, and a download of the encrypted backup; since phase 11 it imports the logins other password managers export and exports the vault unencrypted; since phase 12 a login can hold an authenticator key and the vault shows its current code | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*` including `POST /v1/account/password` and `/v1/account/passkeys*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
 | `api.bitosx.se` | — | The account API. Lives in [`networkluki/bitosx-api`](https://github.com/networkluki/bitosx-api) and is operated alongside the desktop app; nothing here | — |
 
 The desktop app lives in [`networkluki/bitosx`](https://github.com/networkluki/bitosx).
@@ -31,7 +31,7 @@ revision, size, when stored) and asks for the vault's **master password**. On *O
 4. The vault key is unwrapped and the content decrypted with **AES-256-GCM from WebCrypto**, with
    the associated data built byte for byte as `VaultCryptor` builds it. A wrong password and a
    modified envelope are indistinguishable, as on the desktop.
-5. The decrypted JSON is read strictly (schema version 1, `login` items, no unknown fields, no
+5. The decrypted JSON is read strictly (schema version 1, or 2 since phase 12, `login` items, no unknown fields, no
    duplicate ids) and rendered as **text** — never HTML — with passwords hidden until *Show*.
 
 Nothing decrypted is ever sent anywhere; since phase 5 (below) edits are encrypted in the browser
@@ -365,6 +365,62 @@ results):
   outside ASCII (zero-width joiners, a soft hyphen, full-width dots), which the specification
   leaves to each client. Ordinary addresses, ports, paths and queries agreed in every case tried.
 
+## Authenticator codes (phase 12)
+
+Web `0.9.0`, desktop `0.15.0`. No server change. A login may hold one **authenticator key** (RFC 6238
+TOTP), and the vault shows its current code. The rules are the desktop application's `docs/TOTP.md`
+(`networkluki/bitosx`), which both clients follow; `vault-crypto.js` is that specification in
+JavaScript (`readTotpKey`, `totpCode`, `formatTotpCode`, the stored form in `parseVault` and
+`serializeVault`), and `vault.js` is the page around it.
+
+- **Entering a key.** The editor has an *Authenticator key* field, masked like the password, with
+  *Show*. It takes the key as a site shows it (base32, either case, with spaces or dashes) or the
+  whole `otpauth://totp/…` link (`algorithm` SHA1, SHA256 or SHA512; `digits` 6 to 8; `period` 1 to
+  300 seconds). Anything else is refused with the specification's fixed text under the field — a
+  counter-based (`hotp`) or Steam link, a link without a key, an unsupported algorithm, length or
+  time step, a key that is not base32 or is shorter than 10 or longer than 128 bytes — and *Save item*
+  stays blocked until it is right. Removing the text removes the key. A stored key is shown again as
+  its base32 text, or as a link when it is not SHA1 / 6 digits / 30 seconds.
+- **The code.** An item with a key shows its current code in two groups (`123 456`, `123 4567`,
+  `1234 5678`), the seconds it has left, *Copy* (the digits alone, through the page's copy path, so
+  the clipboard is cleared after 30 seconds as for a password) and the specification's note that
+  codes depend on this device's clock. Codes are computed with WebCrypto's HMAC. One timer, at the
+  turn of each second, computes a code once for each time step; nothing is computed while the vault
+  is locked, and locking stops the timer and clears every code.
+- **Where the key is not.** Never in the list, an attribute, an accessible name, a tooltip, a notice
+  or the console; only the editor's field holds it, and only while the editor is open. In memory it is
+  as secret as the password, and leaves the browser only inside the encrypted vault.
+- **Compatibility.** The vault's content is written as **schema version 1** when no item has a key —
+  byte for byte as before — and as **version 2** when at least one has (`"Totp": { "Secret",
+  "Algorithm", "Digits", "Period" }` after `"Urls"`). Web `0.8.1` and earlier, and desktop `0.14.1`
+  and earlier, refuse a version 2 vault with their existing "unsupported schema version" error: they
+  never get far enough to save, so nothing is lost, but they cannot open it until they are updated.
+  Removing the last key makes the vault version 1 again on the next save. A key in a version 1
+  document, a `"Totp": null`, version 3 and above, and a key that is not exactly valid are refused as
+  any invalid content is, without quoting it.
+- **Both factors in one vault.** Keeping a site's key next to its password means that whoever opens
+  the vault has both factors of that login. That is the user's choice, as in other password managers;
+  a key kept only on a phone is out of reach of a stolen master password.
+
+**Verified:** `tests/totp.test.js` holds the code to RFC 6238 Appendix B (all 18 codes; the RFC text
+was read from two byte-identical copies on GitHub, `pingidentity/ldapsdk` and
+`smuellerDD/leancrypto`, SHA-256 `82947ed9…69a7a`, because rfc-editor.org, datatracker.ietf.org and
+ietf.org were not reachable from where this was built), to an independent implementation over
+`node:crypto` (1,836 combinations of algorithm, digits, period, secret length and time), and to the
+desktop's shared fixtures, copied byte for byte into `tests/fixtures/totp`: all 91 texts give the
+desktop's key, refusal or no key, all 40 keys and times the desktop's code, display and seconds left.
+The mocked suite drives the editor (every kind of refusal, *Save item* blocked, masked, Show), the code
+view at a fixed clock (the next step, the countdown, *Copy*), saving as schema 2 and back to 1, and
+locking (no HMAC is computed while locked); the live suite adds a key in the page, saves it to the
+real API and, signed in again in another browser profile with its clock held at a fixed instant,
+gets the code computed in Node for that instant. **Not verified:** browsers other than headless
+Chromium; a real desktop opening a browser-written version 2 vault through `api.bitosx.se` (the
+desktop's own fixtures and code are what both clients are held to).
+
+**Where this client differs from the desktop.** A stored `Digits` or `Period` written with a fraction
+or an exponent (`6.0`, `6e0`): the desktop refuses the document; `JSON.parse` sees the number 6, and
+this page reads it. Neither client writes such a number.
+
 ## What phase 1 was
 
 Phase 1 used **only endpoints the API already implemented** (`bitosx-api/docs/API.md`):
@@ -524,6 +580,10 @@ node --test tests/webauthn.test.js
 # the other nine reach DOMParser and run in Chromium, below), and the rules one by one — the CSV
 # reader, the strict JSON check, the address rules, normalisation, duplicates, limits, the exports.
 node --test tests/import-export.test.js
+# Authenticator codes: RFC 6238 Appendix B, an independent implementation over node:crypto, the
+# stored form (schema 1 and 2), the reading of keys and links rule by rule, and the desktop's
+# shared fixtures (tests/fixtures/totp: 91 texts, 40 codes).
+node --test tests/totp.test.js
 
 # End-to-end in headless Chromium against the in-process mock API (needs the `playwright` package
 # and a Chromium it can find; PLAYWRIGHT_BROWSERS_PATH if it is not the default location).
@@ -602,6 +662,10 @@ conformance fixture imported through the page (nothing is sent while it is read)
 (a real `PUT`) → reload, sign in again, re-open: the logins are there, and the server's copy opens
 under Node with exactly the items the desktop makes of that file → an export that refuses the account
 password and, with the master password, downloads the vault's items without asking the API anything.
+Since phase 12, before the export: an authenticator key added in the editor (the code shown is the one
+computed in Node for the page's own clock) → *Save to server*: the server's copy is content schema 2
+and holds the key → signed in again in a second browser profile whose clock is held at a fixed
+instant, the vault opened: the code shown is the one computed in Node for that instant; locking clears it.
 It runs in a few minutes, mostly waiting for TOTP steps.
 
 **The page origin is `http://localhost:8788`** (the devstack's default since phase 10: `localhost` is a
@@ -640,7 +704,7 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 ## Versioning
 
-`web v0.8.1` (two fixes to the import: a hidden tab is kept unlocked only while the file chooser is open, and an address with a backslash before the `@` is not imported; `v0.8.0` phase 11, import and export; `v0.7.0` phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
+`web v0.9.0` (phase 12, authenticator codes in logins; `v0.8.1` two fixes to the import: a hidden tab is kept unlocked only while the file chooser is open, and an address with a backslash before the `@` is not imported; `v0.8.0` phase 11, import and export; `v0.7.0` phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
 the `?v=` cache-busting query on the stylesheet links together (the e2e hygiene test checks it). The
-desktop app (`0.14.1`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
+desktop app (`0.15.0`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
 product page for orientation only.
