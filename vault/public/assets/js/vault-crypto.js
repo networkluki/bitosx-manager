@@ -403,6 +403,150 @@
 		return isValidTotpKey(key) ? key : null;
 	}
 
+	// ---- reading an authenticator key from text: hand entry and import, the same rules in both
+	// clients. The result is { key, refusal }: a key and null; null and null when the text is empty
+	// (no key, not an error); or null and one of TOTP_REFUSALS. The text itself is never part of a
+	// refusal.
+	var TOTP_MAX_TEXT = 2048;
+	var TOTP_REFUSALS = Object.freeze(["too_long", "steam_not_supported", "invalid_link", "hotp_not_supported", "missing_secret",
+		"unsupported_algorithm", "unsupported_digits", "unsupported_period", "invalid_secret", "secret_too_short", "secret_too_long"]);
+
+	// The trim set of IMPORT_EXPORT.md §2.1 (what .NET's Trim and JavaScript's trim remove, together).
+	function isTrimmedCode(c) {
+		return (c >= 0x0009 && c <= 0x000D) || c === 0x0020 || c === 0x0085 || c === 0x00A0 || c === 0x1680
+			|| (c >= 0x2000 && c <= 0x200A) || c === 0x2028 || c === 0x2029 || c === 0x202F || c === 0x205F
+			|| c === 0x3000 || c === 0xFEFF;
+	}
+	function trimText(value) {
+		var start = 0, end = value.length;
+		while (start < end && isTrimmedCode(value.charCodeAt(start))) { start++; }
+		while (end > start && isTrimmedCode(value.charCodeAt(end - 1))) { end--; }
+		return value.slice(start, end);
+	}
+	// A to Z become a to z, nothing else changes.
+	function lowerAscii(value) { return value.replace(/[A-Z]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) + 32); }); }
+	function startsWithAscii(value, prefix) { return value.length >= prefix.length && lowerAscii(value.slice(0, prefix.length)) === prefix; }
+
+	function totpResult(key, refusal) { return Object.freeze({ key: key, refusal: refusal }); }
+
+	// Spaces and "-" go, then the "=" at the end; what is left must be base32 (either case).
+	function readBase32Secret(text) {
+		var compact = "";
+		for (var i = 0; i < text.length; i++) {
+			var c = text.charCodeAt(i);
+			if (c !== 0x20 && c !== 0x2D) { compact += text[i]; }
+		}
+		var end = compact.length;
+		while (end > 0 && compact.charCodeAt(end - 1) === 0x3D) { end--; }
+		compact = compact.slice(0, end);
+		for (var j = 0; j < compact.length; j++) {
+			if (base32Value(compact.charCodeAt(j)) < 0) { return { refusal: "invalid_secret" }; }
+		}
+		// No more than 128 bytes can come from 205 characters; a longer text is not decoded at all.
+		if (compact.length > Math.ceil(TOTP_MAX_SECRET_BYTES * 8 / 5) + 1) { return { refusal: "secret_too_long" }; }
+		var bytes = base32Decode(compact);
+		try {
+			if (bytes.length < TOTP_MIN_SECRET_BYTES) { return { refusal: "secret_too_short" }; }
+			if (bytes.length > TOTP_MAX_SECRET_BYTES) { return { refusal: "secret_too_long" }; }
+			return { secret: base32Encode(bytes) };
+		} finally { bytes.fill(0); }
+	}
+
+	// Percent-decoding as UTF-8: "%" and two hex digits, the bytes valid UTF-8; "+" stays "+".
+	// Returns null for anything else.
+	var strictDecoder = null;
+	function percentDecode(value) {
+		if (value.indexOf("%") < 0) { return value; }
+		var bytes = [];
+		for (var i = 0; i < value.length; i++) {
+			var c = value.charCodeAt(i);
+			if (c === 0x25) {
+				var hex = value.slice(i + 1, i + 3);
+				if (!/^[0-9A-Fa-f]{2}$/.test(hex)) { return null; }
+				bytes.push(parseInt(hex, 16));
+				i += 2;
+			} else {
+				var piece = encoder.encode(value.slice(i, c >= 0xD800 && c <= 0xDBFF ? i + 2 : i + 1));
+				for (var k = 0; k < piece.length; k++) { bytes.push(piece[k]); }
+				if (c >= 0xD800 && c <= 0xDBFF) { i++; }
+			}
+		}
+		if (strictDecoder === null) { strictDecoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }); }
+		var view = new Uint8Array(bytes);
+		try { return strictDecoder.decode(view); }
+		catch (e) { return null; }
+		finally { view.fill(0); }
+	}
+	function isPlainNumber(value) { return /^[1-9][0-9]*$/.test(value); }
+
+	// Google's Key Uri Format, for "totp" only. The checks run in this order; the first that fails
+	// is the result: the type, the query, every parameter's form, a parameter twice, secret,
+	// algorithm, digits, period. The label is not read; parameters other than these four are not used.
+	function readOtpauthLink(text) {
+		var rest = text.slice("otpauth://".length);
+		var slash = rest.indexOf("/");
+		if (slash < 0) { return totpResult(null, "invalid_link"); }
+		var type = lowerAscii(rest.slice(0, slash));
+		if (type === "hotp") { return totpResult(null, "hotp_not_supported"); }
+		if (type !== "totp") { return totpResult(null, "invalid_link"); }
+		var afterType = rest.slice(slash + 1);
+		var question = afterType.indexOf("?");
+		if (question < 0) { return totpResult(null, "invalid_link"); }
+		var query = afterType.slice(question + 1);
+		var hash = query.indexOf("#");
+		if (hash >= 0) { query = query.slice(0, hash); }
+		var parameters = Object.create(null);
+		var pieces = query.split("&");
+		for (var i = 0; i < pieces.length; i++) {
+			if (pieces[i].length === 0) { continue; }
+			var equals = pieces[i].indexOf("=");
+			if (equals < 0) { return totpResult(null, "invalid_link"); }
+			var name = lowerAscii(pieces[i].slice(0, equals));
+			var value = percentDecode(pieces[i].slice(equals + 1));
+			if (value === null) { return totpResult(null, "invalid_link"); }
+			if (Object.prototype.hasOwnProperty.call(parameters, name)) { return totpResult(null, "invalid_link"); }
+			parameters[name] = value;
+		}
+		function parameter(n) { return Object.prototype.hasOwnProperty.call(parameters, n) ? parameters[n] : undefined; }
+
+		var secretText = parameter("secret");
+		if (secretText === undefined || secretText.length === 0) { return totpResult(null, "missing_secret"); }
+		var secret = readBase32Secret(secretText);
+		if (secret.refusal) { return totpResult(null, secret.refusal); }
+
+		var algorithm = "SHA1";
+		var algorithmText = parameter("algorithm");
+		if (algorithmText !== undefined) {
+			algorithm = algorithmText.replace(/[a-z]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 32); });
+			if (!Object.prototype.hasOwnProperty.call(TOTP_ALGORITHMS, algorithm)) { return totpResult(null, "unsupported_algorithm"); }
+		}
+		var digits = 6;
+		var digitsText = parameter("digits");
+		if (digitsText !== undefined) {
+			if (digitsText !== "6" && digitsText !== "7" && digitsText !== "8") { return totpResult(null, "unsupported_digits"); }
+			digits = Number(digitsText);
+		}
+		var period = 30;
+		var periodText = parameter("period");
+		if (periodText !== undefined) {
+			if (!isPlainNumber(periodText) || periodText.length > 3 || Number(periodText) > TOTP_MAX_PERIOD) { return totpResult(null, "unsupported_period"); }
+			period = Number(periodText);
+		}
+		return totpResult(totpKey(secret.secret, algorithm, digits, period), null);
+	}
+
+	function readTotpKey(text) {
+		if (typeof text !== "string") { return totpResult(null, "invalid_secret"); }
+		if (text.length > TOTP_MAX_TEXT) { return totpResult(null, "too_long"); }
+		var trimmed = trimText(text);
+		if (trimmed.length === 0) { return totpResult(null, null); }
+		if (startsWithAscii(trimmed, "otpauth://")) { return readOtpauthLink(trimmed); }
+		if (startsWithAscii(trimmed, "steam://")) { return totpResult(null, "steam_not_supported"); }
+		var secret = readBase32Secret(trimmed);
+		if (secret.refusal) { return totpResult(null, secret.refusal); }
+		return totpResult(totpKey(secret.secret, "SHA1", 6, 30), null);
+	}
+
 	// RFC 6238 with RFC 4226's dynamic truncation, through WebCrypto's HMAC. unixSeconds is a whole
 	// number of seconds since 1970 (the device clock). Resolves to { code, secondsLeft }: the code
 	// as digits only, left-padded with zeros, and the seconds until the next one.
@@ -918,6 +1062,8 @@
 		sameKeyWrap: sameKeyWrap,
 		TOTP_ALGORITHMS: TOTP_ALGORITHMS,
 		isValidTotpKey: isValidTotpKey,
+		TOTP_REFUSALS: TOTP_REFUSALS,
+		readTotpKey: readTotpKey,
 		totpCode: totpCode,
 		totpSecondsLeft: totpSecondsLeft,
 		formatTotpCode: formatTotpCode,

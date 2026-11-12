@@ -233,3 +233,159 @@ test("an item with a key that is not valid is not written, and the message does 
 	}
 	assert.ok(vc.isValidTotpKey({ secret: TOTP.Secret, algorithm: "SHA1", digits: 6, period: 30 }));
 });
+
+// ------------------------------------------------------ reading a key from text
+const JBSW = "JBSWY3DPEHPK3PXP";   // 10 bytes: "Hello!\xDE\xAD\xBE\xEF"
+const key = (secret, algorithm = "SHA1", digits = 6, period = 30) => ({ secret, algorithm, digits, period });
+function reads(input, expected) {
+	const result = vc.readTotpKey(input);
+	assert.equal(result.refusal, null, `${JSON.stringify(input)} was refused: ${result.refusal}`);
+	assert.deepEqual(result.key === null ? null : { ...result.key }, expected, JSON.stringify(input));
+	if (result.key) { assert.ok(Object.isFrozen(result.key) && vc.isValidTotpKey(result.key)); }
+}
+function refuses(input, code) {
+	const result = vc.readTotpKey(input);
+	assert.equal(result.key, null, JSON.stringify(input));
+	assert.equal(result.refusal, code, JSON.stringify(input));
+	assert.ok(vc.TOTP_REFUSALS.includes(code));
+}
+
+test("§3.1: the length is checked first, then the text is trimmed; empty is no key; otpauth:// and steam:// are told apart from a secret", () => {
+	refuses("A".repeat(2049), "too_long");
+	refuses(" ".repeat(2049), "too_long");                       // before trimming
+	refuses("otpauth://totp/x?secret=" + "A".repeat(2025), "too_long");
+	reads("A".repeat(16) + " ".repeat(2032), key("A".repeat(16)));   // 2048 units: read
+	for (const empty of ["", " ", "\t\r\n", "  　﻿\u0085"]) { reads(empty, null); }
+	reads("　 " + JBSW + " ﻿", key(JBSW));
+	reads("OTPAUTH://TOTP/x?SECRET=" + JBSW, key(JBSW));
+	refuses("steam://ABCDEFGH", "steam_not_supported");
+	refuses("  STEAM://x", "steam_not_supported");
+	refuses("steam:/x", "invalid_secret");
+	refuses("otpauth:/totp/x?secret=" + JBSW, "invalid_secret");
+	// Every character the trim of IMPORT_EXPORT.md §2.1 removes, and no other, is removed here too.
+	const ie = require("../vault/public/assets/js/import-export.js")(vc);
+	for (let c = 0; c < 0x10000; c++) {
+		const ch = String.fromCharCode(c);
+		const trimmedHere = vc.readTotpKey(ch + "steam://x" + ch).refusal === "steam_not_supported";
+		assert.equal(trimmedHere, ie._trim(ch + "x") === "x", `U+${c.toString(16)}`);
+	}
+});
+
+test("§3.3: spaces, hyphens and trailing padding go, either case is read, and the stored secret is canonical", () => {
+	reads(JBSW, key(JBSW));
+	reads(JBSW.toLowerCase(), key(JBSW));
+	reads("jbsw y3dp ehpk 3pxp", key(JBSW));
+	reads("JBSW-Y3DP-EHPK-3PXP", key(JBSW));
+	reads(JBSW + "======", key(JBSW));
+	reads(JBSW + "= =-=", key(JBSW));                            // spaces and hyphens go first, then the "=" at the end
+	reads("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", key("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"));
+	reads("AAAAAAAAAAAAAAAAAB", key("AAAAAAAAAAAAAAAAAA"));       // 11 bytes: the leftover bits are dropped unchecked
+	reads("AAAAAAAAAAAAAAAAA", key("AAAAAAAAAAAAAAAA"));          // 17 characters are 10 bytes
+	reads("A".repeat(205), key("A".repeat(205)));                // 128 bytes
+	reads("A".repeat(206), key("A".repeat(205)));                // still 128 bytes
+	refuses("A".repeat(207), "secret_too_long");                 // 129
+	refuses("A".repeat(2000), "secret_too_long");
+	refuses("A".repeat(15), "secret_too_short");                 // 9 bytes
+	refuses("====", "secret_too_short");
+	refuses("- -", "secret_too_short");
+	refuses("JBSW=Y3DPEHPK3PXP", "invalid_secret");               // "=" not at the end
+	refuses(JBSW + "0", "invalid_secret");
+	refuses(JBSW + "1", "invalid_secret");
+	refuses(JBSW + "8", "invalid_secret");
+	refuses("JBSW\tY3DPEHPK3PXP", "invalid_secret");               // only U+0020 is a space here
+	refuses("JBSW Y3DPEHPK3PXP", "invalid_secret");
+	refuses("JBSW_Y3DPEHPK3PXP", "invalid_secret");
+	refuses("ĴBSWY3DPEHPK3PXP", "invalid_secret");
+	refuses("ＪBSWY3DPEHPK3PXP", "invalid_secret");                // full-width letter
+	refuses("JBSWY3DPEHPK3PX\uD83D", "invalid_secret");
+	refuses("A".repeat(15) + "!", "invalid_secret");             // the alphabet is checked before the length
+	// The canonical form is what the bytes are, not what was typed.
+	assert.equal(vc.readTotpKey("mzxw6ytboi======").refusal, "secret_too_short");
+});
+
+test("§3.2: the type, the query, and the form of every parameter", () => {
+	const link = (rest) => "otpauth://" + rest;
+	reads(link("totp/Example:alice@example.com?secret=" + JBSW + "&issuer=Example"), key(JBSW));
+	reads(link("TOTP/?secret=" + JBSW), key(JBSW));
+	reads(link("ToTp/label/with/slashes?secret=" + JBSW), key(JBSW));
+	reads(link("totp/label#not-a-fragment?secret=" + JBSW), key(JBSW));   // the label is not read
+	refuses(link("hotp/x?secret=" + JBSW + "&counter=1"), "hotp_not_supported");
+	refuses(link("HOTP/x?secret=" + JBSW), "hotp_not_supported");
+	refuses(link("steam/x?secret=" + JBSW), "invalid_link");
+	refuses(link("totp?secret=" + JBSW), "invalid_link");                 // no "/"
+	refuses(link("x"), "invalid_link");
+	refuses(link(""), "invalid_link");
+	refuses(link("/x?secret=" + JBSW), "invalid_link");                   // an empty type
+	refuses(link("totp /x?secret=" + JBSW), "invalid_link");
+	refuses(link("totp/x"), "invalid_link");                              // no "?"
+	// The query starts at the first "?" after the type, wherever a "#" is in the label (above and
+	// here), and ends at the first "#" after it.
+	reads(link("totp/x#?secret=" + JBSW), key(JBSW));
+	reads(link("totp/x?secret=" + JBSW + "#&secret=other"), key(JBSW));
+	refuses(link("totp/x?#secret=" + JBSW), "missing_secret");
+	reads(link("totp/x?&&secret=" + JBSW + "&&"), key(JBSW));             // empty items are skipped
+	refuses(link("totp/x?secret=" + JBSW + "&issuer"), "invalid_link");   // an item without "="
+	reads(link("totp/x?secret=" + JBSW + "&=x"), key(JBSW));              // an empty name is just another parameter
+	reads(link("totp/x?secret=" + JBSW + "&issuer=a=b"), key(JBSW));      // the value runs from the first "="
+	refuses(link("totp/x?secret=" + JBSW + "&secret=" + JBSW), "invalid_link");
+	refuses(link("totp/x?secret=" + JBSW + "&SECRET=" + JBSW), "invalid_link");
+	refuses(link("totp/x?secret=" + JBSW + "&issuer=a&Issuer=b"), "invalid_link");   // any parameter twice
+	refuses(link("totp/x?digits=6&secret=" + JBSW + "&digits=6"), "invalid_link");
+	refuses(link("totp/x?secret=" + JBSW + "&issuer=%"), "invalid_link");            // every value is decoded
+	refuses(link("totp/x?secret=" + JBSW + "&issuer=%4"), "invalid_link");
+	refuses(link("totp/x?secret=" + JBSW + "&issuer=%G1"), "invalid_link");
+	refuses(link("totp/x?secret=" + JBSW + "&issuer=%C3%28"), "invalid_link");       // not UTF-8
+	refuses(link("totp/x?secret=" + JBSW + "&issuer=%ED%A0%80"), "invalid_link");    // an encoded surrogate
+	refuses(link("totp/x?secret=" + JBSW + "&issuer=%FF"), "invalid_link");
+	reads(link("totp/x?secret=" + JBSW + "&issuer=%C3%A9%e2%82%ac+x"), key(JBSW));
+	reads(link("totp/x?secret=%4a%42SWY3DPEHPK3PXP"), key(JBSW));                     // the secret is decoded, then read by §3.3
+	reads(link("totp/x?secret=JBSW%20Y3DP-EHPK%203PXP%3D%3D"), key(JBSW));
+	refuses(link("totp/x?secret=JBSW+Y3DPEHPK3PXP"), "invalid_secret");               // "+" stays "+"
+	reads(link("totp/x?%73ecret=" + JBSW + "&secret=" + JBSW), key(JBSW));            // names are not decoded
+});
+
+test("§3.2: secret, algorithm, digits and period, and the order the checks run in", () => {
+	const link = (query) => "otpauth://totp/Example?" + query;
+	refuses(link("issuer=Example"), "missing_secret");
+	refuses(link("secret="), "missing_secret");
+	refuses(link("secret=&algorithm=MD5"), "missing_secret");
+	refuses(link("secret=%20"), "secret_too_short");                       // not empty after decoding; nothing left after §3.3
+	refuses(link("secret=JBSW!"), "invalid_secret");
+	refuses(link("secret=AAAA"), "secret_too_short");
+	refuses(link("secret=" + "A".repeat(207)), "secret_too_long");
+	reads(link("secret=" + JBSW + "&algorithm=SHA1"), key(JBSW));
+	reads(link("secret=" + JBSW + "&algorithm=sha256"), key(JBSW, "SHA256"));
+	reads(link("secret=" + JBSW + "&ALGORITHM=Sha512"), key(JBSW, "SHA512"));
+	for (const bad of ["", "MD5", "SHA-1", "SHA224", "SHA3-256", " SHA1", "SHA1 ", "ſha1"]) {
+		refuses(link("secret=" + JBSW + "&algorithm=" + encodeURIComponent(bad)), "unsupported_algorithm");
+	}
+	reads(link("secret=" + JBSW + "&digits=7"), key(JBSW, "SHA1", 7));
+	reads(link("secret=" + JBSW + "&digits=8"), key(JBSW, "SHA1", 8));
+	for (const bad of ["", "5", "9", "06", "+6", "-6", "6.0", "６", " 6", "10"]) {
+		refuses(link("secret=" + JBSW + "&digits=" + encodeURIComponent(bad)), "unsupported_digits");
+	}
+	reads(link("secret=" + JBSW + "&period=1"), key(JBSW, "SHA1", 6, 1));
+	reads(link("secret=" + JBSW + "&period=60"), key(JBSW, "SHA1", 6, 60));
+	reads(link("secret=" + JBSW + "&period=300"), key(JBSW, "SHA1", 6, 300));
+	for (const bad of ["", "0", "301", "030", "+30", "-30", "30.0", "3e1", "１", "99999999999999999999", " 30"]) {
+		refuses(link("secret=" + JBSW + "&period=" + encodeURIComponent(bad)), "unsupported_period");
+	}
+	// The first failure in the order of the list is the result.
+	refuses(link("secret=" + JBSW + "&algorithm=MD5&digits=5&period=0"), "unsupported_algorithm");
+	refuses(link("secret=" + JBSW + "&digits=5&period=0"), "unsupported_digits");
+	refuses(link("secret=JBSW!&algorithm=MD5"), "invalid_secret");
+	refuses(link("algorithm=MD5&issuer=%ZZ"), "invalid_link");
+	refuses(link("secret=" + JBSW + "&period=0&secret=x"), "invalid_link");
+	// Everything else is ignored, whatever its value.
+	reads(link("secret=" + JBSW + "&issuer=&image=https%3A%2F%2Fx&counter=abc&foo=bar"), key(JBSW));
+});
+
+test("a refusal never carries the text, and every result can be used as is", () => {
+	const secret = "SECRETSECRETSECRET";
+	for (const input of ["otpauth://totp/x?secret=" + secret + "&digits=9", secret + "!", "steam://" + secret, "otpauth://hotp/x?secret=" + secret]) {
+		const result = vc.readTotpKey(input);
+		assert.ok(!JSON.stringify(result).includes(secret));
+		assert.ok(Object.isFrozen(result));
+	}
+	assert.deepEqual(Object.keys(vc.readTotpKey(JBSW)), ["key", "refusal"]);
+});
