@@ -62,11 +62,12 @@
 		too_many_urls: "The entry has more than 64 web addresses.",
 		url_too_long: "A web address is longer than 2048 characters.",
 		url_invalid: "A web address is not a valid http or https address.",
-		notes_too_long_with_extras: "With the fields BitosX has no place for copied into them, the notes would be longer than 16384 characters."
+		notes_too_long_with_extras: "With the fields BitosX has no place for copied into them, the notes would be longer than 16384 characters.",
+		totp_invalid: "The authenticator key in the file is not valid."
 	});
 	// The kinds, in the order the fixtures and a preview list them, each "in the plural, in a sentence".
 	var EXTRA_TEXTS = Object.freeze({
-		totp: "authenticator keys (TOTP)",
+		totp: "authenticator keys that could not be read",
 		folder: "folder or group names",
 		other_address: "addresses that are not web addresses",
 		custom_field: "custom fields"
@@ -320,6 +321,10 @@
 		return {
 			position: position, name: "", username: "", password: "", notes: "", favorite: false,
 			addresses: [], totp: "", folder: "", customFields: [], problem: null
+			// Set by a reader only when it applies: totpKey, a key the reader read itself (KeePass
+			// strings, BitosX's own export); totpRefusal, why one it found could not be read (KeePass:
+			// its strings then stay custom fields); totpInvalid, BitosX's own export holds a "totp"
+			// that is not a key.
 		};
 	}
 
@@ -624,9 +629,41 @@
 			if (urls !== null) {
 				for (var u = 0; u < urls.length; u++) { if (typeof urls[u] === "string") { entry.addresses.push(urls[u]); } }
 			}
+			var totp = readBitosXTotp(item);
+			if (totp.key !== null) { entry.totpKey = totp.key; }
+			if (!totp.valid) { entry.totpInvalid = true; }
 			entries.push(entry);
 		}
 		return parsedImport("bitosx_json", "BitosX (JSON)", entries, items.length, unsupported, 0, []);
+	}
+
+	// The "totp" of an item of BitosX's own export: absent or null is no key; an object with exactly
+	// secret, algorithm, digits and period that make a key the vault accepts is that key. Anything
+	// else is not valid, and the entry is not imported: an export of BitosX's own is never guessed
+	// at. Numbers may be written any way JSON allows (6, 6.0, 6e0), as for "version".
+	function readBitosXTotp(item) {
+		if (!hasOwn.call(item, "totp") || item.totp === null) { return { valid: true, key: null }; }
+		var totp = item.totp;
+		if (!isObject(totp)) { return { valid: false, key: null }; }
+		var secret = null, algorithm = null, digits = null, period = null;
+		var names = Object.keys(totp);
+		for (var i = 0; i < names.length; i++) {
+			var value = totp[names[i]];
+			if (names[i] === "secret" && typeof value === "string") { secret = value; }
+			else if (names[i] === "algorithm" && typeof value === "string") {
+				if (value !== "SHA1" && value !== "SHA256" && value !== "SHA512") { return { valid: false, key: null }; }
+				algorithm = value;
+			}
+			else if (names[i] === "digits") { digits = smallInteger(value); }
+			else if (names[i] === "period") { period = smallInteger(value); }
+			else { return { valid: false, key: null }; }   // another member, or one of the four of the wrong JSON type
+		}
+		if (secret === null || algorithm === null || digits === null || period === null) { return { valid: false, key: null }; }
+		var key = Object.freeze({ secret: secret, algorithm: algorithm, digits: digits, period: period });
+		return vc.isValidTotpKey(key) ? { valid: true, key: key } : { valid: false, key: null };
+	}
+	function smallInteger(value) {
+		return typeof value === "number" && value >= 0 && value <= 1000 && Math.floor(value) === value ? value : null;
 	}
 
 	// ---- §5 KeePass 2 XML ----
@@ -654,6 +691,36 @@
 			if (doc.getElementsByTagNameNS(PARSER_ERROR_NAMESPACES[i], "parsererror").length > 0) { return true; }
 		}
 		return false;
+	}
+
+	// The strings an authenticator key is kept in (§5.3): KeePassXC's "otp" (an otpauth:// link) and
+	// KeePass 2's TimeOtp-* (KeePass/Util/EntryUtil.cs). KeePass reads the secret from the first of
+	// TimeOtp-Secret (UTF-8), -Hex, -Base32 and -Base64 that is not empty; only Base32 is read here.
+	var AUTHENTICATOR_STRINGS = ["otp", "TimeOtp-Secret", "TimeOtp-Secret-Hex", "TimeOtp-Secret-Base32", "TimeOtp-Algorithm", "TimeOtp-Length", "TimeOtp-Period"];
+
+	// The authenticator key of a KeePass entry, and the custom fields left once the strings it was
+	// read from are taken away. The first string of a name counts; a blank value counts as none.
+	// "otp" is read as any text is; otherwise TimeOtp-Secret-Base32, if TimeOtp-Secret and
+	// TimeOtp-Secret-Hex are blank (KeePass would use those first), with TimeOtp-Algorithm, -Length
+	// and -Period. A key that is read takes its strings out of the custom fields; one that is refused
+	// leaves them where they are, and is counted as a key that could not be read.
+	function authenticatorKeyOf(found) {
+		function value(name) { return hasOwn.call(found.authenticatorFields, name) ? found.customFields[found.authenticatorFields[name]].value : null; }
+		function isSet(name) { var v = value(name); return v !== null && !isBlank(v); }
+		var result, used;
+		if (isSet("otp")) {
+			result = vc.readTotpKey(value("otp"));
+			used = ["otp"];
+		} else if (isSet("TimeOtp-Secret-Base32") && !isSet("TimeOtp-Secret") && !isSet("TimeOtp-Secret-Hex")) {
+			result = vc.readKeePass2TotpKey(value("TimeOtp-Secret-Base32"), value("TimeOtp-Algorithm"), value("TimeOtp-Length"), value("TimeOtp-Period"));
+			used = ["TimeOtp-Secret-Base32", "TimeOtp-Algorithm", "TimeOtp-Length", "TimeOtp-Period"];
+		} else {
+			return { key: null, refusal: null, customFields: found.customFields };
+		}
+		if (result.key === null) { return { key: null, refusal: result.refusal, customFields: found.customFields }; }
+		var taken = [];
+		used.forEach(function (name) { if (hasOwn.call(found.authenticatorFields, name)) { taken.push(found.authenticatorFields[name]); } });
+		return { key: result.key, refusal: null, customFields: found.customFields.filter(function (field, i) { return taken.indexOf(i) < 0; }) };
 	}
 
 	function readKeePassXml(text) {
@@ -712,8 +779,12 @@
 			var field = key === "Title" ? "title" : key === "UserName" ? "userName" : key === "Password" ? "password"
 				: key === "URL" ? "url" : key === "Notes" ? "notes" : null;
 			if (field === null) {
-				// Every other string is a custom field: KeePass keeps authenticator keys in such
-				// strings too ("otp", "TOTP Seed", "TimeOtp-Secret…"), under whatever name.
+				// Every other string is a custom field. Those an authenticator key is kept in are
+				// marked, by their name as written (the first of each name); whether they stay custom
+				// fields is decided once the entry is read (authenticatorKeyOf).
+				if (AUTHENTICATOR_STRINGS.indexOf(key) >= 0 && !hasOwn.call(entry.authenticatorFields, key)) {
+					entry.authenticatorFields[key] = entry.customFields.length;
+				}
 				entry.customFields.push({ name: trim(key), value: value });
 			} else if (entry[field] !== null) {
 				entry.hasFieldTwice = true;   // the first value is the one that is shown
@@ -723,7 +794,8 @@
 		}
 		function readEntry(element, level, group) {
 			if (entries.length >= MAX_ENTRIES) { throw new ImportRefused("too_many_entries"); }
-			var entry = { group: group, position: entries.length + 1, title: null, userName: null, password: null, url: null, notes: null, hasFieldTwice: false, customFields: [] };
+			var entry = { group: group, position: entries.length + 1, title: null, userName: null, password: null, url: null, notes: null, hasFieldTwice: false, customFields: [],
+				authenticatorFields: Object.create(null) };
 			entries.push(entry);
 			// Only the strings are read. The earlier versions of the entry are in History, which is
 			// passed over like everything else, so they are neither imported nor counted.
@@ -795,7 +867,10 @@
 			entry.notes = found.notes === null ? "" : found.notes;
 			entry.addresses = found.url !== null && found.url.length > 0 ? [found.url] : [];
 			entry.folder = pathOf(found.group);
-			entry.customFields = found.customFields;
+			var authenticator = authenticatorKeyOf(found);
+			entry.customFields = authenticator.customFields;
+			if (authenticator.key !== null) { entry.totpKey = authenticator.key; }
+			if (authenticator.refusal !== null) { entry.totpRefusal = authenticator.refusal; }
 			entry.problem = found.hasFieldTwice ? "field_twice" : null;
 			result.push(entry);
 		});
@@ -1029,9 +1104,18 @@
 
 		// A custom field without a value has nothing that could be lost.
 		var customFields = entry.customFields.filter(function (field) { return !isBlank(field.value); });
-		var extras = { totp: trim(entry.totp), folder: trim(entry.folder), otherAddresses: otherAddresses, customFields: customFields };
 
-		if (name.length === 0 && urls.length === 0
+		// The authenticator key: read already, or read now from its text (docs/TOTP.md §3). Text that
+		// is not a key stays an extra, as it was before keys were stored.
+		var totp = entry.totpKey || null, totpRefused = entry.totpRefusal || null, totpText = "";
+		if (totp === null && entry.totp.length > 0) {
+			var read = vc.readTotpKey(entry.totp);
+			totp = read.key;
+			if (read.refusal !== null) { totpRefused = read.refusal; totpText = trim(entry.totp); }
+		}
+		var extras = { totp: totpText, folder: trim(entry.folder), otherAddresses: otherAddresses, customFields: customFields };
+
+		if (name.length === 0 && urls.length === 0 && totp === null
 			&& extras.totp.length === 0 && otherAddresses.length === 0 && customFields.length === 0
 			&& isBlank(entry.username) && isBlank(entry.password) && isBlank(entry.notes)) {
 			return null;   // nothing but, at most, the name of a folder
@@ -1049,6 +1133,7 @@
 			notes = withExtras(notes, extras);
 			if (reason === null && notes.length > ITEM.notes) { reason = "notes_too_long_with_extras"; }
 		}
+		if (reason === null && entry.totpInvalid === true) { reason = "totp_invalid"; }   // checked after every other reason
 
 		return {
 			position: entry.position,
@@ -1063,6 +1148,8 @@
 			favorite: entry.favorite,
 			nameWasDerived: nameWasDerived,
 			httpsAdded: httpsAdded,
+			totp: totp,
+			totpRefused: totpRefused,
 			extras: extras
 		};
 	}
@@ -1092,7 +1179,7 @@
 
 		var candidates = [];
 		var counts = {
-			toAdd: 0, duplicates: 0, notImported: 0, empty: 0, httpsAdded: 0, namesDerived: 0,
+			toAdd: 0, duplicates: 0, notImported: 0, empty: 0, httpsAdded: 0, namesDerived: 0, totpKeys: 0, totpUnreadable: 0,
 			vaultItemsBefore: vaultItems.length, vaultItemsAfter: 0, exceedsVaultItemLimit: false
 		};
 		var extras = {};
@@ -1116,6 +1203,8 @@
 				counts.toAdd++;
 				counts.httpsAdded += candidate.httpsAdded;
 				if (candidate.nameWasDerived) { counts.namesDerived++; }
+				if (candidate.totp !== null) { counts.totpKeys++; }
+				if (candidate.totpRefused !== null) { counts.totpUnreadable++; }
 				if (candidate.extras.totp.length > 0) { count(extras, "totp"); }
 				if (candidate.extras.folder.length > 0) { count(extras, "folder"); }
 				extras.other_address = (extras.other_address || 0) + candidate.extras.otherAddresses.length;
@@ -1165,6 +1254,7 @@
 				urls: Object.freeze(candidate.urls.map(detached)),
 				notes: candidate.notes.length > 0 ? detached(candidate.notes) : null,
 				favorite: candidate.favorite === true,
+				totp: candidate.totp == null ? null : Object.freeze({ secret: detached(candidate.totp.secret), algorithm: candidate.totp.algorithm, digits: candidate.totp.digits, period: candidate.totp.period }),
 				createdAt: now,
 				createdAtText: null,
 				updatedAt: now
@@ -1265,6 +1355,7 @@
 					username: wellFormed(item.username == null ? "" : item.username),
 					password: wellFormed(item.password == null ? "" : item.password),
 					urls: item.urls.map(wellFormed),
+					totp: item.totp == null ? null : { secret: item.totp.secret, algorithm: item.totp.algorithm, digits: item.totp.digits, period: item.totp.period },
 					notes: wellFormed(item.notes == null ? "" : item.notes),
 					favorite: item.favorite === true,
 					createdAt: itemTimestamp(item.createdAt, item.createdAtText),
@@ -1287,6 +1378,14 @@
 	function countItemsWithSeveralUrls(items) {
 		var n = 0;
 		items.forEach(function (item) { if (item.urls.length > 1) { n++; } });
+		return n;
+	}
+
+	// How many items have an authenticator key. A CSV export does not hold keys: this is the number
+	// a person is told before choosing it.
+	function countItemsWithTotp(items) {
+		var n = 0;
+		items.forEach(function (item) { if (item.totp != null) { n++; } });
 		return n;
 	}
 
@@ -1319,6 +1418,7 @@
 		exportCsv: exportCsv,
 		exportJson: exportJson,
 		countItemsWithSeveralUrls: countItemsWithSeveralUrls,
+		countItemsWithTotp: countItemsWithTotp,
 		exportFileName: exportFileName,
 		// The parts, for the unit tests.
 		_trim: trim,

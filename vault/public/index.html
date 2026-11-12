@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Sign in — BitosX vault</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.8.1" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.9.0" />
     <meta name="theme-color" content="#26292E" />
     <script src="/assets/js/theme-init.js"></script>
 </head>
@@ -348,6 +348,15 @@
               </details>
             </div>
             <div class="field">
+              <label for="edit-totp">Authenticator key</label>
+              <div class="vault-editor__password">
+                <input id="edit-totp" type="password" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" spellcheck="false" autocapitalize="off" aria-describedby="edit-totp-hint" />
+                <button class="btn ghost small" type="button" id="edit-totp-toggle" aria-pressed="false">Show</button>
+              </div>
+              <span class="field-error" id="edit-totp-error" hidden></span>
+              <span class="hint" id="edit-totp-hint">The key or the otpauth:// link a site shows when you set up two-step sign-in.</span>
+            </div>
+            <div class="field">
               <label for="edit-urls">URLs (one per line, http or https)</label>
               <textarea id="edit-urls" rows="2" autocomplete="off" spellcheck="false"></textarea>
               <span class="field-error" id="edit-urls-error" hidden></span>
@@ -404,6 +413,7 @@
               <label class="vault-editor__check"><input id="export-format-json" name="export-format" type="radio" value="json" /> JSON, BitosX's own format: everything an item holds, every address included</label>
             </fieldset>
             <p class="inline-note" id="export-several-urls" hidden></p>
+            <p class="inline-note" id="export-totp" hidden></p>
             <p class="export-warning" id="export-warning">This file will contain every password in plain text. Anyone who can read it can sign in as you. Keep it only as long as you need it, and delete it afterwards. Do not open it in a spreadsheet program: such programs can run formulas found in files like this. To keep a copy of your vault, use the encrypted backup instead.</p>
             <div class="field">
               <label class="vault-editor__check"><input id="export-ack" type="checkbox" aria-describedby="export-warning" /> I understand that this file is not encrypted</label>
@@ -444,7 +454,7 @@
   </main>
 
   <footer>
-    <div class="footer-version">web v0.8.1</div>
+    <div class="footer-version">web v0.9.0</div>
     <div class="footer-links">
       <a href="https://bitosx.se/#security" rel="noopener noreferrer">How your data is protected</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">API source</a>

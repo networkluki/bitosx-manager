@@ -1,0 +1,120 @@
+{
+  "encrypted": false,
+  "folders": [],
+  "items": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "type": 1,
+      "name": "FAKE link as Bitwarden writes it",
+      "notes": null,
+      "favorite": false,
+      "deletedDate": null,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://fake1.example.test/"
+          }
+        ],
+        "username": "fake.user1",
+        "password": "FAKE-pw-1",
+        "totp": "otpauth://totp/FAKE:fake.user1?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=FAKE&algorithm=SHA1&digits=6&period=30"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "type": 1,
+      "name": "FAKE plain key",
+      "notes": null,
+      "favorite": false,
+      "deletedDate": null,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://fake2.example.test/"
+          }
+        ],
+        "username": "fake.user2",
+        "password": "FAKE-pw-2",
+        "totp": "JBSW Y3DP EHPK 3PXP"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "type": 1,
+      "name": "FAKE Steam",
+      "notes": null,
+      "favorite": false,
+      "deletedDate": null,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://fake3.example.test/"
+          }
+        ],
+        "username": "fake.user3",
+        "password": "FAKE-pw-3",
+        "totp": "steam://FAKEFAKEFAKEFAKE"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "type": 1,
+      "name": "FAKE no key",
+      "notes": null,
+      "favorite": false,
+      "deletedDate": null,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://fake4.example.test/"
+          }
+        ],
+        "username": "fake.user4",
+        "password": "FAKE-pw-4",
+        "totp": null
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "type": 1,
+      "name": "FAKE key that is not a string",
+      "notes": null,
+      "favorite": false,
+      "deletedDate": null,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://fake5.example.test/"
+          }
+        ],
+        "username": "fake.user5",
+        "password": "FAKE-pw-5",
+        "totp": 123456
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "type": 1,
+      "name": "FAKE link with a period of 301",
+      "notes": null,
+      "favorite": false,
+      "deletedDate": null,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://fake6.example.test/"
+          }
+        ],
+        "username": "fake.user6",
+        "password": "FAKE-pw-6",
+        "totp": "otpauth://totp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=301"
+      }
+    }
+  ]
+}

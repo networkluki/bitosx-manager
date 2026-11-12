@@ -1,0 +1,384 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "bitwarden-totp.json"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "bitwarden_json",
+        "label": "Bitwarden (JSON)",
+        "records": 6,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 6,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "totpKeys": 2,
+          "totpUnreadable": 2,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 6,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 2
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link as Bitwarden writes it",
+            "username": "fake.user1",
+            "password": "FAKE-pw-1",
+            "urls": [
+              "https://fake1.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE plain key",
+            "username": "fake.user2",
+            "password": "FAKE-pw-2",
+            "urls": [
+              "https://fake2.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "JBSWY3DPEHPK3PXP",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE Steam",
+            "username": "fake.user3",
+            "password": "FAKE-pw-3",
+            "urls": [
+              "https://fake3.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "steam_not_supported",
+            "extras": {
+              "totp": "steam://FAKEFAKEFAKEFAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE no key",
+            "username": "fake.user4",
+            "password": "FAKE-pw-4",
+            "urls": [
+              "https://fake4.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE key that is not a string",
+            "username": "fake.user5",
+            "password": "FAKE-pw-5",
+            "urls": [
+              "https://fake5.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link with a period of 301",
+            "username": "fake.user6",
+            "password": "FAKE-pw-6",
+            "urls": [
+              "https://fake6.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_period",
+            "extras": {
+              "totp": "otpauth://totp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=301",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "what BitosX has no field for is copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "bitwarden_json",
+        "label": "Bitwarden (JSON)",
+        "records": 6,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 6,
+          "duplicates": 0,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "totpKeys": 2,
+          "totpUnreadable": 2,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 6,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 2
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link as Bitwarden writes it",
+            "username": "fake.user1",
+            "password": "FAKE-pw-1",
+            "urls": [
+              "https://fake1.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE plain key",
+            "username": "fake.user2",
+            "password": "FAKE-pw-2",
+            "urls": [
+              "https://fake2.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "JBSWY3DPEHPK3PXP",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE Steam",
+            "username": "fake.user3",
+            "password": "FAKE-pw-3",
+            "urls": [
+              "https://fake3.example.test/"
+            ],
+            "notes": "Authenticator key (TOTP): steam://FAKEFAKEFAKEFAKE",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "steam_not_supported",
+            "extras": {
+              "totp": "steam://FAKEFAKEFAKEFAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE no key",
+            "username": "fake.user4",
+            "password": "FAKE-pw-4",
+            "urls": [
+              "https://fake4.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE key that is not a string",
+            "username": "fake.user5",
+            "password": "FAKE-pw-5",
+            "urls": [
+              "https://fake5.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link with a period of 301",
+            "username": "fake.user6",
+            "password": "FAKE-pw-6",
+            "urls": [
+              "https://fake6.example.test/"
+            ],
+            "notes": "Authenticator key (TOTP): otpauth://totp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=301",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_period",
+            "extras": {
+              "totp": "otpauth://totp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=301",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

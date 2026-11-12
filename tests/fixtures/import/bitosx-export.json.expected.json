@@ -25,6 +25,8 @@
           "empty": 0,
           "httpsAdded": 0,
           "namesDerived": 0,
+          "totpKeys": 2,
+          "totpUnreadable": 0,
           "vaultItemsBefore": 0,
           "vaultItemsAfter": 8,
           "exceedsVaultItemLimit": false
@@ -46,6 +48,13 @@
             "favorite": true,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -69,6 +78,13 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": {
+              "secret": "JBSWY3DPEHPK3PXP",
+              "algorithm": "SHA256",
+              "digits": 8,
+              "period": 60
+            },
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -91,6 +107,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -113,6 +131,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -133,6 +153,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -155,6 +177,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -177,6 +201,8 @@
             "favorite": true,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -197,6 +223,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -290,6 +318,8 @@
           "empty": 0,
           "httpsAdded": 0,
           "namesDerived": 0,
+          "totpKeys": 0,
+          "totpUnreadable": 0,
           "vaultItemsBefore": 8,
           "vaultItemsAfter": 8,
           "exceedsVaultItemLimit": false
@@ -311,6 +341,13 @@
             "favorite": true,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -334,6 +371,13 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": {
+              "secret": "JBSWY3DPEHPK3PXP",
+              "algorithm": "SHA256",
+              "digits": 8,
+              "period": 60
+            },
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -356,6 +400,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -378,6 +424,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -398,6 +446,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -420,6 +470,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -442,6 +494,8 @@
             "favorite": true,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -462,6 +516,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",

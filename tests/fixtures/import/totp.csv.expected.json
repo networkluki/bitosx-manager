@@ -1,0 +1,1124 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "totp.csv"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 13,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 12,
+          "duplicates": 1,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 2,
+          "totpKeys": 5,
+          "totpUnreadable": 6,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 12,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 6
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE base32",
+            "username": "fake.one",
+            "password": "FAKE-pw-1",
+            "urls": [
+              "https://one.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE groups in lower case",
+            "username": "fake.two",
+            "password": "FAKE-pw-2",
+            "urls": [
+              "https://two.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link SHA256",
+            "username": "fake.three",
+            "password": "FAKE-pw-3",
+            "urls": [
+              "https://three.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA256",
+              "digits": 8,
+              "period": 60
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link SHA512 7 digits",
+            "username": "fake.four",
+            "password": "FAKE-pw-4",
+            "urls": [
+              "https://four.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA512",
+              "digits": 7,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE hotp",
+            "username": "fake.five",
+            "password": "FAKE-pw-5",
+            "urls": [
+              "https://five.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "hotp_not_supported",
+            "extras": {
+              "totp": "otpauth://hotp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&counter=3",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE steam",
+            "username": "fake.six",
+            "password": "FAKE-pw-6",
+            "urls": [
+              "https://six.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "steam_not_supported",
+            "extras": {
+              "totp": "steam://FAKEFAKEFAKEFAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE too short",
+            "username": "fake.seven",
+            "password": "FAKE-pw-7",
+            "urls": [
+              "https://seven.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "secret_too_short",
+            "extras": {
+              "totp": "FAKEFAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE not base32",
+            "username": "fake.eight",
+            "password": "FAKE-pw-8",
+            "urls": [
+              "https://eight.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "invalid_secret",
+            "extras": {
+              "totp": "FAKE-0189-FAKE-FAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link without secret",
+            "username": "fake.nine",
+            "password": "FAKE-pw-9",
+            "urls": [
+              "https://nine.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "missing_secret",
+            "extras": {
+              "totp": "otpauth://totp/FAKE?issuer=FAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE white space only",
+            "username": "fake.ten",
+            "password": "FAKE-pw-10",
+            "urls": [
+              "https://ten.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 11,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Untitled",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.only.a.bad.key",
+            "username": "fake.only.a.bad.key",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_period",
+            "extras": {
+              "totp": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=0",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 13,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "FAKE base32",
+            "username": "fake.one",
+            "password": "FAKE-pw-1",
+            "urls": [
+              "https://one.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "JBSWY3DPEHPK3PXP",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "keys that could not be read are copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 13,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 12,
+          "duplicates": 1,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 2,
+          "totpKeys": 5,
+          "totpUnreadable": 6,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 12,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 6
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE base32",
+            "username": "fake.one",
+            "password": "FAKE-pw-1",
+            "urls": [
+              "https://one.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE groups in lower case",
+            "username": "fake.two",
+            "password": "FAKE-pw-2",
+            "urls": [
+              "https://two.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link SHA256",
+            "username": "fake.three",
+            "password": "FAKE-pw-3",
+            "urls": [
+              "https://three.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA256",
+              "digits": 8,
+              "period": 60
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link SHA512 7 digits",
+            "username": "fake.four",
+            "password": "FAKE-pw-4",
+            "urls": [
+              "https://four.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA512",
+              "digits": 7,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE hotp",
+            "username": "fake.five",
+            "password": "FAKE-pw-5",
+            "urls": [
+              "https://five.example.test/"
+            ],
+            "notes": "Authenticator key (TOTP): otpauth://hotp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&counter=3",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "hotp_not_supported",
+            "extras": {
+              "totp": "otpauth://hotp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&counter=3",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE steam",
+            "username": "fake.six",
+            "password": "FAKE-pw-6",
+            "urls": [
+              "https://six.example.test/"
+            ],
+            "notes": "Authenticator key (TOTP): steam://FAKEFAKEFAKEFAKE",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "steam_not_supported",
+            "extras": {
+              "totp": "steam://FAKEFAKEFAKEFAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE too short",
+            "username": "fake.seven",
+            "password": "FAKE-pw-7",
+            "urls": [
+              "https://seven.example.test/"
+            ],
+            "notes": "Authenticator key (TOTP): FAKEFAKE",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "secret_too_short",
+            "extras": {
+              "totp": "FAKEFAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE not base32",
+            "username": "fake.eight",
+            "password": "FAKE-pw-8",
+            "urls": [
+              "https://eight.example.test/"
+            ],
+            "notes": "Authenticator key (TOTP): FAKE-0189-FAKE-FAKE",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "invalid_secret",
+            "extras": {
+              "totp": "FAKE-0189-FAKE-FAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link without secret",
+            "username": "fake.nine",
+            "password": "FAKE-pw-9",
+            "urls": [
+              "https://nine.example.test/"
+            ],
+            "notes": "Authenticator key (TOTP): otpauth://totp/FAKE?issuer=FAKE",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "missing_secret",
+            "extras": {
+              "totp": "otpauth://totp/FAKE?issuer=FAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE white space only",
+            "username": "fake.ten",
+            "password": "FAKE-pw-10",
+            "urls": [
+              "https://ten.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 11,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Untitled",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.only.a.bad.key",
+            "username": "fake.only.a.bad.key",
+            "password": "",
+            "urls": [],
+            "notes": "Authenticator key (TOTP): otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=0",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_period",
+            "extras": {
+              "totp": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=0",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 13,
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "FAKE base32",
+            "username": "fake.one",
+            "password": "FAKE-pw-1",
+            "urls": [
+              "https://one.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "JBSWY3DPEHPK3PXP",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "duplicates imported: the key is not compared",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": true
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "CSV",
+        "records": 13,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 13,
+          "duplicates": 1,
+          "notImported": 0,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 2,
+          "totpKeys": 6,
+          "totpUnreadable": 6,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 13,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "totp": 6
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE base32",
+            "username": "fake.one",
+            "password": "FAKE-pw-1",
+            "urls": [
+              "https://one.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE groups in lower case",
+            "username": "fake.two",
+            "password": "FAKE-pw-2",
+            "urls": [
+              "https://two.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link SHA256",
+            "username": "fake.three",
+            "password": "FAKE-pw-3",
+            "urls": [
+              "https://three.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA256",
+              "digits": 8,
+              "period": 60
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link SHA512 7 digits",
+            "username": "fake.four",
+            "password": "FAKE-pw-4",
+            "urls": [
+              "https://four.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA512",
+              "digits": 7,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE hotp",
+            "username": "fake.five",
+            "password": "FAKE-pw-5",
+            "urls": [
+              "https://five.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "hotp_not_supported",
+            "extras": {
+              "totp": "otpauth://hotp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&counter=3",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE steam",
+            "username": "fake.six",
+            "password": "FAKE-pw-6",
+            "urls": [
+              "https://six.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "steam_not_supported",
+            "extras": {
+              "totp": "steam://FAKEFAKEFAKEFAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE too short",
+            "username": "fake.seven",
+            "password": "FAKE-pw-7",
+            "urls": [
+              "https://seven.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "secret_too_short",
+            "extras": {
+              "totp": "FAKEFAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE not base32",
+            "username": "fake.eight",
+            "password": "FAKE-pw-8",
+            "urls": [
+              "https://eight.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "invalid_secret",
+            "extras": {
+              "totp": "FAKE-0189-FAKE-FAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE link without secret",
+            "username": "fake.nine",
+            "password": "FAKE-pw-9",
+            "urls": [
+              "https://nine.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "missing_secret",
+            "extras": {
+              "totp": "otpauth://totp/FAKE?issuer=FAKE",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE white space only",
+            "username": "fake.ten",
+            "password": "FAKE-pw-10",
+            "urls": [
+              "https://ten.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 11,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Untitled",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "fake.only.a.bad.key",
+            "username": "fake.only.a.bad.key",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": "unsupported_period",
+            "extras": {
+              "totp": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=0",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 13,
+            "status": "add",
+            "duplicate": true,
+            "reason": null,
+            "name": "FAKE base32",
+            "username": "fake.one",
+            "password": "FAKE-pw-1",
+            "urls": [
+              "https://one.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "JBSWY3DPEHPK3PXP",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

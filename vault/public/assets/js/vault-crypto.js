@@ -28,7 +28,8 @@
 
 	var ENVELOPE_KEYS = ["version", "kdf", "kdfParameters", "salt", "algorithm", "keyWrapNonce", "encryptedVaultKey", "contentNonce", "ciphertext"];
 	var KDF_KEYS = ["memoryKiB", "iterations", "parallelism", "keyLengthBytes"];
-	var ITEM_KEYS = ["type", "Id", "Name", "Notes", "Favorite", "CreatedAt", "UpdatedAt", "Username", "Password", "Urls"];
+	var ITEM_KEYS = ["type", "Id", "Name", "Notes", "Favorite", "CreatedAt", "UpdatedAt", "Username", "Password", "Urls", "Totp"];
+	var TOTP_KEYS = ["Secret", "Algorithm", "Digits", "Period"];
 	var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 	var KINDS = Object.freeze({
@@ -286,7 +287,9 @@
 		if (!isPlainObject(doc) || !Object.keys(doc).every(function (k) { return k === "schemaVersion" || k === "items"; })) {
 			throw new VaultError(KINDS.CONTENT, "The decrypted vault content is not a vault.");
 		}
-		if (doc.schemaVersion !== 1) { throw new VaultError(KINDS.CONTENT, "Unsupported vault schema version."); }
+		// 1: no item has an authenticator key; 2: items may have one (written only when one has).
+		if (doc.schemaVersion !== 1 && doc.schemaVersion !== 2) { throw new VaultError(KINDS.CONTENT, "Unsupported vault schema version."); }
+		var schemaVersion = doc.schemaVersion;
 		var rawItems = doc.items === undefined || doc.items === null ? [] : doc.items;
 		if (!Array.isArray(rawItems) || rawItems.length > MAX_ITEMS) { throw new VaultError(KINDS.CONTENT, "The vault's item list is invalid."); }
 
@@ -306,6 +309,14 @@
 			var created = raw.CreatedAt === undefined ? new Date(0) : parseDate(raw.CreatedAt, "CreatedAt");
 			var updated = raw.UpdatedAt === undefined ? created : parseDate(raw.UpdatedAt, "UpdatedAt");
 			if (updated < created) { updated = created; } // VaultValidation.NormalizeLoaded
+			var totp = null;
+			// Absent when the item has none; "Totp": null is not a stored form, and is refused.
+			if (raw.Totp !== undefined) {
+				// A version 1 document cannot hold a key: its readers would not know it is there.
+				if (schemaVersion < 2) { throw new VaultError(KINDS.CONTENT, "The vault contains an item with a field this version does not understand."); }
+				totp = readStoredTotp(raw.Totp);
+				if (totp === null) { throw new VaultError(KINDS.CONTENT, "The vault contains an invalid item (Totp)."); }
+			}
 			var updatedNormalized = raw.UpdatedAt !== undefined && updated === created && parseDate(raw.UpdatedAt, "UpdatedAt").getTime() !== created.getTime();
 			return Object.freeze({
 				id: id,
@@ -319,10 +330,315 @@
 				updatedAtText: raw.UpdatedAt === undefined || updatedNormalized ? null : dateText(raw.UpdatedAt),
 				username: optionalString(raw.Username, "Username", 1024),
 				password: optionalString(raw.Password, "Password", 4096),
-				urls: Object.freeze((raw.Urls || []).slice())
+				urls: Object.freeze((raw.Urls || []).slice()),
+				totp: totp
 			});
 		});
-		return Object.freeze({ schemaVersion: 1, items: Object.freeze(items) });
+		return Object.freeze({ schemaVersion: schemaVersion, items: Object.freeze(items) });
+	}
+
+	// ---- authenticator keys (RFC 6238 TOTP) in a login item ----
+	// Stored as "Totp": { "Secret", "Algorithm", "Digits", "Period" }, all four required: Secret is the
+	// canonical base32 of 10 to 128 bytes (RFC 4648 alphabet, upper case, no padding), Algorithm
+	// SHA1, SHA256 or SHA512, Digits 6 to 8, Period 1 to 300 seconds. In the page an item holds it as
+	// totp: { secret, algorithm, digits, period } (frozen), or null.
+	var BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+	var TOTP_ALGORITHMS = Object.freeze({ SHA1: "SHA-1", SHA256: "SHA-256", SHA512: "SHA-512" });
+	var TOTP_MIN_SECRET_BYTES = 10, TOTP_MAX_SECRET_BYTES = 128, TOTP_MAX_PERIOD = 300;
+
+	// The value (0-31) of a base32 character, either case; -1 for anything else.
+	function base32Value(c) {
+		if (c >= 0x41 && c <= 0x5A) { return c - 0x41; }
+		if (c >= 0x61 && c <= 0x7A) { return c - 0x61; }
+		if (c >= 0x32 && c <= 0x37) { return c - 0x32 + 26; }
+		return -1;
+	}
+	// 5 bits for each character, most significant first: floor(5n/8) bytes; the bits left over are
+	// dropped. The text must be base32 characters only (checked by the caller).
+	function base32Decode(text) {
+		var out = new Uint8Array(Math.floor(text.length * 5 / 8));
+		var buffer = 0, bits = 0, at = 0;
+		for (var i = 0; i < text.length; i++) {
+			buffer = ((buffer << 5) | base32Value(text.charCodeAt(i))) & 0xFFFF;
+			bits += 5;
+			if (bits >= 8) { bits -= 8; out[at++] = (buffer >>> bits) & 0xFF; }
+		}
+		return out;
+	}
+	// Upper case, no padding: ceil(8n/5) characters.
+	function base32Encode(bytes) {
+		var out = "", buffer = 0, bits = 0;
+		for (var i = 0; i < bytes.length; i++) {
+			buffer = ((buffer << 8) | bytes[i]) & 0xFFFF;
+			bits += 8;
+			while (bits >= 5) { bits -= 5; out += BASE32_ALPHABET[(buffer >>> bits) & 31]; }
+		}
+		if (bits > 0) { out += BASE32_ALPHABET[(buffer << (5 - bits)) & 31]; }
+		return out;
+	}
+	// A stored secret: only A-Z and 2-7, exactly the encoding of what it decodes to, 10 to 128 bytes.
+	function isCanonicalSecret(secret) {
+		if (typeof secret !== "string" || secret.length === 0 || secret.length > 2 * TOTP_MAX_SECRET_BYTES) { return false; }
+		for (var i = 0; i < secret.length; i++) {
+			var c = secret.charCodeAt(i);
+			if (!((c >= 0x41 && c <= 0x5A) || (c >= 0x32 && c <= 0x37))) { return false; }
+		}
+		var bytes = base32Decode(secret);
+		var ok = bytes.length >= TOTP_MIN_SECRET_BYTES && bytes.length <= TOTP_MAX_SECRET_BYTES && base32Encode(bytes) === secret;
+		bytes.fill(0);
+		return ok;
+	}
+	function isValidTotpKey(key) {
+		return isPlainObject(key) && isCanonicalSecret(key.secret)
+			&& typeof key.algorithm === "string" && Object.prototype.hasOwnProperty.call(TOTP_ALGORITHMS, key.algorithm)
+			&& isInt(key.digits) && key.digits >= 6 && key.digits <= 8
+			&& isInt(key.period) && key.period >= 1 && key.period <= TOTP_MAX_PERIOD;
+	}
+	function totpKey(secret, algorithm, digits, period) {
+		return Object.freeze({ secret: secret, algorithm: algorithm, digits: digits, period: period });
+	}
+	// The "Totp" member of a stored item: the key, or null when it is not exactly a valid one.
+	function readStoredTotp(raw) {
+		if (!isPlainObject(raw) || !hasExactKeys(raw, TOTP_KEYS)) { return null; }
+		var key = totpKey(raw.Secret, raw.Algorithm, raw.Digits, raw.Period);
+		return isValidTotpKey(key) ? key : null;
+	}
+
+	// ---- reading an authenticator key from text: hand entry and import, the same rules in both
+	// clients. The result is { key, refusal }: a key and null; null and null when the text is empty
+	// (no key, not an error); or null and one of TOTP_REFUSALS. The text itself is never part of a
+	// refusal.
+	var TOTP_MAX_TEXT = 2048;
+	var TOTP_REFUSALS = Object.freeze(["too_long", "steam_not_supported", "invalid_link", "hotp_not_supported", "missing_secret",
+		"unsupported_algorithm", "unsupported_digits", "unsupported_period", "invalid_secret", "secret_too_short", "secret_too_long"]);
+
+	// The text under the field for each refusal: the fixed texts of the desktop's specification
+	// (docs/TOTP.md, BitosX.Core.Authenticator.TotpTexts), word for word. None quotes the input.
+	var TOTP_REFUSAL_TEXTS = Object.freeze({
+		too_long: "This is too long to be an authenticator key or an otpauth:// link.",
+		steam_not_supported: "Steam Guard codes are not supported. BitosX makes standard time-based codes (TOTP) only.",
+		invalid_link: "This otpauth:// link cannot be read. Copy the link again, or enter the key itself.",
+		hotp_not_supported: "This link is for counter-based codes (HOTP), which BitosX does not support. BitosX makes time-based codes (TOTP) only.",
+		missing_secret: "This otpauth:// link holds no key.",
+		unsupported_algorithm: "This link asks for an algorithm BitosX does not support. BitosX supports SHA1, SHA256 and SHA512.",
+		unsupported_digits: "This link asks for codes of a length BitosX does not support. BitosX makes codes of 6, 7 or 8 digits.",
+		unsupported_period: "This link asks for a time step BitosX does not support. BitosX supports 1 to 300 seconds.",
+		invalid_secret: "The key can hold only the letters A to Z and the digits 2 to 7. Spaces and dashes are ignored.",
+		secret_too_short: "The key is too short. An authenticator key has at least 16 characters.",
+		secret_too_long: "The key is too long to be an authenticator key."
+	});
+
+	// The text the editor shows for a stored key: the secret alone when the rest is SHA1 / 6 / 30
+	// (what a secret alone is read as), otherwise an otpauth:// link that reads back to the same key.
+	function totpKeyText(key) {
+		if (key.algorithm === "SHA1" && key.digits === 6 && key.period === 30) { return key.secret; }
+		return "otpauth://totp/?secret=" + key.secret + "&algorithm=" + key.algorithm + "&digits=" + key.digits + "&period=" + key.period;
+	}
+
+	// The trim set of IMPORT_EXPORT.md §2.1 (what .NET's Trim and JavaScript's trim remove, together).
+	function isTrimmedCode(c) {
+		return (c >= 0x0009 && c <= 0x000D) || c === 0x0020 || c === 0x0085 || c === 0x00A0 || c === 0x1680
+			|| (c >= 0x2000 && c <= 0x200A) || c === 0x2028 || c === 0x2029 || c === 0x202F || c === 0x205F
+			|| c === 0x3000 || c === 0xFEFF;
+	}
+	function trimText(value) {
+		var start = 0, end = value.length;
+		while (start < end && isTrimmedCode(value.charCodeAt(start))) { start++; }
+		while (end > start && isTrimmedCode(value.charCodeAt(end - 1))) { end--; }
+		return value.slice(start, end);
+	}
+	// A to Z become a to z, nothing else changes.
+	function lowerAscii(value) { return value.replace(/[A-Z]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) + 32); }); }
+	function startsWithAscii(value, prefix) { return value.length >= prefix.length && lowerAscii(value.slice(0, prefix.length)) === prefix; }
+
+	function totpResult(key, refusal) { return Object.freeze({ key: key, refusal: refusal }); }
+
+	// Spaces and "-" go, then the "=" at the end; what is left must be base32 (either case).
+	function readBase32Secret(text) {
+		var compact = "";
+		for (var i = 0; i < text.length; i++) {
+			var c = text.charCodeAt(i);
+			if (c !== 0x20 && c !== 0x2D) { compact += text[i]; }
+		}
+		var end = compact.length;
+		while (end > 0 && compact.charCodeAt(end - 1) === 0x3D) { end--; }
+		compact = compact.slice(0, end);
+		for (var j = 0; j < compact.length; j++) {
+			if (base32Value(compact.charCodeAt(j)) < 0) { return { refusal: "invalid_secret" }; }
+		}
+		// No more than 128 bytes can come from 205 characters; a longer text is not decoded at all.
+		if (compact.length > Math.ceil(TOTP_MAX_SECRET_BYTES * 8 / 5) + 1) { return { refusal: "secret_too_long" }; }
+		var bytes = base32Decode(compact);
+		try {
+			if (bytes.length < TOTP_MIN_SECRET_BYTES) { return { refusal: "secret_too_short" }; }
+			if (bytes.length > TOTP_MAX_SECRET_BYTES) { return { refusal: "secret_too_long" }; }
+			return { secret: base32Encode(bytes) };
+		} finally { bytes.fill(0); }
+	}
+
+	// Percent-decoding as UTF-8: "%" and two hex digits, the bytes valid UTF-8; "+" stays "+".
+	// Returns null for anything else.
+	var strictDecoder = null;
+	function percentDecode(value) {
+		if (value.indexOf("%") < 0) { return value; }
+		var bytes = [];
+		for (var i = 0; i < value.length; i++) {
+			var c = value.charCodeAt(i);
+			if (c === 0x25) {
+				var hex = value.slice(i + 1, i + 3);
+				if (!/^[0-9A-Fa-f]{2}$/.test(hex)) { return null; }
+				bytes.push(parseInt(hex, 16));
+				i += 2;
+			} else {
+				var piece = encoder.encode(value.slice(i, c >= 0xD800 && c <= 0xDBFF ? i + 2 : i + 1));
+				for (var k = 0; k < piece.length; k++) { bytes.push(piece[k]); }
+				if (c >= 0xD800 && c <= 0xDBFF) { i++; }
+			}
+		}
+		if (strictDecoder === null) { strictDecoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }); }
+		var view = new Uint8Array(bytes);
+		try { return strictDecoder.decode(view); }
+		catch (e) { return null; }
+		finally { view.fill(0); }
+	}
+	function isPlainNumber(value) { return /^[1-9][0-9]*$/.test(value); }
+
+	// Google's Key Uri Format, for "totp" only. The checks run in this order; the first that fails
+	// is the result: the type (up to the first "/"), the query, every parameter's form and a
+	// parameter twice (left to right), secret, algorithm, digits, period. The label is not read;
+	// parameter names are not decoded; parameters other than these four are not used, but their
+	// values are decoded like the others.
+	function readOtpauthLink(text) {
+		var rest = text.slice("otpauth://".length);
+		var slash = rest.indexOf("/");
+		if (slash < 0) { return totpResult(null, "invalid_link"); }
+		var type = lowerAscii(rest.slice(0, slash));
+		if (type === "hotp") { return totpResult(null, "hotp_not_supported"); }
+		if (type !== "totp") { return totpResult(null, "invalid_link"); }
+		// Everything from the first "#" on is the fragment and goes first; the query then runs from
+		// the first "?" to the end.
+		var afterType = rest.slice(slash + 1);
+		var hash = afterType.indexOf("#");
+		if (hash >= 0) { afterType = afterType.slice(0, hash); }
+		var question = afterType.indexOf("?");
+		if (question < 0) { return totpResult(null, "invalid_link"); }
+		var query = afterType.slice(question + 1);
+		var parameters = Object.create(null);
+		var pieces = query.split("&");
+		for (var i = 0; i < pieces.length; i++) {
+			if (pieces[i].length === 0) { continue; }
+			var equals = pieces[i].indexOf("=");
+			if (equals < 0) { return totpResult(null, "invalid_link"); }
+			var name = lowerAscii(pieces[i].slice(0, equals));
+			var value = percentDecode(pieces[i].slice(equals + 1));
+			if (value === null) { return totpResult(null, "invalid_link"); }
+			if (Object.prototype.hasOwnProperty.call(parameters, name)) { return totpResult(null, "invalid_link"); }
+			parameters[name] = value;
+		}
+		function parameter(n) { return Object.prototype.hasOwnProperty.call(parameters, n) ? parameters[n] : undefined; }
+
+		var secretText = parameter("secret");
+		if (secretText === undefined || secretText.length === 0) { return totpResult(null, "missing_secret"); }
+		var secret = readBase32Secret(secretText);
+		if (secret.refusal) { return totpResult(null, secret.refusal); }
+
+		var algorithm = "SHA1";
+		var algorithmText = parameter("algorithm");
+		if (algorithmText !== undefined) {
+			algorithm = algorithmText.replace(/[a-z]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 32); });
+			if (!Object.prototype.hasOwnProperty.call(TOTP_ALGORITHMS, algorithm)) { return totpResult(null, "unsupported_algorithm"); }
+		}
+		var digits = 6;
+		var digitsText = parameter("digits");
+		if (digitsText !== undefined) {
+			if (digitsText !== "6" && digitsText !== "7" && digitsText !== "8") { return totpResult(null, "unsupported_digits"); }
+			digits = Number(digitsText);
+		}
+		var period = 30;
+		var periodText = parameter("period");
+		if (periodText !== undefined) {
+			if (!isPlainNumber(periodText) || periodText.length > 3 || Number(periodText) > TOTP_MAX_PERIOD) { return totpResult(null, "unsupported_period"); }
+			period = Number(periodText);
+		}
+		return totpResult(totpKey(secret.secret, algorithm, digits, period), null);
+	}
+
+	// The key KeePass 2 keeps in an entry's strings (IMPORT_EXPORT.md §5.3): TimeOtp-Secret-Base32
+	// and, each optional (null when the entry has no such string), TimeOtp-Algorithm
+	// (HMAC-SHA-1, HMAC-SHA-256, HMAC-SHA-512), TimeOtp-Length and TimeOtp-Period. The secret is
+	// read by the first two steps of reading a text and by the base32 rules; the other three are
+	// trimmed, and empty means the default.
+	function readKeePass2TotpKey(secretBase32, algorithm, length, period) {
+		if (secretBase32.length > TOTP_MAX_TEXT) { return totpResult(null, "too_long"); }
+		var trimmed = trimText(secretBase32);
+		if (trimmed.length === 0) { return totpResult(null, null); }
+		var secret = readBase32Secret(trimmed);
+		if (secret.refusal) { return totpResult(null, secret.refusal); }
+		var algorithmText = trimText(algorithm === null ? "" : algorithm);
+		var algorithmName = algorithmText === "" || algorithmText === "HMAC-SHA-1" ? "SHA1"
+			: algorithmText === "HMAC-SHA-256" ? "SHA256" : algorithmText === "HMAC-SHA-512" ? "SHA512" : null;
+		if (algorithmName === null) { return totpResult(null, "unsupported_algorithm"); }
+		var digits = 6;
+		var lengthText = trimText(length === null ? "" : length);
+		if (lengthText.length > 0) {
+			if (lengthText !== "6" && lengthText !== "7" && lengthText !== "8") { return totpResult(null, "unsupported_digits"); }
+			digits = Number(lengthText);
+		}
+		var periodValue = 30;
+		var periodText = trimText(period === null ? "" : period);
+		if (periodText.length > 0) {
+			if (!isPlainNumber(periodText) || periodText.length > 3 || Number(periodText) > TOTP_MAX_PERIOD) { return totpResult(null, "unsupported_period"); }
+			periodValue = Number(periodText);
+		}
+		return totpResult(totpKey(secret.secret, algorithmName, digits, periodValue), null);
+	}
+
+	function readTotpKey(text) {
+		if (typeof text !== "string") { return totpResult(null, "invalid_secret"); }
+		if (text.length > TOTP_MAX_TEXT) { return totpResult(null, "too_long"); }
+		var trimmed = trimText(text);
+		if (trimmed.length === 0) { return totpResult(null, null); }
+		if (startsWithAscii(trimmed, "otpauth://")) { return readOtpauthLink(trimmed); }
+		if (startsWithAscii(trimmed, "steam://")) { return totpResult(null, "steam_not_supported"); }
+		var secret = readBase32Secret(trimmed);
+		if (secret.refusal) { return totpResult(null, secret.refusal); }
+		return totpResult(totpKey(secret.secret, "SHA1", 6, 30), null);
+	}
+
+	// RFC 6238 with RFC 4226's dynamic truncation, through WebCrypto's HMAC. unixSeconds is a whole
+	// number of seconds since 1970 (the device clock). Resolves to { code, secondsLeft }: the code
+	// as digits only, left-padded with zeros, and the seconds until the next one.
+	function totpCode(key, unixSeconds) {
+		if (!isValidTotpKey(key)) { return Promise.reject(new VaultError(KINDS.CONTENT, "The authenticator key is not valid.")); }
+		if (!Number.isSafeInteger(unixSeconds) || unixSeconds < 0) { return Promise.reject(new VaultError(KINDS.CONTENT, "The time is not valid.")); }
+		var counter = Math.floor(unixSeconds / key.period);
+		var message = new Uint8Array(8);
+		var view = new DataView(message.buffer);
+		view.setUint32(0, Math.floor(counter / 4294967296));
+		view.setUint32(4, counter % 4294967296);
+		var secret = base32Decode(key.secret);
+		var imported;
+		try { imported = webcrypto.subtle.importKey("raw", secret, { name: "HMAC", hash: { name: TOTP_ALGORITHMS[key.algorithm] } }, false, ["sign"]); }
+		catch (e) { secret.fill(0); return Promise.reject(e); }
+		return Promise.resolve(imported)
+			.finally(function () { secret.fill(0); })
+			.then(function (hmacKey) { return webcrypto.subtle.sign("HMAC", hmacKey, message); })
+			.then(function (signature) {
+				var mac = new Uint8Array(signature);
+				var offset = mac[mac.length - 1] & 0x0F;
+				var binary = ((mac[offset] & 0x7F) * 16777216) + (mac[offset + 1] << 16) + (mac[offset + 2] << 8) + mac[offset + 3];
+				mac.fill(0);
+				var code = String(binary % Math.pow(10, key.digits));
+				while (code.length < key.digits) { code = "0" + code; }
+				return Object.freeze({ code: code, secondsLeft: totpSecondsLeft(key, unixSeconds) });
+			});
+	}
+	function totpSecondsLeft(key, unixSeconds) { return key.period - (unixSeconds % key.period); }
+	// For the eye: the first half of the digits (rounded down), a space, the rest: "123 456",
+	// "123 4567", "1234 5678". Copying takes the digits without the space.
+	function formatTotpCode(code) {
+		var half = Math.floor(code.length / 2);
+		return code.slice(0, half) + " " + code.slice(half);
 	}
 
 	// ---- writing (VaultSerializer.SerializeToUtf8Bytes, EncryptedVaultSerializer.Serialize) ----
@@ -409,6 +725,7 @@
 		if (!(item.createdAt instanceof Date) || !(item.updatedAt instanceof Date) || isNaN(item.createdAt) || isNaN(item.updatedAt)) { throw new VaultError(KINDS.CONTENT, "Item dates are required."); }
 		if (item.updatedAt < item.createdAt) { throw new VaultError(KINDS.CONTENT, "UpdatedAt must not be earlier than CreatedAt."); }
 		if (typeof item.favorite !== "boolean") { throw new VaultError(KINDS.CONTENT, "Favorite must be a boolean."); }
+		if (item.totp != null && !isValidTotpKey(item.totp)) { throw new VaultError(KINDS.CONTENT, "The authenticator key is not valid."); }
 	}
 
 	// The decrypted document as the desktop writes it: compact, "type" first, the login fields, then
@@ -416,6 +733,7 @@
 	function serializeVault(vault) {
 		if (!isPlainObject(vault) || !Array.isArray(vault.items) || vault.items.length > MAX_ITEMS) { throw new VaultError(KINDS.CONTENT, "The vault's item list is invalid."); }
 		var seen = Object.create(null);
+		var anyKey = false;
 		var parts = vault.items.map(function (item) {
 			validateItem(item);
 			var id = item.id.toLowerCase();
@@ -425,6 +743,12 @@
 			if (item.username != null) { fields.push("\"Username\":" + jsonString(item.username)); }
 			if (item.password != null) { fields.push("\"Password\":" + jsonString(item.password)); }
 			fields.push("\"Urls\":[" + item.urls.map(jsonString).join(",") + "]");
+			if (item.totp != null) {
+				anyKey = true;
+				// Secret is A-Z and 2-7 only, Algorithm one of three names: nothing to escape.
+				fields.push("\"Totp\":{\"Secret\":\"" + item.totp.secret + "\",\"Algorithm\":\"" + item.totp.algorithm +
+					"\",\"Digits\":" + item.totp.digits + ",\"Period\":" + item.totp.period + "}");
+			}
 			fields.push("\"Id\":" + jsonString(id));
 			fields.push("\"Name\":" + jsonString(item.name));
 			if (item.notes != null) { fields.push("\"Notes\":" + jsonString(item.notes)); }
@@ -434,7 +758,9 @@
 			fields.push("\"UpdatedAt\":\"" + itemDate(item.updatedAt, item.updatedAtText) + "\"");
 			return "{" + fields.join(",") + "}";
 		});
-		return utf8("{\"schemaVersion\":1,\"items\":[" + parts.join(",") + "]}");
+		// Version 2 only when an item has a key, so that a vault without one stays readable, byte for
+		// byte as before, by the versions that know only version 1.
+		return utf8("{\"schemaVersion\":" + (anyKey ? 2 : 1) + ",\"items\":[" + parts.join(",") + "]}");
 	}
 
 	// The envelope as the desktop writes it: indented with two spaces, the fields in this order.
@@ -792,6 +1118,16 @@
 		estimateStrength: estimateStrength,
 		STRENGTH_NAMES: STRENGTH_NAMES,
 		sameKeyWrap: sameKeyWrap,
+		TOTP_ALGORITHMS: TOTP_ALGORITHMS,
+		isValidTotpKey: isValidTotpKey,
+		TOTP_REFUSALS: TOTP_REFUSALS,
+		readTotpKey: readTotpKey,
+		readKeePass2TotpKey: readKeePass2TotpKey,
+		TOTP_REFUSAL_TEXTS: TOTP_REFUSAL_TEXTS,
+		totpKeyText: totpKeyText,
+		totpCode: totpCode,
+		totpSecondsLeft: totpSecondsLeft,
+		formatTotpCode: formatTotpCode,
 		isWellFormed: isWellFormed,
 		_jsonString: jsonString,
 		_jsonDate: jsonDate

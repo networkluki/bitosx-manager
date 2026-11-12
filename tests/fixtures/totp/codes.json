@@ -1,0 +1,605 @@
+{
+  "schema": 1,
+  "cases": [
+    {
+      "name": "RFC 6238 Appendix B: SHA1 at 59",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 59,
+      "result": {
+        "code": "94287082",
+        "display": "9428 7082",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA256 at 59",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA",
+        "algorithm": "SHA256",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 59,
+      "result": {
+        "code": "46119246",
+        "display": "4611 9246",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA512 at 59",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA",
+        "algorithm": "SHA512",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 59,
+      "result": {
+        "code": "90693936",
+        "display": "9069 3936",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA1 at 1111111109",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 1111111109,
+      "result": {
+        "code": "07081804",
+        "display": "0708 1804",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA256 at 1111111109",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA",
+        "algorithm": "SHA256",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 1111111109,
+      "result": {
+        "code": "68084774",
+        "display": "6808 4774",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA512 at 1111111109",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA",
+        "algorithm": "SHA512",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 1111111109,
+      "result": {
+        "code": "25091201",
+        "display": "2509 1201",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA1 at 1111111111",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 1111111111,
+      "result": {
+        "code": "14050471",
+        "display": "1405 0471",
+        "secondsLeft": 29
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA256 at 1111111111",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA",
+        "algorithm": "SHA256",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 1111111111,
+      "result": {
+        "code": "67062674",
+        "display": "6706 2674",
+        "secondsLeft": 29
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA512 at 1111111111",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA",
+        "algorithm": "SHA512",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 1111111111,
+      "result": {
+        "code": "99943326",
+        "display": "9994 3326",
+        "secondsLeft": 29
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA1 at 1234567890",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 1234567890,
+      "result": {
+        "code": "89005924",
+        "display": "8900 5924",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA256 at 1234567890",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA",
+        "algorithm": "SHA256",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 1234567890,
+      "result": {
+        "code": "91819424",
+        "display": "9181 9424",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA512 at 1234567890",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA",
+        "algorithm": "SHA512",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 1234567890,
+      "result": {
+        "code": "93441116",
+        "display": "9344 1116",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA1 at 2000000000",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 2000000000,
+      "result": {
+        "code": "69279037",
+        "display": "6927 9037",
+        "secondsLeft": 10
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA256 at 2000000000",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA",
+        "algorithm": "SHA256",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 2000000000,
+      "result": {
+        "code": "90698825",
+        "display": "9069 8825",
+        "secondsLeft": 10
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA512 at 2000000000",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA",
+        "algorithm": "SHA512",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 2000000000,
+      "result": {
+        "code": "38618901",
+        "display": "3861 8901",
+        "secondsLeft": 10
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA1 at 20000000000",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 20000000000,
+      "result": {
+        "code": "65353130",
+        "display": "6535 3130",
+        "secondsLeft": 10
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA256 at 20000000000",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA",
+        "algorithm": "SHA256",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 20000000000,
+      "result": {
+        "code": "77737706",
+        "display": "7773 7706",
+        "secondsLeft": 10
+      }
+    },
+    {
+      "name": "RFC 6238 Appendix B: SHA512 at 20000000000",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA",
+        "algorithm": "SHA512",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 20000000000,
+      "result": {
+        "code": "47863826",
+        "display": "4786 3826",
+        "secondsLeft": 10
+      }
+    },
+    {
+      "name": "6 digits at 0: the first second of the first step",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 0,
+      "result": {
+        "code": "755224",
+        "display": "755 224",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "6 digits at 29: the last second of the first step",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 29,
+      "result": {
+        "code": "755224",
+        "display": "755 224",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "6 digits at 30: the first second of the second step",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 30,
+      "result": {
+        "code": "287082",
+        "display": "287 082",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "6 digits at 59",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 59,
+      "result": {
+        "code": "287082",
+        "display": "287 082",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "6 digits at 60",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 60,
+      "result": {
+        "code": "359152",
+        "display": "359 152",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "7 digits at 59",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 7,
+        "period": 30
+      },
+      "unixSeconds": 59,
+      "result": {
+        "code": "4287082",
+        "display": "428 7082",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "7 digits, SHA512",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA",
+        "algorithm": "SHA512",
+        "digits": 7,
+        "period": 30
+      },
+      "unixSeconds": 1234567890,
+      "result": {
+        "code": "3441116",
+        "display": "344 1116",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "6 digits, SHA256",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA",
+        "algorithm": "SHA256",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 1234567890,
+      "result": {
+        "code": "819424",
+        "display": "819 424",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "a period of 60 at 59",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 60
+      },
+      "unixSeconds": 59,
+      "result": {
+        "code": "755224",
+        "display": "755 224",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "a period of 60 at 60",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 60
+      },
+      "unixSeconds": 60,
+      "result": {
+        "code": "287082",
+        "display": "287 082",
+        "secondsLeft": 60
+      }
+    },
+    {
+      "name": "a period of 60 at 119",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 60
+      },
+      "unixSeconds": 119,
+      "result": {
+        "code": "287082",
+        "display": "287 082",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "a period of 60 at 120",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 60
+      },
+      "unixSeconds": 120,
+      "result": {
+        "code": "359152",
+        "display": "359 152",
+        "secondsLeft": 60
+      }
+    },
+    {
+      "name": "a period of 1: every second a new code",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 1
+      },
+      "unixSeconds": 1234567890,
+      "result": {
+        "code": "965462",
+        "display": "965 462",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "a period of 1, beyond 2^32 steps",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 8,
+        "period": 1
+      },
+      "unixSeconds": 20000000000,
+      "result": {
+        "code": "04468884",
+        "display": "0446 8884",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "a period of 300 at 299",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 300
+      },
+      "unixSeconds": 299,
+      "result": {
+        "code": "755224",
+        "display": "755 224",
+        "secondsLeft": 1
+      }
+    },
+    {
+      "name": "a period of 300 at 300",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 300
+      },
+      "unixSeconds": 300,
+      "result": {
+        "code": "287082",
+        "display": "287 082",
+        "secondsLeft": 300
+      }
+    },
+    {
+      "name": "a period that does not divide a minute",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 45
+      },
+      "unixSeconds": 1700000000,
+      "result": {
+        "code": "659196",
+        "display": "659 196",
+        "secondsLeft": 10
+      }
+    },
+    {
+      "name": "a 10-byte secret at 0",
+      "key": {
+        "secret": "JBSWY3DPEHPK3PXP",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 0,
+      "result": {
+        "code": "282760",
+        "display": "282 760",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "a 10-byte secret in 2026",
+      "key": {
+        "secret": "JBSWY3DPEHPK3PXP",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 1794787200,
+      "result": {
+        "code": "930575",
+        "display": "930 575",
+        "secondsLeft": 30
+      }
+    },
+    {
+      "name": "a 128-byte secret, SHA512",
+      "key": {
+        "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "algorithm": "SHA512",
+        "digits": 8,
+        "period": 30
+      },
+      "unixSeconds": 20000000000,
+      "result": {
+        "code": "65308227",
+        "display": "6530 8227",
+        "secondsLeft": 10
+      }
+    },
+    {
+      "name": "a 128-byte secret, SHA1 (longer than the block of SHA-1)",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 1111111111,
+      "result": {
+        "code": "627467",
+        "display": "627 467",
+        "secondsLeft": 29
+      }
+    },
+    {
+      "name": "a 11-byte secret",
+      "key": {
+        "secret": "GEZDGNBVGY3TQOJQGE",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "unixSeconds": 1111111111,
+      "result": {
+        "code": "818905",
+        "display": "818 905",
+        "secondsLeft": 29
+      }
+    }
+  ]
+}

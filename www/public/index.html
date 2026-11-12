@@ -13,7 +13,7 @@
     <title>BitosX — Your Security</title>
     <link rel="canonical" href="https://bitosx.se/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.8.1" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.9.0" />
     <meta name="theme-color" content="#26292E" />
     <!-- Theme applied before first paint (avoids a flash of the wrong theme) -->
     <script src="/assets/js/theme-init.js"></script>
@@ -113,7 +113,7 @@ encrypted vault — the only thing written to disk</pre>
     <section class="section" id="today">
       <div class="container">
         <h2>What works today</h2>
-        <p class="intro">Honest status, no marketing. The desktop application (0.14.1) is a complete local encrypted vault. The online account, encrypted sync and the web vault are built behind it, one audited layer at a time.</p>
+        <p class="intro">Honest status, no marketing. The desktop application (0.15.0) is a complete local encrypted vault. The online account, encrypted sync and the web vault are built behind it, one audited layer at a time.</p>
         <div class="two-col">
           <article class="card">
             <h3>Desktop app — available</h3>
@@ -217,8 +217,12 @@ encrypted vault — the only thing written to disk</pre>
             <div><p><strong>Passkeys.</strong> Sign in to vault.bitosx.se with a passkey — your device's screen lock, a password manager or a security key, through WebAuthn — as the second step after the account password, or on its own without email and password. Passkeys come on top of two-factor authentication, never instead of it: they need it to be on, and the desktop app keeps signing in with the authenticator code. The server keeps only public keys and checks every signature, its counter and the site it was made for. A passkey opens the account, not the vault: the vault master password stays what it always was, yours alone and never on the server.</p></div>
           </li>
           <li>
-            <div class="phase">Phase 11<small>in review</small></div>
+            <div class="phase">Phase 11<small>built</small></div>
             <div><p><strong>Import and export.</strong> Bring your logins over from another password manager: the desktop app and the web vault read what Chrome, Edge, Firefox, Bitwarden, KeePassXC and KeePass export, any other CSV file with a header line, and BitosX's own export. You see what an import would do before anything is added — how many logins, which duplicates are skipped, what is left out and why — and nothing is ever cut short to make it fit. The file is read on your own device: in the web vault it never leaves the browser, and the server still sees only the encrypted vault. And the way out is just as open: export the vault as CSV or JSON for another password manager, after a plain warning and the master password once more, because such a file holds every password unencrypted. Both clients follow one written specification and are held to the same test files, so the same file gives the same items in both.</p></div>
+          </li>
+          <li>
+            <div class="phase">Phase 12<small>in review</small></div>
+            <div><p><strong>Authenticator codes.</strong> A login can hold the authenticator key a site gives you when you turn on two-step sign-in — typed in, pasted as an otpauth:// link, or brought along by an import — and the desktop app and the web vault show its current six- to eight-digit code with the seconds it has left, ready to copy. The key is encrypted inside the vault like the password, so the server still sees nothing; it is masked in the editor, never shown in the item's view, and no code is made while the vault is locked. Keeping the key next to the password means one vault holds both factors of that login: that is your choice to make, as in other password managers. Both clients follow one written specification and give the same codes on the same test vectors, among them the RFC's own.</p></div>
           </li>
         </ol>
       </div>
@@ -226,7 +230,7 @@ encrypted vault — the only thing written to disk</pre>
   </main>
 
   <footer>
-    <div class="footer-version">web v0.8.1 · app v0.14.1 · api v0.1.0</div>
+    <div class="footer-version">web v0.9.0 · app v0.15.0 · api v0.1.0</div>
     <div class="footer-links">
       <a href="https://github.com/networkluki/bitosx" target="_blank" rel="noopener noreferrer">bitosx</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">bitosx-api</a>

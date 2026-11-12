@@ -1,0 +1,1014 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "bitosx-export-totp.json"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "bitosx_json",
+        "label": "BitosX (JSON)",
+        "records": 19,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 5,
+          "duplicates": 0,
+          "notImported": 14,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "totpKeys": 3,
+          "totpUnreadable": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 5,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE key",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE key SHA512 8 digits 60 seconds",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA512",
+              "digits": 8,
+              "period": 60
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE key with numbers written as 7.0 and 3e1",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA256",
+              "digits": 7,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE totp null",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE totp absent",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE secret in lower case",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE secret with padding",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE secret not canonical",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE secret too short",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE algorithm in lower case",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 11,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE digits 9",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE digits as a string",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 13,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE period 0",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 14,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE period with a fraction",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 15,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE period missing",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 16,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE another member",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 17,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE totp a string",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 18,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE totp an array",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 19,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE totp false",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "what BitosX has no field for is copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "bitosx_json",
+        "label": "BitosX (JSON)",
+        "records": 19,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 5,
+          "duplicates": 0,
+          "notImported": 14,
+          "empty": 0,
+          "httpsAdded": 0,
+          "namesDerived": 0,
+          "totpKeys": 3,
+          "totpUnreadable": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 5,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE key",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE key SHA512 8 digits 60 seconds",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA512",
+              "digits": 8,
+              "period": 60
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE key with numbers written as 7.0 and 3e1",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": {
+              "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+              "algorithm": "SHA256",
+              "digits": 7,
+              "period": 30
+            },
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE totp null",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE totp absent",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE secret in lower case",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE secret with padding",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE secret not canonical",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE secret too short",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE algorithm in lower case",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 11,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE digits 9",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 12,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE digits as a string",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 13,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE period 0",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 14,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE period with a fraction",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 15,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE period missing",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 16,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE another member",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 17,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE totp a string",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 18,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE totp an array",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 19,
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "totp_invalid",
+            "name": "FAKE totp false",
+            "username": "fake.user",
+            "password": "FAKE-pw",
+            "urls": [
+              "https://fake.example.test/"
+            ],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

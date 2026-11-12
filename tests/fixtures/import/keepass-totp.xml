@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<KeePassFile>
+	<Meta>
+		<Generator>KeePassXC</Generator>
+		<DatabaseName>Fake database with authenticator keys</DatabaseName>
+	</Meta>
+	<Root>
+		<Group>
+			<UUID>AAAAAAAAAAAAAAAAAAAAAQ==</UUID>
+			<Name>Root</Name>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA01AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE otp link, SHA512, 7 digits</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user1</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-1</Value>
+				</String>
+				<String>
+					<Key>otp</Key>
+					<Value ProtectInMemory="True">otpauth://totp/FAKE:fake.user1?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&amp;period=30&amp;digits=7&amp;issuer=FAKE&amp;algorithm=SHA512</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA02AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE otp link for HOTP</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user2</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-2</Value>
+				</String>
+				<String>
+					<Key>otp</Key>
+					<Value ProtectInMemory="True">otpauth://hotp/FAKE?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&amp;counter=1</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA03AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE otp, KeePassXC Steam</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user3</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-3</Value>
+				</String>
+				<String>
+					<Key>otp</Key>
+					<Value ProtectInMemory="True">otpauth://totp/FAKE:fake.user3?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&amp;period=30&amp;digits=5&amp;issuer=FAKE&amp;encoder=steam</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA04AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE KeePass 2 TimeOtp</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user4</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-4</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Base32</Key>
+					<Value ProtectInMemory="True">gezd gnbv gy3t qojq</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Algorithm</Key>
+					<Value>HMAC-SHA-256</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Length</Key>
+					<Value>8</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Period</Key>
+					<Value> 60 </Value>
+				</String>
+				<String>
+					<Key>FAKE other field</Key>
+					<Value>FAKE value</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA05AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE KeePass 2 TimeOtp, defaults</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user5</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-5</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Base32</Key>
+					<Value ProtectInMemory="True">GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA06AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE KeePass 2 TimeOtp, 5 digits</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user6</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-6</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Base32</Key>
+					<Value ProtectInMemory="True">GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Length</Key>
+					<Value>5</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA07AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE KeePass 2 TimeOtp, algorithm as a link spells it</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user7</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-7</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Base32</Key>
+					<Value ProtectInMemory="True">GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Algorithm</Key>
+					<Value>SHA256</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA08AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE KeePass 2 TimeOtp in hexadecimal: not read</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user8</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-8</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Hex</Key>
+					<Value ProtectInMemory="True">3132333435363738393031323334353637383930</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA09AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE KeePass 2 UTF-8 and Base32: KeePass uses UTF-8, not read</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user9</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-9</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret</Key>
+					<Value ProtectInMemory="True">FAKE-utf8-secret</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Base32</Key>
+					<Value ProtectInMemory="True">GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA10AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE KeePass 2 Base64 and Base32: Base32 comes first</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user10</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-10</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Base64</Key>
+					<Value ProtectInMemory="True">MTIzNDU2Nzg5MDEyMzQ1Njc4OTA=</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Base32</Key>
+					<Value ProtectInMemory="True">GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA11AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE KeePassXC legacy: not read</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user11</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-11</Value>
+				</String>
+				<String>
+					<Key>TOTP Seed</Key>
+					<Value ProtectInMemory="True">GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+				<String>
+					<Key>TOTP Settings</Key>
+					<Value>30;6</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA12AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE otp and TimeOtp: otp counts</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user12</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-12</Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Base32</Key>
+					<Value ProtectInMemory="True">JBSWY3DPEHPK3PXP</Value>
+				</String>
+				<String>
+					<Key>otp</Key>
+					<Value ProtectInMemory="True">otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA13AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE otp twice: the first counts</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user13</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-13</Value>
+				</String>
+				<String>
+					<Key>otp</Key>
+					<Value ProtectInMemory="True">JBSWY3DPEHPK3PXP</Value>
+				</String>
+				<String>
+					<Key>otp</Key>
+					<Value ProtectInMemory="True">otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA14AA==</UUID>
+				<String>
+					<Key>Title</Key>
+					<Value>FAKE otp blank, TimeOtp read</Value>
+				</String>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user14</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-14</Value>
+				</String>
+				<String>
+					<Key>otp</Key>
+					<Value>  </Value>
+				</String>
+				<String>
+					<Key>TimeOtp-Secret-Base32</Key>
+					<Value ProtectInMemory="True">GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+			</Entry>
+			<Entry>
+				<UUID>AAAAAAAAAAAAAAAAAAAA15AA==</UUID>
+				<String>
+					<Key>UserName</Key>
+					<Value>fake.user15</Value>
+				</String>
+				<String>
+					<Key>Password</Key>
+					<Value ProtectInMemory="True">FAKE-pw-15</Value>
+				</String>
+				<String>
+					<Key>otp</Key>
+					<Value ProtectInMemory="True">otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</Value>
+				</String>
+			</Entry>
+		</Group>
+	</Root>
+</KeePassFile>

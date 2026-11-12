@@ -25,13 +25,15 @@
           "empty": 1,
           "httpsAdded": 1,
           "namesDerived": 0,
+          "totpKeys": 1,
+          "totpUnreadable": 0,
           "vaultItemsBefore": 0,
           "vaultItemsAfter": 3,
           "exceedsVaultItemLimit": false
         },
         "extras": {
           "folder": 1,
-          "custom_field": 3
+          "custom_field": 2
         },
         "candidates": [
           {
@@ -49,15 +51,18 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": {
+              "secret": "FAKEFAKEFAKEFAKE",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
               "otherAddresses": [],
               "customFields": [
-                {
-                  "name": "otp",
-                  "value": "otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Example"
-                },
                 {
                   "name": "Recovery code",
                   "value": "FAKE-recovery-code"
@@ -84,6 +89,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 1,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -104,6 +111,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -126,6 +135,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Internet",
@@ -148,6 +159,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Internet/Shops",
@@ -179,13 +192,15 @@
           "empty": 1,
           "httpsAdded": 1,
           "namesDerived": 0,
+          "totpKeys": 1,
+          "totpUnreadable": 0,
           "vaultItemsBefore": 0,
           "vaultItemsAfter": 3,
           "exceedsVaultItemLimit": false
         },
         "extras": {
           "folder": 1,
-          "custom_field": 3
+          "custom_field": 2
         },
         "candidates": [
           {
@@ -199,19 +214,22 @@
             "urls": [
               "https://example.com/login"
             ],
-            "notes": "First line\nsecond line & an ampersand, <angle brackets>\nÜnïcödé 日本語 \uD83D\uDE00\n\notp: otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Example\nRecovery code: FAKE-recovery-code\nKP2A_URL: https://example.com/second-address",
+            "notes": "First line\nsecond line & an ampersand, <angle brackets>\nÜnïcödé 日本語 \uD83D\uDE00\n\nRecovery code: FAKE-recovery-code\nKP2A_URL: https://example.com/second-address",
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": {
+              "secret": "FAKEFAKEFAKEFAKE",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
               "otherAddresses": [],
               "customFields": [
-                {
-                  "name": "otp",
-                  "value": "otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Example"
-                },
                 {
                   "name": "Recovery code",
                   "value": "FAKE-recovery-code"
@@ -238,6 +256,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 1,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -258,6 +278,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -280,6 +302,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Internet",
@@ -302,6 +326,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Internet/Shops",

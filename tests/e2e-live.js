@@ -31,7 +31,9 @@
 //   (and revoke another session) -> enroll TOTP (codes computed here, RFC 6238) -> sign out -> sign in
 //   with a code -> the vault (the page cannot create one: a desktop-written fixture envelope is uploaded
 //   through the API) opens with the master password -> edit an item -> Save (real PUT, real CORS) ->
-//   reload, sign in, re-open, the edit is there -> encrypted backup == GET /v1/sync/envelope ->
+//   reload, sign in, re-open, the edit is there -> import a file -> add an authenticator key, Save (the
+//   server holds content schema 2) -> sign in again in another browser profile whose clock is held at
+//   a fixed instant: the same code as computed here -> export -> encrypted backup == GET /v1/sync/envelope ->
 //   passkeys (phase 10, Chromium's virtual authenticator over CDP, the page origin is the API's WebAuthn
 //   origin): add one with the password + a code -> TOTP cannot be turned off while it exists -> sign in
 //   with the password and the passkey -> sign in with the passkey alone (the vault still needs its
@@ -548,6 +550,78 @@ async function check(name, fn) {
 		assert.equal(names.length, 3 + importedNames.length);
 		for (const name of importedNames) { assert.ok(names.includes(name), `${name} is listed: ${names.join(" | ")}`); }
 		assert.equal(await page.evaluate(() => window.bitosxVault.hasUnsavedChanges()), false);
+	});
+	// Phase 12: an authenticator key added in the browser is stored on the server and gives, after
+	// signing in again, the same code at the same instant.
+	const LIVE_KEY = { secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA", algorithm: "SHA256", digits: 8, period: 60 };
+	const shownCode = (p) => p.evaluate((id) => {
+		const dd = document.querySelector(`.vault-item[data-item-id="${id}"] dd[data-totp]`);
+		return dd ? { now: Date.now(), code: dd.querySelector(".vault-totp-code").textContent, left: dd.querySelector(".vault-totp-left").textContent } : null;
+	}, GITHUB_ID);
+	await step("add an authenticator key in the editor and Save to server: the server's copy is content schema 2 and holds the key; the code shown is the code of this moment", async () => {
+		const item = page.locator(`.vault-item[data-item-id="${GITHUB_ID}"]`);
+		await item.locator("button[data-edit]").click();
+		await page.waitForSelector("#vault-editor:not([hidden])");
+		await page.fill("#edit-totp", `otpauth://totp/Live:${email}?secret=${LIVE_KEY.secret.toLowerCase()}&issuer=Live&algorithm=sha256&digits=8&period=60`);
+		assert.equal(await page.isHidden("#edit-totp-error"), true);
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		await page.waitForFunction((id) => /^\d{4} \d{4}$/.test((document.querySelector(`.vault-item[data-item-id="${id}"] .vault-totp-code`) || {}).textContent || ""), GITHUB_ID);
+		// What the page shows is what this suite computes for the page's own clock (read together;
+		// once more if a step turned between the two).
+		let matched = false;
+		for (let attempt = 0; attempt < 3 && !matched; attempt++) {
+			const seen = await shownCode(page);
+			const expected = (await vcNode.totpCode(LIVE_KEY, Math.floor(seen.now / 1000))).code;
+			matched = seen.code === vcNode.formatTotpCode(expected);
+			if (!matched) { await sleep(1100); }
+		}
+		assert.ok(matched, "the code shown is the code of the page's clock");
+		await page.click("#vault-save");
+		await page.waitForFunction((r) => document.getElementById("vault-notice").textContent.startsWith(`Saved: the server now holds revision ${r}.`), revision + 1);
+		revision += 1;
+		const { meta, bytes } = await serverEnvelope(other.accessToken);
+		assert.equal(meta.revision, revision);
+		const opened = await vcNode.unlock(vcNode.parseEnvelope(new Uint8Array(bytes)), fixtureMeta.typedPassword);
+		assert.ok(Buffer.from(opened.plaintext).toString("utf8").startsWith('{"schemaVersion":2,'), "written as content schema 2");
+		const saved = vcNode.parseVault(opened.plaintext).items.find((i) => i.id === GITHUB_ID);
+		assert.deepEqual({ ...saved.totp }, LIVE_KEY);
+		assert.ok(!(await page.content()).includes(LIVE_KEY.secret), "the key is not in the page");
+	});
+	await step("sign in again (another browser profile, its clock held at a fixed instant), open the vault: the same code as computed here for that instant", async () => {
+		const ctx = await browser.newContext();
+		const p = await ctx.newPage();
+		p.setDefaultTimeout(30000);
+		watchConsole(p, errors);
+		await p.clock.install({ time: Date.now() });
+		await p.goto(`${WEB.origin}/`);
+		await p.fill("#login-email", email);
+		await p.fill("#login-password", password);
+		await p.click("#login-submit");
+		await p.waitForSelector("#code-form:not([hidden])");
+		await p.fill("#login-code", await nextTotp());
+		await p.click("#code-submit");
+		await p.waitForSelector("#account-panel:not([hidden])");
+		await p.waitForSelector("#vault-panel:not([hidden])");
+		await p.waitForFunction(() => !document.getElementById("vault-status-text").textContent.startsWith("Checking"));
+		await p.fill("#vault-master-password", fixtureMeta.typedPassword);
+		await p.click("#vault-unlock-submit");
+		await p.waitForSelector("#vault-items-section:not([hidden])");
+		// 17 seconds into a 60-second step, a minute or two ahead (the vault locks only after five idle minutes).
+		const fixed = (Math.ceil((await p.evaluate(() => Date.now())) / 60000) + 1) * 60 + 17;
+		await p.clock.pauseAt(fixed * 1000);
+		const expected = vcNode.formatTotpCode((await vcNode.totpCode(LIVE_KEY, fixed)).code);
+		await p.waitForFunction(([id, text]) => (document.querySelector(`.vault-item[data-item-id="${id}"] .vault-totp-code`) || {}).textContent === text, [GITHUB_ID, expected]);
+		assert.deepEqual(await shownCode(p), { now: fixed * 1000, code: expected, left: "43 seconds left" });
+		await p.click("#vault-lock");
+		assert.equal(await p.locator(".vault-totp-code").count(), 0, "locking clears the code");
+		await p.clock.resume();
+		await p.click("#logout");
+		await p.waitForSelector("#login-panel:not([hidden])");
+		await ctx.close();
+		// The first profile's page carries on (a browser may have counted it as hidden meanwhile, which locks it).
+		await page.bringToFront();
+		if (!(await page.evaluate(() => window.bitosxVault.isUnlocked()))) { await unlock(); }
 	});
 	await step("export the vault unencrypted: the box and the master password first; a wrong password writes nothing; the right one downloads every login, and asks nothing of the API", async () => {
 		const requestsBefore = relayed.length;

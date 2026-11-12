@@ -2657,6 +2657,280 @@ async function test(name, fn) {
 	});
 
 	// ------------------------------------------- phase 11: import and export
+	// ------------------------------------------- phase 12: authenticator codes
+	console.log("vault.bitosx.se — authenticator codes");
+	const RFC_SECRET = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";   // base32 of "12345678901234567890", RFC 6238's SHA1 seed
+	// A vault the desktop could have written (the small fixture, re-encrypted under its own key) with
+	// items that hold keys, seeded on the mock server.
+	async function keyedVault(mock, extraItems) {
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const { bytes, meta } = fixture("small");
+		const env = vcNode.parseEnvelope(new Uint8Array(bytes));
+		const opened = await vcNode.unlock(env, meta.typedPassword);
+		const items = vcNode.parseVault(opened.plaintext).items.concat(extraItems);
+		const next = await vcNode.encryptContent(env, opened.vaultKey, vcNode.serializeVault({ items }));
+		mock.seedEnvelope(accountId, Buffer.from(vcNode.serializeEnvelope(next)));
+		return { accountId, meta };
+	}
+	const keyedItem = (id, name, totp) => ({ id, name, username: "u@example.com", password: null, urls: [], notes: null, favorite: false,
+		createdAt: new Date("2026-11-01T08:00:00Z"), updatedAt: new Date("2026-11-01T08:00:00Z"), totp: Object.freeze(totp) });
+	const KEYED = [
+		keyedItem("44444444-4444-4444-8444-444444444444", "Six digits", { secret: RFC_SECRET, algorithm: "SHA1", digits: 6, period: 30 }),
+		keyedItem("55555555-5555-4555-8555-555555555555", "Eight digits", { secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA", algorithm: "SHA256", digits: 8, period: 60 })
+	];
+	// An instant 7 seconds into a 30-second step and 37 into a 60-second one, a little after now
+	// (the page signs in against the mock at the real time first), and the codes Node computes for it.
+	function fixedInstant() {
+		const seconds = Math.ceil(Date.now() / 60000) * 60 + 120 + 37;
+		return { seconds, ms: seconds * 1000 };
+	}
+	const codeOf = async (key, seconds) => (await vcNode.totpCode(key, seconds)).code;
+	const codeRow = (page, id) => page.locator(`.vault-item[data-item-id="${id}"] dd[data-totp]`);
+	async function codeShown(page, id) {
+		const row = codeRow(page, id);
+		await page.waitForFunction((rowId) => {
+			const dd = document.querySelector(`.vault-item[data-item-id="${rowId}"] dd[data-totp]`);
+			return dd && /^\d/.test(dd.querySelector(".vault-totp-code").textContent);
+		}, id);
+		return { code: await row.locator(".vault-totp-code").textContent(), left: await row.locator(".vault-totp-left").textContent() };
+	}
+	// Counts the HMAC signatures the page asks WebCrypto for: a code is one signature.
+	const countSignatures = (page) => page.addInitScript(() => {
+		window.__hmacSigns = 0;
+		const sign = crypto.subtle.sign.bind(crypto.subtle);
+		crypto.subtle.sign = (algorithm, key, data) => { if ((algorithm && algorithm.name || algorithm) === "HMAC") { window.__hmacSigns++; } return sign(algorithm, key, data); };
+	});
+
+	await test("authenticator key: masked in the editor, the refusal under the field and Save item blocked while it is invalid; a valid key is saved as schema 2 and gives the code", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const { bytes, meta } = fixture("small");
+		mock.seedEnvelope(accountId, bytes);
+		const at = fixedInstant();
+		const consoleText = [];
+		const page = await newPage(mock, { beforeRoute: async (p, context) => {
+			await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: vault.origin });
+			await p.clock.install({ time: at.ms - 100 * 1000 });
+			p.on("console", (msg) => consoleText.push(msg.text()));
+		} });
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await page.clock.pauseAt(at.ms);
+		await page.click("#vault-add");
+		await page.fill("#edit-name", "Two-step");
+		assert.equal(await page.getAttribute("#edit-totp", "type"), "password", "masked by default");
+		assert.equal(await page.textContent("#edit-totp-hint"), "The key or the otpauth:// link a site shows when you set up two-step sign-in.");
+		assert.equal(await page.getAttribute("#edit-totp", "maxlength"), null, "a pasted key is never cut short");
+		const cases = [
+			["otpauth://totp/Example?secret=" + RFC_SECRET + "&digits=9", "unsupported_digits"],
+			["otpauth://hotp/Example?secret=" + RFC_SECRET + "&counter=1", "hotp_not_supported"],
+			["steam://" + RFC_SECRET, "steam_not_supported"],
+			[RFC_SECRET.slice(0, 15), "secret_too_short"],
+			[RFC_SECRET + "!", "invalid_secret"],
+			["A".repeat(2049), "too_long"]
+		];
+		for (const [typed, code] of cases) {
+			await page.fill("#edit-totp", typed);
+			assert.equal(await page.textContent("#edit-totp-error"), vcNode.TOTP_REFUSAL_TEXTS[code], code);
+			assert.equal(await page.isHidden("#edit-totp-error"), false);
+			assert.equal(await page.getAttribute("#edit-totp", "aria-invalid"), "true");
+			assert.equal(await page.getAttribute("#edit-totp", "aria-describedby"), "edit-totp-error edit-totp-hint");
+			assert.equal(await page.isDisabled("#edit-save"), true, "Save item is blocked while the key is invalid");
+		}
+		// Enter in the form does not save it either: the editor stays, nothing is added.
+		await page.press("#edit-totp", "Enter");
+		assert.equal(await page.isHidden("#vault-editor"), false);
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 3);
+		// Show and hide.
+		await page.click("#edit-totp-toggle");
+		assert.equal(await page.getAttribute("#edit-totp", "type"), "text");
+		assert.equal(await page.getAttribute("#edit-totp-toggle", "aria-pressed"), "true");
+		await page.click("#edit-totp-toggle");
+		assert.equal(await page.getAttribute("#edit-totp", "type"), "password");
+		// A valid key, typed loosely: accepted, and stored canonically.
+		await page.fill("#edit-totp", "  " + RFC_SECRET.toLowerCase().replace(/(.{4})/g, "$1 ") + "  ");
+		assert.equal(await page.isHidden("#edit-totp-error"), true);
+		assert.equal(await page.getAttribute("#edit-totp", "aria-describedby"), "edit-totp-hint");
+		assert.equal(await page.isDisabled("#edit-save"), false);
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		assert.equal(await page.inputValue("#edit-totp"), "", "nothing typed stays in the field");
+		// The code of the fixed instant, grouped, with the seconds left and the note about the clock.
+		const id = await page.locator(".vault-item", { hasText: "Two-step" }).getAttribute("data-item-id");
+		const key = { secret: RFC_SECRET, algorithm: "SHA1", digits: 6, period: 30 };
+		const expected = await codeOf(key, at.seconds);
+		const shown = await codeShown(page, id);
+		assert.equal(shown.code, expected.slice(0, 3) + " " + expected.slice(3));
+		assert.equal(shown.left, "23 seconds left");
+		assert.match(await codeRow(page, id).textContent(), /Codes depend on this device's clock\. If they are refused, check that the clock is right\./);
+		// Copy: the digits without the space.
+		await codeRow(page, id).locator('button[data-copy="totp"]').click();
+		await page.waitForFunction(() => /Copied/.test(document.getElementById("vault-notice").textContent));
+		assert.equal(await page.evaluate(() => navigator.clipboard.readText()), expected);
+		// The seconds count down, and the next step brings the next code.
+		// (The page looks at the clock just after each turn of the second.)
+		await page.clock.runFor(5100);
+		await page.waitForFunction((rowId) => document.querySelector(`.vault-item[data-item-id="${rowId}"] .vault-totp-left`).textContent === "18 seconds left", id);
+		assert.equal((await codeShown(page, id)).code, shown.code);
+		await page.clock.runFor(18000);
+		const next = await codeOf(key, at.seconds + 23);
+		await page.waitForFunction(([rowId, text]) => document.querySelector(`.vault-item[data-item-id="${rowId}"] .vault-totp-code`).textContent === text, [id, next.slice(0, 3) + " " + next.slice(3)]);
+		assert.equal(await codeRow(page, id).locator(".vault-totp-left").textContent(), "30 seconds left");
+		// The key is nowhere in the page: not in the list, an attribute, a label or a title.
+		const html = await page.content();
+		for (const s of [RFC_SECRET, RFC_SECRET.toLowerCase(), RFC_SECRET.slice(0, 16)]) { assert.ok(!html.includes(s), "key in the DOM"); }
+		// Saved: the server's vault is schema 2 and holds the key, canonically.
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const e = mock.envelopes.get(accountId);
+		const plaintext = (await vcNode.unlock(vcNode.parseEnvelope(new Uint8Array(e.bytes)), meta.typedPassword)).plaintext;
+		const text = Buffer.from(plaintext).toString("utf8");
+		assert.ok(text.startsWith('{"schemaVersion":2,'));
+		assert.ok(text.includes('"Totp":{"Secret":"' + RFC_SECRET + '","Algorithm":"SHA1","Digits":6,"Period":30}'));
+		const saved = vcNode.parseVault(plaintext).items.find((i) => i.id === id);
+		assert.deepEqual({ ...saved.totp }, key);
+		// Editing it again shows the key (masked); removing the text removes the key, and the next
+		// save writes schema 1 again.
+		await codeRow(page, id).locator("xpath=ancestor::li").locator("button[data-edit]").click();
+		assert.equal(await page.inputValue("#edit-totp"), RFC_SECRET);
+		assert.equal(await page.getAttribute("#edit-totp", "type"), "password");
+		await page.fill("#edit-totp", "");
+		assert.equal(await page.isHidden("#edit-totp-error"), true);
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		assert.equal(await codeRow(page, id).count(), 0);
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 3/.test(document.getElementById("vault-notice").textContent));
+		const again = mock.envelopes.get(accountId);
+		const text3 = Buffer.from((await vcNode.unlock(vcNode.parseEnvelope(new Uint8Array(again.bytes)), meta.typedPassword)).plaintext).toString("utf8");
+		assert.ok(text3.startsWith('{"schemaVersion":1,') && !text3.includes("Totp"));
+		// Nothing of the key reached the console.
+		assert.ok(consoleText.every((t) => !t.includes(RFC_SECRET) && !t.toLowerCase().includes(RFC_SECRET.toLowerCase())));
+		await page.close();
+	});
+
+	await test("authenticator key: a link with algorithm, digits and period is kept as such, and shown again as a link that reads back to it", async () => {
+		const mock = createMockApi();
+		const { page } = await openedVault(mock);
+		await page.click("#vault-add");
+		await page.fill("#edit-name", "Linked");
+		await page.fill("#edit-totp", "otpauth://totp/Example:alice@example.com?secret=" + RFC_SECRET + "&issuer=Example&algorithm=sha512&digits=8&period=60");
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		const li = page.locator(".vault-item", { hasText: "Linked" });
+		await page.waitForFunction(() => [...document.querySelectorAll(".vault-totp-code")].some((n) => /^\d{4} \d{4}$/.test(n.textContent)));
+		await li.locator("button[data-edit]").click();
+		const text = await page.inputValue("#edit-totp");
+		assert.equal(text, "otpauth://totp/?secret=" + RFC_SECRET + "&algorithm=SHA512&digits=8&period=60");
+		assert.deepEqual({ ...vcNode.readTotpKey(text).key }, { secret: RFC_SECRET, algorithm: "SHA512", digits: 8, period: 60 });
+		// Nothing changed: Cancel asks nothing (the text read back is the text shown).
+		await page.click("#edit-cancel");
+		assert.equal(await page.isHidden("#vault-editor"), true);
+		await page.close();
+	});
+
+	await test("authenticator codes: a vault with keys shows each item's code at a fixed instant; locking stops the timer, clears every code, and nothing is computed while locked", async () => {
+		const mock = createMockApi();
+		const { meta } = await keyedVault(mock, KEYED);
+		const at = fixedInstant();
+		const page = await newPage(mock, { beforeRoute: async (p) => { await countSignatures(p); await p.clock.install({ time: at.ms - 100 * 1000 }); } });
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await page.clock.pauseAt(at.ms);
+		const six = await codeShown(page, KEYED[0].id);
+		const eight = await codeShown(page, KEYED[1].id);
+		const e6 = await codeOf(KEYED[0].totp, at.seconds), e8 = await codeOf(KEYED[1].totp, at.seconds);
+		assert.equal(six.code, e6.slice(0, 3) + " " + e6.slice(3));
+		assert.equal(eight.code, e8.slice(0, 4) + " " + e8.slice(4));
+		assert.equal(six.left, "23 seconds left");
+		assert.equal(eight.left, "23 seconds left");
+		// Items without a key have no code row.
+		assert.equal(await page.locator('.vault-item[data-item-id="11111111-1111-4111-8111-111111111111"] dd[data-totp]').count(), 0);
+		// Search and re-rendering keep the codes; no extra signature for a step already computed.
+		await page.fill("#vault-search", "digits");
+		assert.equal((await codeShown(page, KEYED[0].id)).code, six.code);
+		const signsBefore = await page.evaluate(() => window.__hmacSigns);
+		await page.fill("#vault-search", "");
+		await codeShown(page, KEYED[1].id);
+		assert.equal(await page.evaluate(() => window.__hmacSigns), signsBefore);
+		// Lock: the codes go, and the timer with them.
+		await page.click("#vault-lock");
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.locator(".vault-totp-code, .vault-totp-left, dd[data-totp]").count(), 0);
+		const html = await page.content();
+		assert.ok(!html.includes(e6) && !html.includes(e6.slice(0, 3) + " " + e6.slice(3)) && !html.includes(e8.slice(0, 4) + " " + e8.slice(4)));
+		const signsAtLock = await page.evaluate(() => window.__hmacSigns);
+		await page.clock.runFor(150 * 1000);   // five 30-second steps
+		assert.equal(await page.evaluate(() => window.__hmacSigns), signsAtLock, "no code computed while locked");
+		// Opened again (the master password asked for again): the codes of that moment.
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		const later = Math.floor((await page.evaluate(() => Date.now())) / 1000);
+		const e6b = await codeOf(KEYED[0].totp, later);
+		assert.equal((await codeShown(page, KEYED[0].id)).code, e6b.slice(0, 3) + " " + e6b.slice(3));
+		await page.close();
+	});
+
+	await test("authenticator codes: signed in again, the same vault gives the same code at the same instant; signing out clears it", async () => {
+		const mock = createMockApi();
+		const { meta } = await keyedVault(mock, KEYED);
+		const at = fixedInstant();
+		const page = await newPage(mock, { beforeRoute: (p) => p.clock.install({ time: at.ms - 100 * 1000 }) });
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await page.clock.pauseAt(at.ms);
+		const first = await codeShown(page, KEYED[1].id);
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		assert.equal(await page.locator(".vault-totp-code").count(), 0);
+		await page.clock.resume();
+		await page.clock.setSystemTime(at.ms - 60 * 1000);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await page.clock.pauseAt(at.ms);
+		assert.deepEqual(await codeShown(page, KEYED[1].id), first);
+		await page.close();
+	});
+
+	await test("authenticator codes: the desktop's own vault with keys (tests/fixtures/totp.vault.json) opens and shows, at each moment of its meta file, the desktop's code and seconds left", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const { bytes, meta } = fixture("totp");
+		mock.seedEnvelope(accountId, bytes);
+		const moments = [...new Set(meta.totpCodes.map((c) => c.unixSeconds))].sort((a, b) => a - b);
+		// The page's clock starts a little before the first moment, and the mock server's runs with it.
+		const start = moments[0] * 1000 - 90 * 1000;
+		mock.clock.offsetMs = start - Date.now();
+		const page = await newPage(mock, { beforeRoute: (p) => p.clock.install({ time: start }) });
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 4);
+		assert.equal(await page.locator("dd[data-totp]").count(), 3, "three items have a key, one has none");
+		assert.equal(await page.locator('.vault-item[data-item-id="44444444-4444-4444-8444-444444444444"] dd[data-totp]').count(), 0);
+		// Names are text, never markup.
+		assert.equal(await page.locator("#vault-items .vault-item__name b").count(), 0);
+		for (const at of moments) {
+			await page.clock.pauseAt(at * 1000);
+			for (const c of meta.totpCodes.filter((x) => x.unixSeconds === at)) {
+				await page.waitForFunction(([id, display, left]) => {
+					const dd = document.querySelector(`.vault-item[data-item-id="${id}"] dd[data-totp]`);
+					return dd && dd.querySelector(".vault-totp-code").textContent === display && dd.querySelector(".vault-totp-left").textContent === left;
+				}, [c.id, c.display, c.secondsLeft + (c.secondsLeft === 1 ? " second left" : " seconds left")]);
+			}
+		}
+		// Copy gives the digits alone, and the keys are nowhere in the page.
+		const html = await page.content();
+		for (const s of ["GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", "JBSWY3DPEHPK3PXP"]) { assert.ok(!html.includes(s), "a key in the DOM"); }
+		await page.click("#vault-lock");
+		assert.equal(await page.locator(".vault-totp-code").count(), 0);
+		await page.close();
+	});
+
 	console.log("vault.bitosx.se — import and export");
 	const conformance = require("./import-conformance.js");
 	const ieNode = require("../vault/public/assets/js/import-export.js")(vcNode);
@@ -2695,7 +2969,7 @@ async function test(name, fn) {
 		URL.revokeObjectURL = (url) => { window.__urls.revoked.push(url); return revoke(url); };
 	});
 
-	await test("import: every conformance fixture gives in Chromium exactly what the desktop makes of it — all 44 files, KeePass XML through DOMParser", async () => {
+	await test("import: every conformance fixture gives in Chromium exactly what the desktop makes of it — all 48 files, KeePass XML through DOMParser", async () => {
 		const mock = createMockApi();
 		const page = await newPage(mock);
 		const refusedStyles = [];
@@ -2722,9 +2996,9 @@ async function test(name, fn) {
 			const start = (expected.input.file ? importFixture(expected.input.file).toString("latin1") : expected.input.parts[0].text).trimStart();
 			if (start.startsWith("<")) { xmlFiles++; }
 		}
-		assert.equal(files, 44);
-		assert.equal(cases, 55);
-		assert.equal(xmlFiles, 11, "the XML fixtures: nine that reach the parser, two refused before it");
+		assert.equal(files, 48);
+		assert.equal(cases, 64);   // 55, and since phase 12 the cases of the four fixtures with authenticator keys
+		assert.equal(xmlFiles, 12, "the XML fixtures: ten that reach the parser (keepass-totp.xml since phase 12), two refused before it");
 		assert.ok(outcomes.keepass_xml >= 3 && outcomes.nested_too_deeply >= 2 && outcomes.protected_values >= 1 && outcomes.doctype >= 2 && outcomes.too_many_entries >= 3, JSON.stringify(outcomes));
 		// Exactly the two messages Chromium's error document causes for each damaged XML file, and no other.
 		assert.equal(damagedXml, 1);
@@ -2797,7 +3071,7 @@ async function test(name, fn) {
 			// What the page holds after it opened a vault the desktop wrote with these items.
 			const held = items.map((it, i) => ({
 				id: "0b1705e0-0000-4000-8000-" + String(i + 1).padStart(12, "0"), type: "login", name: it.name, username: it.username || null, password: it.password || null,
-				urls: it.urls, notes: it.notes || null, favorite: it.favorite, createdAt: new Date(it.createdAt), createdAtText: it.createdAt.replace(/Z$/, "+00:00"),
+				urls: it.urls, notes: it.notes || null, favorite: it.favorite, totp: it.totp || null, createdAt: new Date(it.createdAt), createdAtText: it.createdAt.replace(/Z$/, "+00:00"),
 				updatedAt: new Date(it.updatedAt), updatedAtText: it.updatedAt.replace(/Z$/, "+00:00")
 			}));
 			const base64 = (bytes) => { let s = ""; bytes.forEach((b) => { s += String.fromCharCode(b); }); return btoa(s); };
@@ -3014,17 +3288,24 @@ async function test(name, fn) {
 		assert.ok(preview.lines.some((l) => l.startsWith("Not logins, and not imported: secure notes (1), cards (1), identities (1), SSH keys (1), bank accounts (1), driver's licences (1), passports (1), other items (")));
 		assert.ok(preview.lines.includes("In the trash or the recycle bin of the file, and not imported: 1."));
 		const leftOut = preview.lines.find((l) => l.startsWith("Left out, because BitosX has no field for them: "));
-		assert.equal(leftOut, "Left out, because BitosX has no field for them: authenticator keys (TOTP) (" + expected.extras.totp + "), folder or group names (" + expected.extras.folder + "), addresses that are not web addresses ("
+		// Since phase 12 the file's authenticator key is read, so it is no longer among what BitosX has no field for.
+		assert.deepEqual(Object.keys(expected.extras), ["folder", "other_address", "custom_field"]);
+		assert.equal(leftOut, "Left out, because BitosX has no field for them: folder or group names (" + expected.extras.folder + "), addresses that are not web addresses ("
 			+ expected.extras.other_address + "), custom fields (" + expected.extras.custom_field + "). Tick the first box below to copy them into each item's notes instead.");
+		assert.equal(expected.counts.totpKeys, 1);
+		assert.ok(preview.lines.includes("1 login brings its authenticator key along: the code is shown once it is imported."), preview.lines.join("\n"));
 		assert.ok(preview.lines.some((l) => /^https:\/\/ is put in front of \d+ address(es)? that ha(s|ve) no scheme\.$/.test(l)));
 		assert.ok(preview.lines.some((l) => /^\d+ entr(y has|ies have) no name and (is|are) named after (its|their) address or username\.$/.test(l)));
 		await page.check("#import-copy-extras");
-		assert.ok((await page.locator("#import-summary li").allTextContents()).some((l) => l.startsWith("Copied into each item's notes, because BitosX has no field for them: authenticator keys (TOTP) (")));
+		assert.ok((await page.locator("#import-summary li").allTextContents()).some((l) => l.startsWith("Copied into each item's notes, because BitosX has no field for them: folder or group names (")));
 		// Neither an authenticator key nor the value of a custom field is shown in the preview.
 		const copied = conformance.readExpected("bitwarden.json.expected.json").cases.find((c) => c.options.copyExtrasToNotes && !c.options.importDuplicates && c.vault.length === 0);
 		assert.ok(copied, "the fixture has a case that copies the extras");
-		const withTotp = copied.result.candidates.find((c) => c.status === "add" && c.extras.totp.length > 0);
-		assert.ok(!(await page.content()).includes(withTotp.extras.totp));
+		const withTotp = copied.result.candidates.find((c) => c.status === "add" && c.totp !== null);
+		const withField = copied.result.candidates.find((c) => c.status === "add" && c.extras.customFields.length > 0);
+		const content = await page.content();
+		assert.ok(!content.includes(withTotp.totp.secret));
+		assert.ok(!content.includes(withField.extras.customFields[0].value));
 		await page.click("#import-confirm");
 		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
 		await page.click("#vault-save");
@@ -3032,7 +3313,8 @@ async function test(name, fn) {
 		const stored = (await serverItems(mock, accountId, meta.typedPassword)).slice(3);
 		const added = copied.result.candidates.filter((c) => c.status === "add");
 		assert.deepEqual(stored.map((i) => [i.name, i.notes || ""]), added.map((c) => [c.name, c.notes]));
-		assert.match(stored.find((i) => i.name === withTotp.name).notes, /Authenticator key \(TOTP\): /);
+		// The key goes with the item, not into its notes.
+		assert.deepEqual({ ...stored.find((i) => i.name === withTotp.name).totp }, withTotp.totp);
 		assert.ok(stored.some((i) => /(^|\n)Folder: /.test(i.notes || "")) && stored.some((i) => /(^|\n)Other address: /.test(i.notes || "")));
 		// Left out by default: the same file again, without the box, into a vault without those items.
 		const second = createMockApi();
@@ -3047,6 +3329,57 @@ async function test(name, fn) {
 		assert.deepEqual(plain.map((i) => [i.name, i.notes || ""]), expected.candidates.filter((c) => c.status === "add").map((c) => [c.name, c.notes]));
 		assert.ok(plain.every((i) => !/Authenticator key|Folder: |Other address: /.test(i.notes || "")));
 		await other.page.close();
+		await page.close();
+	});
+
+	await test("import: authenticator keys — read ones go with the items and give codes; ones that cannot be read are counted, left out, or copied into the notes on opt-in", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		await page.click("#vault-import");
+		const name = "bitwarden-totp.json";
+		const expectedFile = conformance.readExpected(name + ".expected.json");
+		const first = expectedFile.cases.find((c) => !c.options.copyExtrasToNotes && !c.options.importDuplicates && c.vault.length === 0).result;
+		const preview = await previewOf(page, name, importFixture(name));
+		const keys = first.counts.totpKeys, unreadable = first.counts.totpUnreadable;
+		assert.ok(keys >= 1 && unreadable >= 1);
+		assert.ok(preview.lines.includes(`${keys} login${keys === 1 ? " brings its" : "s bring their"} authenticator key along: the code is shown once it is imported.`), preview.lines.join("\n"));
+		assert.ok(preview.lines.includes(`${unreadable} authenticator key${unreadable === 1 ? "" : "s"} could not be read, and ${unreadable === 1 ? "its login is" : "their logins are"} imported without one: the text is left out unless you tick the first box below.`), preview.lines.join("\n"));
+		assert.ok(preview.lines.some((l) => l.startsWith("Left out, because BitosX has no field for them: authenticator keys that could not be read (" + first.extras.totp + ")")));
+		// No key, and no text of one, is in the page.
+		const content = await page.content();
+		for (const c of first.candidates) {
+			if (c.totp) { assert.ok(!content.includes(c.totp.secret)); }
+			if (c.extras.totp) { assert.ok(!content.includes(c.extras.totp)); }
+		}
+		await page.check("#import-copy-extras");
+		assert.ok((await page.locator("#import-summary li").allTextContents()).some((l) => / could not be read, .* the text is copied into the notes\.$/.test(l)));
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		// The imported items with a key show a code at once.
+		const codes = await page.locator("#vault-items dd[data-totp]").count();
+		assert.equal(codes, keys);
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const copied = expectedFile.cases.find((c) => c.options.copyExtrasToNotes && !c.options.importDuplicates && c.vault.length === 0).result;
+		const stored = (await serverItems(mock, accountId, meta.typedPassword)).slice(3);
+		const added = copied.candidates.filter((c) => c.status === "add");
+		assert.deepEqual(stored.map((i) => [i.name, i.notes || "", i.totp && { ...i.totp }]), added.map((c) => [c.name, c.notes, c.totp]));
+		assert.ok(stored.some((i) => /(^|\n)Authenticator key \(TOTP\): /.test(i.notes || "")));
+		await page.close();
+	});
+
+	await test("export: the CSV note says how many items have an authenticator key, which only JSON keeps", async () => {
+		const mock = createMockApi();
+		const { meta } = await keyedVault(mock, KEYED);
+		const page = await newPage(mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await page.click("#vault-export");
+		assert.equal(await page.isHidden("#export-totp"), false);
+		assert.equal(await page.textContent("#export-totp"), "2 items have an authenticator key. A CSV file does not hold authenticator keys; only JSON keeps them.");
+		await page.check("#export-format-json");
+		assert.equal(await page.isHidden("#export-totp"), true);
 		await page.close();
 	});
 
@@ -3468,10 +3801,10 @@ async function test(name, fn) {
 		assert.match(doc.exportedAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
 		assert.ok(Math.abs(new Date(doc.exportedAt).getTime() - Date.now()) < 5 * 60 * 1000);
 		assert.deepEqual(doc.items, [
-			{ type: "login", name: "GitHub", username: "octocat@example.com", password: "P@ssw0rd-Strong-123", urls: ["https://github.com"], notes: "", favorite: true, createdAt: "2026-10-01T09:00:00Z", updatedAt: "2026-10-02T09:00:00Z" },
-			{ type: "login", name: "Bank <script>alert(1)</script>", username: "alice", password: "hunter2 & \"quotes\" <b>", urls: ["https://bank.example", "https://login.bank.example/portal"],
+			{ type: "login", name: "GitHub", username: "octocat@example.com", password: "P@ssw0rd-Strong-123", urls: ["https://github.com"], totp: null, notes: "", favorite: true, createdAt: "2026-10-01T09:00:00Z", updatedAt: "2026-10-02T09:00:00Z" },
+			{ type: "login", name: "Bank <script>alert(1)</script>", username: "alice", password: "hunter2 & \"quotes\" <b>", urls: ["https://bank.example", "https://login.bank.example/portal"], totp: null,
 				notes: "Security question: first pet.\nSecond line & <i>markup</i>", favorite: false, createdAt: "2026-10-01T09:00:00Z", updatedAt: "2026-10-01T09:00:00Z" },
-			{ type: "login", name: "Wi-Fi café", username: "", password: "ñandú-Ωmega-🔐", urls: [], notes: "", favorite: false, createdAt: "2026-10-03T09:00:00Z", updatedAt: "2026-10-03T09:00:00Z" }
+			{ type: "login", name: "Wi-Fi café", username: "", password: "ñandú-Ωmega-🔐", urls: [], totp: null, notes: "", favorite: false, createdAt: "2026-10-03T09:00:00Z", updatedAt: "2026-10-03T09:00:00Z" }
 		]);
 		// Both files read back with this importer: into the vault they came from the JSON adds nothing, the CSV the item with two addresses.
 		const held = items.map((i) => ({ name: i.name, username: i.username, password: i.password, urls: i.urls }));
@@ -3651,7 +3984,7 @@ async function test(name, fn) {
 		assert.deepEqual(pp, ["camera=()", "microphone=()", "geolocation=()", "payment=()", "usb=()",
 			"publickey-credentials-create=(self)", "publickey-credentials-get=(self)"]);
 		// One web version everywhere: every footer and every stylesheet link.
-		const WEB_VERSION = "0.8.1";
+		const WEB_VERSION = "0.9.0";
 		for (const f of files) {
 			const html = fs.readFileSync(f, "utf8");
 			for (const m of html.matchAll(/bitosx\.css\?v=([0-9.]+)/g)) { assert.equal(m[1], WEB_VERSION, `stylesheet version in ${f}`); }

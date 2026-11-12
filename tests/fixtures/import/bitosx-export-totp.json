@@ -1,0 +1,344 @@
+{
+  "format": "bitosx-export",
+  "version": 1,
+  "exportedAt": "2026-11-12T12:00:00Z",
+  "items": [
+    {
+      "type": "login",
+      "name": "FAKE key",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE key SHA512 8 digits 60 seconds",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA512",
+        "digits": 8,
+        "period": 60
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE key with numbers written as 7.0 and 3e1",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA256",
+        "digits": 7.0,
+        "period": 3e1
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE totp null",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": null,
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE totp absent",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE secret in lower case",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "gezdgnbvgy3tqojqgezdgnbvgy3tqojq",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE secret with padding",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGE======",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE secret not canonical",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGF",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE secret too short",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOI",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE algorithm in lower case",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "sha1",
+        "digits": 6,
+        "period": 30
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE digits 9",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 9,
+        "period": 30
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE digits as a string",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": "6",
+        "period": 30
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE period 0",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 0
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE period with a fraction",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30.5
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE period missing",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE another member",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "algorithm": "SHA1",
+        "digits": 6,
+        "period": 30,
+        "issuer": "FAKE"
+      },
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE totp a string",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE totp an array",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": [
+        "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+      ],
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    },
+    {
+      "type": "login",
+      "name": "FAKE totp false",
+      "username": "fake.user",
+      "password": "FAKE-pw",
+      "urls": [
+        "https://fake.example.test/"
+      ],
+      "totp": false,
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-01-02T03:04:05Z",
+      "updatedAt": "2026-01-02T03:04:05Z"
+    }
+  ]
+}

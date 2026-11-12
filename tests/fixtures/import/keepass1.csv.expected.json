@@ -25,6 +25,8 @@
           "empty": 0,
           "httpsAdded": 1,
           "namesDerived": 0,
+          "totpKeys": 0,
+          "totpUnreadable": 0,
           "vaultItemsBefore": 0,
           "vaultItemsAfter": 3,
           "exceedsVaultItemLimit": false
@@ -46,6 +48,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -68,6 +72,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 1,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -88,6 +94,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",

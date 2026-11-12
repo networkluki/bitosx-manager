@@ -29,12 +29,13 @@
           "empty": 1,
           "httpsAdded": 1,
           "namesDerived": 0,
+          "totpKeys": 1,
+          "totpUnreadable": 0,
           "vaultItemsBefore": 0,
           "vaultItemsAfter": 4,
           "exceedsVaultItemLimit": false
         },
         "extras": {
-          "totp": 1,
           "folder": 4
         },
         "candidates": [
@@ -53,6 +54,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Root",
@@ -75,8 +78,15 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 1,
+            "totp": {
+              "secret": "FAKEFAKEFAKEFAKE",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
             "extras": {
-              "totp": "otpauth://totp/Shop:fake.shopper?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Shop",
+              "totp": "",
               "folder": "Root/Internet/Shops",
               "otherAddresses": [],
               "customFields": []
@@ -97,6 +107,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Root/Recycle Bin",
@@ -117,6 +129,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Root/Notes",
@@ -139,6 +153,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Root/Internet",
@@ -174,12 +190,13 @@
           "empty": 1,
           "httpsAdded": 1,
           "namesDerived": 0,
+          "totpKeys": 1,
+          "totpUnreadable": 0,
           "vaultItemsBefore": 0,
           "vaultItemsAfter": 4,
           "exceedsVaultItemLimit": false
         },
         "extras": {
-          "totp": 1,
           "folder": 4
         },
         "candidates": [
@@ -198,6 +215,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Root",
@@ -216,12 +235,19 @@
             "urls": [
               "https://shop.example/login"
             ],
-            "notes": "Line one\nLine two\n\nAuthenticator key (TOTP): otpauth://totp/Shop:fake.shopper?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Shop\nFolder: Root/Internet/Shops",
+            "notes": "Line one\nLine two\n\nFolder: Root/Internet/Shops",
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 1,
+            "totp": {
+              "secret": "FAKEFAKEFAKEFAKE",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
             "extras": {
-              "totp": "otpauth://totp/Shop:fake.shopper?secret=FAKEFAKEFAKEFAKE&period=30&digits=6&issuer=Shop",
+              "totp": "",
               "folder": "Root/Internet/Shops",
               "otherAddresses": [],
               "customFields": []
@@ -242,6 +268,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Root/Recycle Bin",
@@ -262,6 +290,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Root/Notes",
@@ -284,6 +314,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Root/Internet",

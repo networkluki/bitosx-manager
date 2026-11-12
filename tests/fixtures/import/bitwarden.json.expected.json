@@ -34,12 +34,13 @@
           "empty": 0,
           "httpsAdded": 1,
           "namesDerived": 1,
+          "totpKeys": 1,
+          "totpUnreadable": 0,
           "vaultItemsBefore": 0,
           "vaultItemsAfter": 6,
           "exceedsVaultItemLimit": false
         },
         "extras": {
-          "totp": 1,
           "folder": 2,
           "other_address": 1,
           "custom_field": 4
@@ -60,8 +61,15 @@
             "favorite": true,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": {
+              "secret": "FAKEFAKEFAKEFAKE",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
             "extras": {
-              "totp": "otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&issuer=Example",
+              "totp": "",
               "folder": "Work",
               "otherAddresses": [
                 "androidapp://com.example.mail"
@@ -101,6 +109,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -121,6 +131,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -144,6 +156,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 1,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -166,6 +180,8 @@
             "favorite": false,
             "nameWasDerived": true,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Private/Shops",
@@ -188,6 +204,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -208,6 +226,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -248,12 +268,13 @@
           "empty": 0,
           "httpsAdded": 1,
           "namesDerived": 1,
+          "totpKeys": 1,
+          "totpUnreadable": 0,
           "vaultItemsBefore": 0,
           "vaultItemsAfter": 6,
           "exceedsVaultItemLimit": false
         },
         "extras": {
-          "totp": 1,
           "folder": 2,
           "other_address": 1,
           "custom_field": 4
@@ -270,12 +291,19 @@
             "urls": [
               "https://mail.example.com/login"
             ],
-            "notes": "First line\nsecond line with \"quotes\"\nÜnïcödé 日本語 \uD83D\uDE00\n\nAuthenticator key (TOTP): otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&issuer=Example\nFolder: Work\nOther address: androidapp://com.example.mail\nPIN: 0000\nSecurity question: FAKE answer\non two lines\nNewsletter: true\nField: FAKE value without a name",
+            "notes": "First line\nsecond line with \"quotes\"\nÜnïcödé 日本語 \uD83D\uDE00\n\nFolder: Work\nOther address: androidapp://com.example.mail\nPIN: 0000\nSecurity question: FAKE answer\non two lines\nNewsletter: true\nField: FAKE value without a name",
             "favorite": true,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": {
+              "secret": "FAKEFAKEFAKEFAKE",
+              "algorithm": "SHA1",
+              "digits": 6,
+              "period": 30
+            },
+            "totpRefused": null,
             "extras": {
-              "totp": "otpauth://totp/Example:fake.user?secret=FAKEFAKEFAKEFAKE&issuer=Example",
+              "totp": "",
               "folder": "Work",
               "otherAddresses": [
                 "androidapp://com.example.mail"
@@ -315,6 +343,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -335,6 +365,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -358,6 +390,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 1,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -380,6 +414,8 @@
             "favorite": false,
             "nameWasDerived": true,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "Private/Shops",
@@ -402,6 +438,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",
@@ -422,6 +460,8 @@
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
             "extras": {
               "totp": "",
               "folder": "",

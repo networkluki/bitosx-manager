@@ -271,6 +271,9 @@ footer .footer-copyright{color:#6a6f78;font-size:11px;letter-spacing:.3px}
 .vault-item__rows dd{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0}
 .vault-value{font-family:"SFMono-Regular",Menlo,Consolas,"Liberation Mono","Courier New",monospace;font-size:.9rem;overflow-wrap:anywhere}
 .vault-url{overflow-wrap:anywhere}
+.vault-totp-code{font-family:"SFMono-Regular",Menlo,Consolas,"Liberation Mono","Courier New",monospace;font-size:1.05rem;font-weight:600;letter-spacing:.04em;white-space:nowrap}
+.vault-totp-left{color:var(--text-soft);font-size:.8rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.vault-totp-note{flex-basis:100%;color:var(--text-soft);font-size:.78rem}
 .vault-notes{white-space:pre-wrap;overflow-wrap:anywhere}
 .vault-empty{color:var(--text-soft);text-align:center;padding:18px 0}
 @media (max-width:560px){.vault-item__rows{grid-template-columns:1fr}.vault-item__rows dt{padding-top:6px}}
