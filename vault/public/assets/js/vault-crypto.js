@@ -28,7 +28,8 @@
 
 	var ENVELOPE_KEYS = ["version", "kdf", "kdfParameters", "salt", "algorithm", "keyWrapNonce", "encryptedVaultKey", "contentNonce", "ciphertext"];
 	var KDF_KEYS = ["memoryKiB", "iterations", "parallelism", "keyLengthBytes"];
-	var ITEM_KEYS = ["type", "Id", "Name", "Notes", "Favorite", "CreatedAt", "UpdatedAt", "Username", "Password", "Urls"];
+	var ITEM_KEYS = ["type", "Id", "Name", "Notes", "Favorite", "CreatedAt", "UpdatedAt", "Username", "Password", "Urls", "Totp"];
+	var TOTP_KEYS = ["Secret", "Algorithm", "Digits", "Period"];
 	var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 	var KINDS = Object.freeze({
@@ -286,7 +287,9 @@
 		if (!isPlainObject(doc) || !Object.keys(doc).every(function (k) { return k === "schemaVersion" || k === "items"; })) {
 			throw new VaultError(KINDS.CONTENT, "The decrypted vault content is not a vault.");
 		}
-		if (doc.schemaVersion !== 1) { throw new VaultError(KINDS.CONTENT, "Unsupported vault schema version."); }
+		// 1: no item has an authenticator key; 2: items may have one (written only when one has).
+		if (doc.schemaVersion !== 1 && doc.schemaVersion !== 2) { throw new VaultError(KINDS.CONTENT, "Unsupported vault schema version."); }
+		var schemaVersion = doc.schemaVersion;
 		var rawItems = doc.items === undefined || doc.items === null ? [] : doc.items;
 		if (!Array.isArray(rawItems) || rawItems.length > MAX_ITEMS) { throw new VaultError(KINDS.CONTENT, "The vault's item list is invalid."); }
 
@@ -306,6 +309,13 @@
 			var created = raw.CreatedAt === undefined ? new Date(0) : parseDate(raw.CreatedAt, "CreatedAt");
 			var updated = raw.UpdatedAt === undefined ? created : parseDate(raw.UpdatedAt, "UpdatedAt");
 			if (updated < created) { updated = created; } // VaultValidation.NormalizeLoaded
+			var totp = null;
+			if (raw.Totp !== undefined && raw.Totp !== null) {
+				// A version 1 document cannot hold a key: its readers would not know it is there.
+				if (schemaVersion < 2) { throw new VaultError(KINDS.CONTENT, "The vault contains an item with a field this version does not understand."); }
+				totp = readStoredTotp(raw.Totp);
+				if (totp === null) { throw new VaultError(KINDS.CONTENT, "The vault contains an invalid item (Totp)."); }
+			}
 			var updatedNormalized = raw.UpdatedAt !== undefined && updated === created && parseDate(raw.UpdatedAt, "UpdatedAt").getTime() !== created.getTime();
 			return Object.freeze({
 				id: id,
@@ -319,10 +329,114 @@
 				updatedAtText: raw.UpdatedAt === undefined || updatedNormalized ? null : dateText(raw.UpdatedAt),
 				username: optionalString(raw.Username, "Username", 1024),
 				password: optionalString(raw.Password, "Password", 4096),
-				urls: Object.freeze((raw.Urls || []).slice())
+				urls: Object.freeze((raw.Urls || []).slice()),
+				totp: totp
 			});
 		});
-		return Object.freeze({ schemaVersion: 1, items: Object.freeze(items) });
+		return Object.freeze({ schemaVersion: schemaVersion, items: Object.freeze(items) });
+	}
+
+	// ---- authenticator keys (RFC 6238 TOTP) in a login item ----
+	// Stored as "Totp": { "Secret", "Algorithm", "Digits", "Period" }, all four required: Secret is the
+	// canonical base32 of 10 to 128 bytes (RFC 4648 alphabet, upper case, no padding), Algorithm
+	// SHA1, SHA256 or SHA512, Digits 6 to 8, Period 1 to 300 seconds. In the page an item holds it as
+	// totp: { secret, algorithm, digits, period } (frozen), or null.
+	var BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+	var TOTP_ALGORITHMS = Object.freeze({ SHA1: "SHA-1", SHA256: "SHA-256", SHA512: "SHA-512" });
+	var TOTP_MIN_SECRET_BYTES = 10, TOTP_MAX_SECRET_BYTES = 128, TOTP_MAX_PERIOD = 300;
+
+	// The value (0-31) of a base32 character, either case; -1 for anything else.
+	function base32Value(c) {
+		if (c >= 0x41 && c <= 0x5A) { return c - 0x41; }
+		if (c >= 0x61 && c <= 0x7A) { return c - 0x61; }
+		if (c >= 0x32 && c <= 0x37) { return c - 0x32 + 26; }
+		return -1;
+	}
+	// 5 bits for each character, most significant first: floor(5n/8) bytes; the bits left over are
+	// dropped. The text must be base32 characters only (checked by the caller).
+	function base32Decode(text) {
+		var out = new Uint8Array(Math.floor(text.length * 5 / 8));
+		var buffer = 0, bits = 0, at = 0;
+		for (var i = 0; i < text.length; i++) {
+			buffer = ((buffer << 5) | base32Value(text.charCodeAt(i))) & 0xFFFF;
+			bits += 5;
+			if (bits >= 8) { bits -= 8; out[at++] = (buffer >>> bits) & 0xFF; }
+		}
+		return out;
+	}
+	// Upper case, no padding: ceil(8n/5) characters.
+	function base32Encode(bytes) {
+		var out = "", buffer = 0, bits = 0;
+		for (var i = 0; i < bytes.length; i++) {
+			buffer = ((buffer << 8) | bytes[i]) & 0xFFFF;
+			bits += 8;
+			while (bits >= 5) { bits -= 5; out += BASE32_ALPHABET[(buffer >>> bits) & 31]; }
+		}
+		if (bits > 0) { out += BASE32_ALPHABET[(buffer << (5 - bits)) & 31]; }
+		return out;
+	}
+	// A stored secret: only A-Z and 2-7, exactly the encoding of what it decodes to, 10 to 128 bytes.
+	function isCanonicalSecret(secret) {
+		if (typeof secret !== "string" || secret.length === 0 || secret.length > 2 * TOTP_MAX_SECRET_BYTES) { return false; }
+		for (var i = 0; i < secret.length; i++) {
+			var c = secret.charCodeAt(i);
+			if (!((c >= 0x41 && c <= 0x5A) || (c >= 0x32 && c <= 0x37))) { return false; }
+		}
+		var bytes = base32Decode(secret);
+		var ok = bytes.length >= TOTP_MIN_SECRET_BYTES && bytes.length <= TOTP_MAX_SECRET_BYTES && base32Encode(bytes) === secret;
+		bytes.fill(0);
+		return ok;
+	}
+	function isValidTotpKey(key) {
+		return isPlainObject(key) && isCanonicalSecret(key.secret)
+			&& typeof key.algorithm === "string" && Object.prototype.hasOwnProperty.call(TOTP_ALGORITHMS, key.algorithm)
+			&& isInt(key.digits) && key.digits >= 6 && key.digits <= 8
+			&& isInt(key.period) && key.period >= 1 && key.period <= TOTP_MAX_PERIOD;
+	}
+	function totpKey(secret, algorithm, digits, period) {
+		return Object.freeze({ secret: secret, algorithm: algorithm, digits: digits, period: period });
+	}
+	// The "Totp" member of a stored item: the key, or null when it is not exactly a valid one.
+	function readStoredTotp(raw) {
+		if (!isPlainObject(raw) || !hasExactKeys(raw, TOTP_KEYS)) { return null; }
+		var key = totpKey(raw.Secret, raw.Algorithm, raw.Digits, raw.Period);
+		return isValidTotpKey(key) ? key : null;
+	}
+
+	// RFC 6238 with RFC 4226's dynamic truncation, through WebCrypto's HMAC. unixSeconds is a whole
+	// number of seconds since 1970 (the device clock). Resolves to { code, secondsLeft }: the code
+	// as digits only, left-padded with zeros, and the seconds until the next one.
+	function totpCode(key, unixSeconds) {
+		if (!isValidTotpKey(key)) { return Promise.reject(new VaultError(KINDS.CONTENT, "The authenticator key is not valid.")); }
+		if (!Number.isSafeInteger(unixSeconds) || unixSeconds < 0) { return Promise.reject(new VaultError(KINDS.CONTENT, "The time is not valid.")); }
+		var counter = Math.floor(unixSeconds / key.period);
+		var message = new Uint8Array(8);
+		var view = new DataView(message.buffer);
+		view.setUint32(0, Math.floor(counter / 4294967296));
+		view.setUint32(4, counter % 4294967296);
+		var secret = base32Decode(key.secret);
+		var imported;
+		try { imported = webcrypto.subtle.importKey("raw", secret, { name: "HMAC", hash: { name: TOTP_ALGORITHMS[key.algorithm] } }, false, ["sign"]); }
+		catch (e) { secret.fill(0); return Promise.reject(e); }
+		return Promise.resolve(imported)
+			.finally(function () { secret.fill(0); })
+			.then(function (hmacKey) { return webcrypto.subtle.sign("HMAC", hmacKey, message); })
+			.then(function (signature) {
+				var mac = new Uint8Array(signature);
+				var offset = mac[mac.length - 1] & 0x0F;
+				var binary = ((mac[offset] & 0x7F) * 16777216) + (mac[offset + 1] << 16) + (mac[offset + 2] << 8) + mac[offset + 3];
+				mac.fill(0);
+				var code = String(binary % Math.pow(10, key.digits));
+				while (code.length < key.digits) { code = "0" + code; }
+				return Object.freeze({ code: code, secondsLeft: totpSecondsLeft(key, unixSeconds) });
+			});
+	}
+	function totpSecondsLeft(key, unixSeconds) { return key.period - (unixSeconds % key.period); }
+	// For the eye: groups of three from the left, four for an eight-digit code. Copying takes the
+	// digits without the space.
+	function formatTotpCode(code) {
+		if (code.length === 8) { return code.slice(0, 4) + " " + code.slice(4); }
+		return code.slice(0, 3) + " " + code.slice(3);
 	}
 
 	// ---- writing (VaultSerializer.SerializeToUtf8Bytes, EncryptedVaultSerializer.Serialize) ----
@@ -409,6 +523,7 @@
 		if (!(item.createdAt instanceof Date) || !(item.updatedAt instanceof Date) || isNaN(item.createdAt) || isNaN(item.updatedAt)) { throw new VaultError(KINDS.CONTENT, "Item dates are required."); }
 		if (item.updatedAt < item.createdAt) { throw new VaultError(KINDS.CONTENT, "UpdatedAt must not be earlier than CreatedAt."); }
 		if (typeof item.favorite !== "boolean") { throw new VaultError(KINDS.CONTENT, "Favorite must be a boolean."); }
+		if (item.totp != null && !isValidTotpKey(item.totp)) { throw new VaultError(KINDS.CONTENT, "The authenticator key is not valid."); }
 	}
 
 	// The decrypted document as the desktop writes it: compact, "type" first, the login fields, then
@@ -416,6 +531,7 @@
 	function serializeVault(vault) {
 		if (!isPlainObject(vault) || !Array.isArray(vault.items) || vault.items.length > MAX_ITEMS) { throw new VaultError(KINDS.CONTENT, "The vault's item list is invalid."); }
 		var seen = Object.create(null);
+		var anyKey = false;
 		var parts = vault.items.map(function (item) {
 			validateItem(item);
 			var id = item.id.toLowerCase();
@@ -425,6 +541,12 @@
 			if (item.username != null) { fields.push("\"Username\":" + jsonString(item.username)); }
 			if (item.password != null) { fields.push("\"Password\":" + jsonString(item.password)); }
 			fields.push("\"Urls\":[" + item.urls.map(jsonString).join(",") + "]");
+			if (item.totp != null) {
+				anyKey = true;
+				// Secret is A-Z and 2-7 only, Algorithm one of three names: nothing to escape.
+				fields.push("\"Totp\":{\"Secret\":\"" + item.totp.secret + "\",\"Algorithm\":\"" + item.totp.algorithm +
+					"\",\"Digits\":" + item.totp.digits + ",\"Period\":" + item.totp.period + "}");
+			}
 			fields.push("\"Id\":" + jsonString(id));
 			fields.push("\"Name\":" + jsonString(item.name));
 			if (item.notes != null) { fields.push("\"Notes\":" + jsonString(item.notes)); }
@@ -434,7 +556,9 @@
 			fields.push("\"UpdatedAt\":\"" + itemDate(item.updatedAt, item.updatedAtText) + "\"");
 			return "{" + fields.join(",") + "}";
 		});
-		return utf8("{\"schemaVersion\":1,\"items\":[" + parts.join(",") + "]}");
+		// Version 2 only when an item has a key, so that a vault without one stays readable, byte for
+		// byte as before, by the versions that know only version 1.
+		return utf8("{\"schemaVersion\":" + (anyKey ? 2 : 1) + ",\"items\":[" + parts.join(",") + "]}");
 	}
 
 	// The envelope as the desktop writes it: indented with two spaces, the fields in this order.
@@ -792,6 +916,11 @@
 		estimateStrength: estimateStrength,
 		STRENGTH_NAMES: STRENGTH_NAMES,
 		sameKeyWrap: sameKeyWrap,
+		TOTP_ALGORITHMS: TOTP_ALGORITHMS,
+		isValidTotpKey: isValidTotpKey,
+		totpCode: totpCode,
+		totpSecondsLeft: totpSecondsLeft,
+		formatTotpCode: formatTotpCode,
 		isWellFormed: isWellFormed,
 		_jsonString: jsonString,
 		_jsonDate: jsonDate
