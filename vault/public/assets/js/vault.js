@@ -84,6 +84,7 @@
 		opened = null;
 		uncertainUpload = null;
 		clearIdle();
+		stopTotp();
 		closeEditor();
 		closeImport();
 		closeExport();
@@ -457,6 +458,16 @@
 				ddP.appendChild(ui.el("button", { type: "button", class: "btn ghost small", "data-copy": "password" }, "Copy"));
 				rows.appendChild(ddP);
 			}
+			if (item.totp) {
+				// The code, not the key: the key is never in the list, an attribute or a label.
+				rows.appendChild(ui.el("dt", null, "Authenticator code"));
+				var ddT = ui.el("dd", { "data-totp": "1" });
+				ddT.appendChild(ui.el("span", { class: "vault-value vault-totp-code" }, TOTP_PENDING));
+				ddT.appendChild(ui.el("span", { class: "vault-totp-left" }, ""));
+				ddT.appendChild(ui.el("button", { type: "button", class: "btn ghost small", "data-copy": "totp" }, "Copy"));
+				ddT.appendChild(ui.el("span", { class: "vault-totp-note" }, "Codes depend on this device's clock. If they are refused, check that the clock is right."));
+				rows.appendChild(ddT);
+			}
 			if (item.urls.length > 0) {
 				rows.appendChild(ui.el("dt", null, item.urls.length === 1 ? "URL" : "URLs"));
 				var ddL = ui.el("dd", null);
@@ -477,6 +488,75 @@
 			li.appendChild(itemActions(item, false));
 			itemsList.appendChild(li);
 		});
+		refreshTotp();
+	}
+
+	// ---- authenticator codes: computed only while unlocked, only for the items on screen ----
+	// One timer, at each turn of the second of the device's clock. A code is computed once for each
+	// time step and kept with the key it is for; locking stops the timer and drops every code.
+	var TOTP_PENDING = "··· ···";
+	var totpTimer = null;
+	var totpCodes = Object.create(null);   // item id -> { key, counter, code } (code null while computing)
+	var totpRun = 0;                       // changes on lock; a code that arrives after that is dropped
+	function nowSeconds() { return Math.floor(Date.now() / 1000); }
+	function stopTotp() {
+		if (totpTimer) { clearTimeout(totpTimer); totpTimer = null; }
+		totpCodes = Object.create(null);
+		totpRun++;
+	}
+	function scheduleTotp() {
+		if (totpTimer) { clearTimeout(totpTimer); totpTimer = null; }
+		if (!opened || !itemsList.querySelector("dd[data-totp]")) { return; }
+		totpTimer = setTimeout(function () { totpTimer = null; refreshTotp(); }, 1000 - (Date.now() % 1000) + 10);
+	}
+	function showCode(item) {
+		var entry = totpCodes[item.id];
+		itemsList.querySelectorAll("li[data-item-id] dd[data-totp]").forEach(function (dd) {
+			if (findItem(dd) !== item) { return; }
+			dd.querySelector(".vault-totp-code").textContent = entry && entry.key === item.totp && entry.code !== null
+				? vc.formatTotpCode(entry.code) : entry && entry.failed ? "—" : TOTP_PENDING;
+		});
+	}
+	function refreshTotp() {
+		if (!opened) { return; }
+		var run = totpRun;
+		var now = nowSeconds();
+		itemsList.querySelectorAll("li[data-item-id] dd[data-totp]").forEach(function (dd) {
+			var item = findItem(dd);
+			if (!item || !item.totp) { return; }
+			var key = item.totp;
+			var seconds = vc.totpSecondsLeft(key, now);
+			dd.querySelector(".vault-totp-left").textContent = seconds + (seconds === 1 ? " second left" : " seconds left");
+			var counter = Math.floor(now / key.period);
+			var entry = totpCodes[item.id];
+			if (!entry || entry.key !== key || entry.counter !== counter) {
+				entry = totpCodes[item.id] = { key: key, counter: counter, code: null, failed: false };
+				vc.totpCode(key, now).then(function (r) {
+					if (run !== totpRun || totpCodes[item.id] !== entry) { return; }
+					entry.code = r.code;
+					showCode(item);
+				}, function () {
+					if (run !== totpRun || totpCodes[item.id] !== entry) { return; }
+					entry.failed = true;
+					showCode(item);
+				});
+			}
+			showCode(item);
+		});
+		scheduleTotp();
+	}
+	// The code of this moment for the clipboard: the one on screen when it is still current.
+	function copyTotp(item) {
+		var now = nowSeconds();
+		var entry = totpCodes[item.id];
+		if (entry && entry.key === item.totp && entry.counter === Math.floor(now / item.totp.period) && entry.code !== null) {
+			copySecret(entry.code);
+			return;
+		}
+		var run = totpRun;
+		vc.totpCode(item.totp, now).then(function (r) {
+			if (run === totpRun && opened) { copySecret(r.code); }
+		}, function () { ui.notice(notice, "err", "The code could not be computed."); });
 	}
 
 	function itemActions(item, armed) {
@@ -527,6 +607,10 @@
 				return;
 			}
 			removeItem(item.id);
+			return;
+		}
+		if (btn.getAttribute("data-copy") === "totp") {
+			if (item.totp) { copyTotp(item); }
 			return;
 		}
 		if (btn.hasAttribute("data-copy")) {
@@ -592,10 +676,10 @@
 	});
 
 	// ---- editing (in memory, until Save to server) ----
-	var FIELD_IDS = ["edit-name", "edit-username", "edit-password", "edit-urls", "edit-notes"];
+	var FIELD_IDS = ["edit-name", "edit-username", "edit-password", "edit-totp", "edit-urls", "edit-notes"];
 	function editorFields() {
 		return { name: $("edit-name").value, username: $("edit-username").value, password: $("edit-password").value,
-			urls: $("edit-urls").value, notes: $("edit-notes").value, favorite: $("edit-favorite").checked };
+			totp: $("edit-totp").value, urls: $("edit-urls").value, notes: $("edit-notes").value, favorite: $("edit-favorite").checked };
 	}
 	function editorModified() {
 		if (editing === null || !editorSnapshot) { return false; }
@@ -625,6 +709,10 @@
 			case "edit-password":
 				if (v.length > L.password) { return "Password must be at most " + L.password + " characters."; }
 				return whole(v, "The password");
+			case "edit-totp":
+				// The fixed text of the refusal; never the key, never a part of it.
+				var read = vc.readTotpKey(v);
+				return read.refusal ? vc.TOTP_REFUSAL_TEXTS[read.refusal] : null;
 			case "edit-notes":
 				if (v.length > L.notes) { return "Notes must be at most " + L.notes + " characters."; }
 				return whole(v, "The notes");
@@ -648,6 +736,7 @@
 		var described = [id + "-error"];
 		if (id === "edit-notes") { described.push("edit-notes-count"); }
 		if (id === "edit-password") { described.push("edit-password-strength"); }
+		if (id === "edit-totp") { described.push("edit-totp-hint"); $("edit-save").disabled = !!problem; }
 		if (problem) { $(id).setAttribute("aria-describedby", described.join(" ")); }
 		else if (described.length > 1) { $(id).setAttribute("aria-describedby", described.slice(1).join(" ")); }
 		else { $(id).removeAttribute("aria-describedby"); }
@@ -679,6 +768,8 @@
 		$("edit-password").type = "password";
 		$("edit-password-toggle").textContent = "Show";
 		$("edit-password-toggle").setAttribute("aria-pressed", "false");
+		$("edit-totp").value = item && item.totp ? vc.totpKeyText(item.totp) : "";
+		showTotpKey(false);
 		$("edit-urls").value = item ? item.urls.join("\n") : "";
 		$("edit-notes").value = item && item.notes ? item.notes : "";
 		$("edit-favorite").checked = !!(item && item.favorite);
@@ -698,6 +789,7 @@
 		// Nothing typed stays in the fields once the editor is closed.
 		FIELD_IDS.forEach(function (id) { $(id).value = ""; showFieldProblem(id, null); });
 		$("edit-password").type = "password";
+		showTotpKey(false);
 		$("edit-favorite").checked = false;
 		$("edit-password-strength").textContent = "";
 		$("edit-notes-count").textContent = "";
@@ -713,6 +805,13 @@
 		this.textContent = show ? "Hide" : "Show";
 		this.setAttribute("aria-pressed", show ? "true" : "false");
 	});
+	// The authenticator key is masked like the password, and shown only on request.
+	function showTotpKey(show) {
+		$("edit-totp").type = show ? "text" : "password";
+		$("edit-totp-toggle").textContent = show ? "Hide" : "Show";
+		$("edit-totp-toggle").setAttribute("aria-pressed", show ? "true" : "false");
+	}
+	$("edit-totp-toggle").addEventListener("click", function () { showTotpKey($("edit-totp").type === "password"); });
 	$("edit-password-generate").addEventListener("click", function () {
 		var o = readGeneratorFields();
 		var pw;
@@ -753,6 +852,10 @@
 		var now = new Date();
 		var created = existing ? existing.createdAt : now;
 		var notes = $("edit-notes").value;
+		var totpRead = vc.readTotpKey($("edit-totp").value);
+		if (totpRead.refusal) { return; }   // checked above with every field; never saved
+		// An unchanged key stays the same object, so its code on screen stays as it is.
+		var totp = totpRead.key && existing && existing.totp && vc.totpKeyText(existing.totp) === vc.totpKeyText(totpRead.key) ? existing.totp : totpRead.key;
 		var item = Object.freeze({
 			id: existing ? existing.id : vc.newId(),
 			type: "login",
@@ -760,6 +863,7 @@
 			username: $("edit-username").value.trim() || null,
 			password: $("edit-password").value || null,
 			urls: Object.freeze(splitUrls($("edit-urls").value)),
+			totp: totp,   // removing the text removes the key
 			notes: notes.trim().length > 0 ? notes : null,   // as the desktop editor: whitespace only is no notes
 			favorite: $("edit-favorite").checked,
 			createdAt: created,
@@ -1093,6 +1197,7 @@
 		items.forEach(function (item) {
 			characters += item.name.length + (item.username ? item.username.length : 0) + (item.password ? item.password.length : 0) + (item.notes ? item.notes.length : 0);
 			item.urls.forEach(function (url) { characters += url.length; });
+			if (item.totp) { characters += item.totp.secret.length; }
 		});
 		// Every character is at least a byte of the document: this much is certain without writing it.
 		if (vc.estimateEnvelopeSize(opened.envelope, characters) + ENVELOPE_MARGIN_BYTES > vc.MAX_ENVELOPE_BYTES) { return false; }
