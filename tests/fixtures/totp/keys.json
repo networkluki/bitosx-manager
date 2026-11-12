@@ -1,0 +1,794 @@
+{
+  "schema": 1,
+  "cases": [
+    {
+      "name": "empty text: no key",
+      "input": "",
+      "result": {
+        "empty": true
+      }
+    },
+    {
+      "name": "only characters that are trimmed: no key",
+      "input": " \t\r\n\u000B\f\u0085\u00A0\u1680\u2000\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF",
+      "result": {
+        "empty": true
+      }
+    },
+    {
+      "name": "2049 spaces: too long, counted before trimming",
+      "input": {
+        "parts": [
+          {
+            "text": " ",
+            "repeat": 2049
+          }
+        ]
+      },
+      "result": {
+        "refused": "too_long"
+      }
+    },
+    {
+      "name": "2048 code units with the key in them: read",
+      "input": {
+        "parts": [
+          {
+            "text": " ",
+            "repeat": 2000
+          },
+          {
+            "text": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+            "repeat": 1
+          },
+          {
+            "text": " ",
+            "repeat": 16
+          }
+        ]
+      },
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "2049 code units with the key in them: too long",
+      "input": {
+        "parts": [
+          {
+            "text": " ",
+            "repeat": 2001
+          },
+          {
+            "text": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+            "repeat": 1
+          },
+          {
+            "text": " ",
+            "repeat": 16
+          }
+        ]
+      },
+      "result": {
+        "refused": "too_long"
+      }
+    },
+    {
+      "name": "steam:// link",
+      "input": "steam://FAKEFAKEFAKEFAKE",
+      "result": {
+        "refused": "steam_not_supported"
+      }
+    },
+    {
+      "name": "steam:// in capitals, after spaces",
+      "input": "  STEAM://FAKE",
+      "result": {
+        "refused": "steam_not_supported"
+      }
+    },
+    {
+      "name": "base32 in capitals: SHA1, 6 digits, 30 seconds",
+      "input": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "base32 in lower case, in groups of four",
+      "input": "gezd gnbv gy3t qojq gezd gnbv gy3t qojq",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "base32 with dashes",
+      "input": "GEZD-GNBV-GY3T-QOJQ-GEZD-GNBV-GY3T-QOJQ",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "base32 with padding",
+      "input": "GEZDGNBVGY3TQOJQGE======",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGE",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "base32 with every character that is trimmed around it",
+      "input": "\t\r\n\u00A0\u2028\u3000\uFEFFGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ \u205F\u0085",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "bits left over in the last character are dropped",
+      "input": "GEZDGNBVGY3TQOJQGF",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGE",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "one character more than a whole byte: dropped",
+      "input": "GEZDGNBVGY3TQOJQG",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "16 characters: 10 bytes, the shortest",
+      "input": "JBSWY3DPEHPK3PXP",
+      "result": {
+        "key": {
+          "secret": "JBSWY3DPEHPK3PXP",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "15 characters: 9 bytes",
+      "input": "JBSWY3DPEHPK3PX",
+      "result": {
+        "refused": "secret_too_short"
+      }
+    },
+    {
+      "name": "206 characters: 128 bytes, the longest",
+      "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "result": {
+        "key": {
+          "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "207 characters: 129 bytes",
+      "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "result": {
+        "refused": "secret_too_long"
+      }
+    },
+    {
+      "name": "only spaces, dashes and padding",
+      "input": "- -==",
+      "result": {
+        "refused": "secret_too_short"
+      }
+    },
+    {
+      "name": "only padding",
+      "input": "====",
+      "result": {
+        "refused": "secret_too_short"
+      }
+    },
+    {
+      "name": "padding in the middle",
+      "input": "GEZDGNBV=GY3TQOJQ",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "the digit 1",
+      "input": "GEZDGNBVGY3TQOJ1",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "the digit 0",
+      "input": "GEZDGNBVGY3TQOJ0",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "the digit 8",
+      "input": "GEZDGNBVGY3TQOJ8",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "a tab inside",
+      "input": "GEZDGNBV\tGY3TQOJQ",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "a no-break space inside",
+      "input": "GEZDGNBV\u00A0GY3TQOJQ",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "a zero-width space inside",
+      "input": "GEZDGNBV​GY3TQOJQ",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "full-width letters",
+      "input": "ＧＥＺＤGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "a plus sign",
+      "input": "GEZD+GNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "a web address",
+      "input": "https://fake.example.test/",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "a link with everything (Google's example key)",
+      "input": "otpauth://totp/FAKE%20Example:fake.user@example.test?secret=JBSWY3DPEHPK3PXP&issuer=FAKE%20Example&algorithm=SHA1&digits=6&period=30",
+      "result": {
+        "key": {
+          "secret": "JBSWY3DPEHPK3PXP",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "a link with SHA256, 8 digits, 60 seconds",
+      "input": "otpauth://totp/FAKE%20Example:fake.user@example.test?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&algorithm=SHA256&digits=8&period=60",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA256",
+          "digits": 8,
+          "period": 60
+        }
+      }
+    },
+    {
+      "name": "a link with SHA512, 7 digits, 300 seconds",
+      "input": "otpauth://totp/FAKE%20Example:fake.user@example.test?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&algorithm=SHA512&digits=7&period=300",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA512",
+          "digits": 7,
+          "period": 300
+        }
+      }
+    },
+    {
+      "name": "a link with a period of 1",
+      "input": "otpauth://totp/FAKE%20Example:fake.user@example.test?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=1",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 1
+        }
+      }
+    },
+    {
+      "name": "a link with only the secret: the defaults",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "scheme, type and names in capitals, an algorithm in lower case",
+      "input": "OTPAUTH://TOTP/x?SECRET=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&Algorithm=sha256&DIGITS=8",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA256",
+          "digits": 8,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "a link with spaces around it",
+      "input": "  otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ  \n",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "a link without a label",
+      "input": "otpauth://totp/?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "a label that is not valid percent-encoding is not read",
+      "input": "otpauth://totp/%%%?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "a secret in lower case, with percent-encoded space, dash and padding",
+      "input": "otpauth://totp/x?secret=gezdgnbv%20gy3tqojq%2Dgezdgnbvgy3tqojq%3d%3D",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "empty parameters between ampersands are skipped",
+      "input": "otpauth://totp/x?&&secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&&digits=8&",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 8,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "other parameters are ignored, also a counter",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Caf%C3%A9&image=https%3A%2F%2Ffake.example.test%2Fa.png&counter=7&lock=true",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 6,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "a fragment after the query is not read",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=8#&digits=7",
+      "result": {
+        "key": {
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+          "algorithm": "SHA1",
+          "digits": 8,
+          "period": 30
+        }
+      }
+    },
+    {
+      "name": "a parameter name that is percent-encoded is not decoded",
+      "input": "otpauth://totp/x?secre%74=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "refused": "missing_secret"
+      }
+    },
+    {
+      "name": "otpauth:// and nothing else",
+      "input": "otpauth://",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "no slash after the type",
+      "input": "otpauth://totp",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "no slash after the type, but a query",
+      "input": "otpauth://totp?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "a slash only in the query",
+      "input": "otpauth://totp?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&image=a/b",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "an empty type",
+      "input": "otpauth:///x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "an unknown type",
+      "input": "otpauth://motp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "a type with a space",
+      "input": "otpauth://to tp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "hotp",
+      "input": "otpauth://hotp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&counter=0",
+      "result": {
+        "refused": "hotp_not_supported"
+      }
+    },
+    {
+      "name": "HOTP in capitals, without a query",
+      "input": "otpauth://HOTP/x",
+      "result": {
+        "refused": "hotp_not_supported"
+      }
+    },
+    {
+      "name": "no query",
+      "input": "otpauth://totp/FAKE:fake.user@example.test",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "a question mark only in the fragment",
+      "input": "otpauth://totp/x#?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "a question mark in the label starts the query",
+      "input": "otpauth://totp/a?b&secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "a parameter without an equals sign",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "a percent sign at the end",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=FAKE%",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "a percent sign and one digit",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=FAKE%4",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "a percent sign and no hexadecimal digits",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=%ZZ",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "percent-encoded bytes that are not UTF-8",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=%C3",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "percent-encoded half of a surrogate pair",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=%ED%A0%80",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "percent-encoded and literal halves of one character",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=%C3©",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "the secret twice, in two letter cases",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&Secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "an ignored parameter twice",
+      "input": "otpauth://totp/x?issuer=a&issuer=b&secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_link"
+      }
+    },
+    {
+      "name": "no secret",
+      "input": "otpauth://totp/x?issuer=FAKE",
+      "result": {
+        "refused": "missing_secret"
+      }
+    },
+    {
+      "name": "an empty secret",
+      "input": "otpauth://totp/x?secret=&issuer=FAKE",
+      "result": {
+        "refused": "missing_secret"
+      }
+    },
+    {
+      "name": "a secret of one encoded space",
+      "input": "otpauth://totp/x?secret=%20",
+      "result": {
+        "refused": "secret_too_short"
+      }
+    },
+    {
+      "name": "a plus sign in the secret stays a plus sign",
+      "input": "otpauth://totp/x?secret=GEZD+GNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "an encoded plus sign in the secret",
+      "input": "otpauth://totp/x?secret=GEZD%2BGNBVGY3TQOJQ",
+      "result": {
+        "refused": "invalid_secret"
+      }
+    },
+    {
+      "name": "a secret that is too short, before a bad algorithm",
+      "input": "otpauth://totp/x?secret=GEZDGNBV&algorithm=MD5",
+      "result": {
+        "refused": "secret_too_short"
+      }
+    },
+    {
+      "name": "a secret that is too long",
+      "input": "otpauth://totp/x?secret=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "result": {
+        "refused": "secret_too_long"
+      }
+    },
+    {
+      "name": "a bad algorithm, before bad digits",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&algorithm=MD5&digits=9",
+      "result": {
+        "refused": "unsupported_algorithm"
+      }
+    },
+    {
+      "name": "an empty algorithm",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&algorithm=",
+      "result": {
+        "refused": "unsupported_algorithm"
+      }
+    },
+    {
+      "name": "SHA-256 with a dash",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&algorithm=SHA-256",
+      "result": {
+        "refused": "unsupported_algorithm"
+      }
+    },
+    {
+      "name": "5 digits",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=5",
+      "result": {
+        "refused": "unsupported_digits"
+      }
+    },
+    {
+      "name": "9 digits",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=9",
+      "result": {
+        "refused": "unsupported_digits"
+      }
+    },
+    {
+      "name": "digits with a leading zero",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=06",
+      "result": {
+        "refused": "unsupported_digits"
+      }
+    },
+    {
+      "name": "digits with a sign",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=%2B6",
+      "result": {
+        "refused": "unsupported_digits"
+      }
+    },
+    {
+      "name": "full-width digits",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=６",
+      "result": {
+        "refused": "unsupported_digits"
+      }
+    },
+    {
+      "name": "empty digits",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=",
+      "result": {
+        "refused": "unsupported_digits"
+      }
+    },
+    {
+      "name": "bad digits, before a bad period",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=10&period=0",
+      "result": {
+        "refused": "unsupported_digits"
+      }
+    },
+    {
+      "name": "a period of 0",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=0",
+      "result": {
+        "refused": "unsupported_period"
+      }
+    },
+    {
+      "name": "a period of 301",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=301",
+      "result": {
+        "refused": "unsupported_period"
+      }
+    },
+    {
+      "name": "a period with a leading zero",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=030",
+      "result": {
+        "refused": "unsupported_period"
+      }
+    },
+    {
+      "name": "a negative period",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=-30",
+      "result": {
+        "refused": "unsupported_period"
+      }
+    },
+    {
+      "name": "a period with a fraction",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=30.0",
+      "result": {
+        "refused": "unsupported_period"
+      }
+    },
+    {
+      "name": "a period with an exponent",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=3e1",
+      "result": {
+        "refused": "unsupported_period"
+      }
+    },
+    {
+      "name": "a period with a space",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=%2030",
+      "result": {
+        "refused": "unsupported_period"
+      }
+    },
+    {
+      "name": "an empty period",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=",
+      "result": {
+        "refused": "unsupported_period"
+      }
+    },
+    {
+      "name": "a very long period",
+      "input": "otpauth://totp/x?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&period=99999999999999999999",
+      "result": {
+        "refused": "unsupported_period"
+      }
+    }
+  ]
+}

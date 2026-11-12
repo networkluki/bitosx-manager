@@ -150,6 +150,8 @@ test("version 1 and version 2 documents are read; a key comes out as the item's 
 
 test("a key in a version 1 document, version 0 and 3 and above, and any key that is not exactly valid are refused", () => {
 	refusedContent(doc(1, [withTotp(TOTP)]));
+	refusedContent(doc(1, [withTotp(null)]));   // "Totp": null is refused in every version (D2)
+	refusedContent(doc(2, [withTotp(null)]));
 	for (const version of [0, 3, 4, 100, "2", 2.5, null]) { refusedContent(doc(version, [])); }
 	const bad = [
 		{ Secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", Algorithm: "SHA1", Digits: 6 },               // a member missing
@@ -176,6 +178,7 @@ test("a key in a version 1 document, version 0 and 3 and above, and any key that
 		Object.assign({}, TOTP, { Period: 301 }),
 		Object.assign({}, TOTP, { Period: 30.5 }),
 		Object.assign({}, TOTP, { Period: null }),
+		null,                                                                                       // "Totp": null is not a stored form (D2)
 		"GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
 		[],
 		true
@@ -308,7 +311,7 @@ test("§3.2: the type, the query, and the form of every parameter", () => {
 	reads(link("totp/Example:alice@example.com?secret=" + JBSW + "&issuer=Example"), key(JBSW));
 	reads(link("TOTP/?secret=" + JBSW), key(JBSW));
 	reads(link("ToTp/label/with/slashes?secret=" + JBSW), key(JBSW));
-	reads(link("totp/label#not-a-fragment?secret=" + JBSW), key(JBSW));   // the label is not read
+	reads(link("totp/label?secret=" + JBSW + "&issuer=a/b"), key(JBSW));   // the label is not read
 	refuses(link("hotp/x?secret=" + JBSW + "&counter=1"), "hotp_not_supported");
 	refuses(link("HOTP/x?secret=" + JBSW), "hotp_not_supported");
 	refuses(link("steam/x?secret=" + JBSW), "invalid_link");
@@ -318,9 +321,11 @@ test("§3.2: the type, the query, and the form of every parameter", () => {
 	refuses(link("/x?secret=" + JBSW), "invalid_link");                   // an empty type
 	refuses(link("totp /x?secret=" + JBSW), "invalid_link");
 	refuses(link("totp/x"), "invalid_link");                              // no "?"
-	// The query starts at the first "?" after the type, wherever a "#" is in the label (above and
-	// here), and ends at the first "#" after it.
-	reads(link("totp/x#?secret=" + JBSW), key(JBSW));
+	// Everything from the first "#" after the type on goes first; the query runs from the first "?"
+	// in what is left (the desktop's reading, contract D3).
+	refuses(link("totp/x#?secret=" + JBSW), "invalid_link");
+	refuses(link("totp/label#not-a-fragment?secret=" + JBSW), "invalid_link");
+	refuses(link("totp?x=/y?secret=" + JBSW), "invalid_link");             // the type runs to the first "/", wherever it is
 	reads(link("totp/x?secret=" + JBSW + "#&secret=other"), key(JBSW));
 	refuses(link("totp/x?#secret=" + JBSW), "missing_secret");
 	reads(link("totp/x?&&secret=" + JBSW + "&&"), key(JBSW));             // empty items are skipped
@@ -342,6 +347,7 @@ test("§3.2: the type, the query, and the form of every parameter", () => {
 	reads(link("totp/x?secret=JBSW%20Y3DP-EHPK%203PXP%3D%3D"), key(JBSW));
 	refuses(link("totp/x?secret=JBSW+Y3DPEHPK3PXP"), "invalid_secret");               // "+" stays "+"
 	reads(link("totp/x?%73ecret=" + JBSW + "&secret=" + JBSW), key(JBSW));            // names are not decoded
+	refuses(link("totp/x?secre%74=" + JBSW), "missing_secret");
 });
 
 test("§3.2: secret, algorithm, digits and period, and the order the checks run in", () => {
@@ -389,3 +395,70 @@ test("a refusal never carries the text, and every result can be used as is", () 
 	}
 	assert.deepEqual(Object.keys(vc.readTotpKey(JBSW)), ["key", "refusal"]);
 });
+
+test("every refusal has its fixed text, and no text has anything of the input in it", () => {
+	assert.deepEqual(Object.keys(vc.TOTP_REFUSAL_TEXTS).sort(), [...vc.TOTP_REFUSALS].sort());
+	for (const code of vc.TOTP_REFUSALS) { assert.match(vc.TOTP_REFUSAL_TEXTS[code], /^[A-Z].+\.$/); }
+	assert.equal(vc.TOTP_REFUSAL_TEXTS.invalid_secret, "The key can hold only the letters A to Z and the digits 2 to 7. Spaces and dashes are ignored.");
+});
+
+test("the editor's text for a stored key reads back to exactly that key", () => {
+	for (const k of [key(JBSW), key(JBSW, "SHA256"), key(JBSW, "SHA1", 8), key(JBSW, "SHA1", 6, 60), key("A".repeat(205), "SHA512", 7, 300)]) {
+		const shown = vc.totpKeyText(k);
+		assert.deepEqual({ ...vc.readTotpKey(shown).key }, k);
+	}
+	assert.equal(vc.totpKeyText(key(JBSW)), JBSW);
+	assert.equal(vc.totpKeyText(key(JBSW, "SHA256", 8, 60)), "otpauth://totp/?secret=" + JBSW + "&algorithm=SHA256&digits=8&period=60");
+});
+
+// ------------------------------------------- the desktop's shared fixtures
+// tests/fixtures/totp is a byte-for-byte copy of the desktop's (docs/TOTP.md §7): what its library
+// makes of each text, and each key's code at each time. The web must arrive at the same results.
+const fs = require("node:fs");
+const path = require("node:path");
+const TOTP_FIXTURES = path.join(__dirname, "fixtures", "totp");
+const loadFixture = (name) => JSON.parse(fs.readFileSync(path.join(TOTP_FIXTURES, name), "utf8"));
+const inputOf = (input) => typeof input === "string" ? input : input.parts.map((p) => p.text.repeat(p.repeat)).join("");
+
+test("keys.json: every case gives the desktop's key, refusal or no key", () => {
+	const { schema, cases } = loadFixture("keys.json");
+	assert.equal(schema, 1);
+	assert.equal(cases.length, 91);
+	const seen = new Set();
+	for (const c of cases) {
+		const result = vc.readTotpKey(inputOf(c.input));
+		const got = result.key ? { key: { ...result.key } } : result.refusal ? { refused: result.refusal } : { empty: true };
+		assert.deepEqual(got, c.result, c.name);
+		if (c.result.refused) { seen.add(c.result.refused); }
+		if (c.result.key) { assert.ok(vc.isValidTotpKey(c.result.key), c.name); }
+	}
+	assert.deepEqual([...seen].sort(), [...vc.TOTP_REFUSALS].sort(), "every refusal code is in the fixtures");
+});
+
+test("codes.json: every case gives the desktop's code, display and seconds left", async () => {
+	const { schema, cases } = loadFixture("codes.json");
+	assert.equal(schema, 1);
+	assert.equal(cases.length, 40);
+	for (const c of cases) {
+		assert.ok(vc.isValidTotpKey(c.key), c.name);
+		const result = await vc.totpCode(c.key, c.unixSeconds);
+		assert.equal(result.code, c.result.code, c.name);
+		assert.equal(result.secondsLeft, c.result.secondsLeft, c.name);
+		assert.equal(vc.formatTotpCode(result.code), c.result.display, c.name);
+		// And the independent implementation agrees.
+		assert.equal(referenceCode(Buffer.from(c.key.secret.length ? decodeForReference(c.key.secret) : []), c.key.algorithm, c.key.digits, c.key.period, c.unixSeconds), c.result.code, c.name);
+	}
+	// The table of RFC 6238 Appendix B is among them, with the same codes as above.
+	for (const [time, sha1, sha256, sha512] of RFC_TABLE) {
+		for (const [algorithm, code] of [["SHA1", sha1], ["SHA256", sha256], ["SHA512", sha512]]) {
+			assert.ok(cases.some((c) => c.key.algorithm === algorithm && c.unixSeconds === time && c.key.secret === base32(utf8(RFC_SEEDS[algorithm])) && c.result.code === code), `${algorithm} at ${time}`);
+		}
+	}
+});
+// base32 to bytes for the reference implementation (bit string, not the code under test).
+function decodeForReference(secret) {
+	const bits = [...secret].map((ch) => "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".indexOf(ch).toString(2).padStart(5, "0")).join("");
+	const out = [];
+	for (let i = 0; i + 8 <= bits.length; i += 8) { out.push(parseInt(bits.slice(i, i + 8), 2)); }
+	return out;
+}

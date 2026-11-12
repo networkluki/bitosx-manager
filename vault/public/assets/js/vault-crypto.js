@@ -310,7 +310,8 @@
 			var updated = raw.UpdatedAt === undefined ? created : parseDate(raw.UpdatedAt, "UpdatedAt");
 			if (updated < created) { updated = created; } // VaultValidation.NormalizeLoaded
 			var totp = null;
-			if (raw.Totp !== undefined && raw.Totp !== null) {
+			// Absent when the item has none; "Totp": null is not a stored form, and is refused.
+			if (raw.Totp !== undefined) {
 				// A version 1 document cannot hold a key: its readers would not know it is there.
 				if (schemaVersion < 2) { throw new VaultError(KINDS.CONTENT, "The vault contains an item with a field this version does not understand."); }
 				totp = readStoredTotp(raw.Totp);
@@ -411,6 +412,29 @@
 	var TOTP_REFUSALS = Object.freeze(["too_long", "steam_not_supported", "invalid_link", "hotp_not_supported", "missing_secret",
 		"unsupported_algorithm", "unsupported_digits", "unsupported_period", "invalid_secret", "secret_too_short", "secret_too_long"]);
 
+	// The text under the field for each refusal: the fixed texts of the desktop's specification
+	// (docs/TOTP.md, BitosX.Core.Authenticator.TotpTexts), word for word. None quotes the input.
+	var TOTP_REFUSAL_TEXTS = Object.freeze({
+		too_long: "This is too long to be an authenticator key or an otpauth:// link.",
+		steam_not_supported: "Steam Guard codes are not supported. BitosX makes standard time-based codes (TOTP) only.",
+		invalid_link: "This otpauth:// link cannot be read. Copy the link again, or enter the key itself.",
+		hotp_not_supported: "This link is for counter-based codes (HOTP), which BitosX does not support. BitosX makes time-based codes (TOTP) only.",
+		missing_secret: "This otpauth:// link holds no key.",
+		unsupported_algorithm: "This link asks for an algorithm BitosX does not support. BitosX supports SHA1, SHA256 and SHA512.",
+		unsupported_digits: "This link asks for codes of a length BitosX does not support. BitosX makes codes of 6, 7 or 8 digits.",
+		unsupported_period: "This link asks for a time step BitosX does not support. BitosX supports 1 to 300 seconds.",
+		invalid_secret: "The key can hold only the letters A to Z and the digits 2 to 7. Spaces and dashes are ignored.",
+		secret_too_short: "The key is too short. An authenticator key has at least 16 characters.",
+		secret_too_long: "The key is too long to be an authenticator key."
+	});
+
+	// The text the editor shows for a stored key: the secret alone when the rest is SHA1 / 6 / 30
+	// (what a secret alone is read as), otherwise an otpauth:// link that reads back to the same key.
+	function totpKeyText(key) {
+		if (key.algorithm === "SHA1" && key.digits === 6 && key.period === 30) { return key.secret; }
+		return "otpauth://totp/?secret=" + key.secret + "&algorithm=" + key.algorithm + "&digits=" + key.digits + "&period=" + key.period;
+	}
+
 	// The trim set of IMPORT_EXPORT.md §2.1 (what .NET's Trim and JavaScript's trim remove, together).
 	function isTrimmedCode(c) {
 		return (c >= 0x0009 && c <= 0x000D) || c === 0x0020 || c === 0x0085 || c === 0x00A0 || c === 0x1680
@@ -480,8 +504,10 @@
 	function isPlainNumber(value) { return /^[1-9][0-9]*$/.test(value); }
 
 	// Google's Key Uri Format, for "totp" only. The checks run in this order; the first that fails
-	// is the result: the type, the query, every parameter's form, a parameter twice, secret,
-	// algorithm, digits, period. The label is not read; parameters other than these four are not used.
+	// is the result: the type (up to the first "/"), the query, every parameter's form and a
+	// parameter twice (left to right), secret, algorithm, digits, period. The label is not read;
+	// parameter names are not decoded; parameters other than these four are not used, but their
+	// values are decoded like the others.
 	function readOtpauthLink(text) {
 		var rest = text.slice("otpauth://".length);
 		var slash = rest.indexOf("/");
@@ -489,12 +515,14 @@
 		var type = lowerAscii(rest.slice(0, slash));
 		if (type === "hotp") { return totpResult(null, "hotp_not_supported"); }
 		if (type !== "totp") { return totpResult(null, "invalid_link"); }
+		// Everything from the first "#" on is the fragment and goes first; the query then runs from
+		// the first "?" to the end.
 		var afterType = rest.slice(slash + 1);
+		var hash = afterType.indexOf("#");
+		if (hash >= 0) { afterType = afterType.slice(0, hash); }
 		var question = afterType.indexOf("?");
 		if (question < 0) { return totpResult(null, "invalid_link"); }
 		var query = afterType.slice(question + 1);
-		var hash = query.indexOf("#");
-		if (hash >= 0) { query = query.slice(0, hash); }
 		var parameters = Object.create(null);
 		var pieces = query.split("&");
 		for (var i = 0; i < pieces.length; i++) {
@@ -576,11 +604,11 @@
 			});
 	}
 	function totpSecondsLeft(key, unixSeconds) { return key.period - (unixSeconds % key.period); }
-	// For the eye: groups of three from the left, four for an eight-digit code. Copying takes the
-	// digits without the space.
+	// For the eye: the first half of the digits (rounded down), a space, the rest: "123 456",
+	// "123 4567", "1234 5678". Copying takes the digits without the space.
 	function formatTotpCode(code) {
-		if (code.length === 8) { return code.slice(0, 4) + " " + code.slice(4); }
-		return code.slice(0, 3) + " " + code.slice(3);
+		var half = Math.floor(code.length / 2);
+		return code.slice(0, half) + " " + code.slice(half);
 	}
 
 	// ---- writing (VaultSerializer.SerializeToUtf8Bytes, EncryptedVaultSerializer.Serialize) ----
@@ -1064,6 +1092,8 @@
 		isValidTotpKey: isValidTotpKey,
 		TOTP_REFUSALS: TOTP_REFUSALS,
 		readTotpKey: readTotpKey,
+		TOTP_REFUSAL_TEXTS: TOTP_REFUSAL_TEXTS,
+		totpKeyText: totpKeyText,
 		totpCode: totpCode,
 		totpSecondsLeft: totpSecondsLeft,
 		formatTotpCode: formatTotpCode,
