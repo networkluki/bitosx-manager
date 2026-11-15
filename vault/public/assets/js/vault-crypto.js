@@ -29,6 +29,15 @@
 	var ENVELOPE_KEYS = ["version", "kdf", "kdfParameters", "salt", "algorithm", "keyWrapNonce", "encryptedVaultKey", "contentNonce", "ciphertext"];
 	var KDF_KEYS = ["memoryKiB", "iterations", "parallelism", "keyLengthBytes"];
 	var ITEM_KEYS = ["type", "Id", "Name", "Notes", "Favorite", "CreatedAt", "UpdatedAt", "Username", "Password", "Urls", "Totp"];
+	// A secure note has the members every item has, and nothing of a login.
+	var NOTE_KEYS = ["type", "Id", "Name", "Notes", "Favorite", "CreatedAt", "UpdatedAt"];
+	// The content schema versions this version reads, and writes: the lowest that holds the content.
+	var SCHEMA = Object.freeze({
+		LOGINS: 1,             // logins without authenticator keys
+		AUTHENTICATOR_KEYS: 2, // at least one login with an authenticator key, and no notes
+		NOTES: 3               // at least one secure note (with or without keys)
+	});
+	var ITEM_TYPES = Object.freeze({ LOGIN: "login", NOTE: "note" });
 	var TOTP_KEYS = ["Secret", "Algorithm", "Digits", "Period"];
 	var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -287,8 +296,11 @@
 		if (!isPlainObject(doc) || !Object.keys(doc).every(function (k) { return k === "schemaVersion" || k === "items"; })) {
 			throw new VaultError(KINDS.CONTENT, "The decrypted vault content is not a vault.");
 		}
-		// 1: no item has an authenticator key; 2: items may have one (written only when one has).
-		if (doc.schemaVersion !== 1 && doc.schemaVersion !== 2) { throw new VaultError(KINDS.CONTENT, "Unsupported vault schema version."); }
+		// 1: logins without authenticator keys; 2: logins may have one (written only when one has);
+		// 3: the vault may hold secure notes (written only when it does). Newer is never guessed at.
+		if (doc.schemaVersion !== SCHEMA.LOGINS && doc.schemaVersion !== SCHEMA.AUTHENTICATOR_KEYS && doc.schemaVersion !== SCHEMA.NOTES) {
+			throw new VaultError(KINDS.CONTENT, "Unsupported vault schema version.");
+		}
 		var schemaVersion = doc.schemaVersion;
 		var rawItems = doc.items === undefined || doc.items === null ? [] : doc.items;
 		if (!Array.isArray(rawItems) || rawItems.length > MAX_ITEMS) { throw new VaultError(KINDS.CONTENT, "The vault's item list is invalid."); }
@@ -296,8 +308,11 @@
 		var seen = Object.create(null);
 		var items = rawItems.map(function (raw) {
 			if (!isPlainObject(raw)) { throw new VaultError(KINDS.CONTENT, "The vault contains an empty item entry."); }
-			if (!Object.keys(raw).every(function (k) { return ITEM_KEYS.indexOf(k) >= 0; })) { throw new VaultError(KINDS.CONTENT, "The vault contains an item with a field this version does not understand."); }
-			if (raw.type !== "login") { throw new VaultError(KINDS.CONTENT, "The vault contains an item of an unknown type."); }
+			// A note is known from version 3 on: in an older document it is an unknown type.
+			var isNote = raw.type === ITEM_TYPES.NOTE && schemaVersion >= SCHEMA.NOTES;
+			var keys = isNote ? NOTE_KEYS : ITEM_KEYS;
+			if (!Object.keys(raw).every(function (k) { return keys.indexOf(k) >= 0; })) { throw new VaultError(KINDS.CONTENT, "The vault contains an item with a field this version does not understand."); }
+			if (raw.type !== ITEM_TYPES.LOGIN && !isNote) { throw new VaultError(KINDS.CONTENT, "The vault contains an item of an unknown type."); }
 			if (typeof raw.Id !== "string" || !UUID_RE.test(raw.Id)) { throw new VaultError(KINDS.CONTENT, "The vault contains an item without a valid identifier."); }
 			var id = raw.Id.toLowerCase();
 			if (seen[id]) { throw new VaultError(KINDS.CONTENT, "The vault contains duplicate item identifiers."); }
@@ -318,9 +333,11 @@
 				if (totp === null) { throw new VaultError(KINDS.CONTENT, "The vault contains an invalid item (Totp)."); }
 			}
 			var updatedNormalized = raw.UpdatedAt !== undefined && updated === created && parseDate(raw.UpdatedAt, "UpdatedAt").getTime() !== created.getTime();
+			// A note has no login fields; they are there, empty, so that nothing that reads items
+			// has to tell the two apart to stay safe. The serializer writes none of them for a note.
 			return Object.freeze({
 				id: id,
-				type: "login",
+				type: isNote ? ITEM_TYPES.NOTE : ITEM_TYPES.LOGIN,
 				name: optionalString(raw.Name, "Name", 1024) || "",
 				notes: optionalString(raw.Notes, "Notes", 65536),
 				favorite: raw.Favorite === true,
@@ -701,10 +718,15 @@
 		return parsed.protocol === "http:" || parsed.protocol === "https:";
 	}
 
-	// VaultValidation.Validate for a login item, with the desktop's messages.
+	// An item without a type is a login (as every item was before notes); otherwise "login" or "note".
+	function isNoteItem(item) { return item.type === ITEM_TYPES.NOTE; }
+
+	// VaultValidation.Validate for a login or a secure note, with the desktop's messages.
 	function validateItem(item) {
 		if (!isPlainObject(item)) { throw new VaultError(KINDS.CONTENT, "Item is required."); }
+		if (item.type !== undefined && item.type !== ITEM_TYPES.LOGIN && item.type !== ITEM_TYPES.NOTE) { throw new VaultError(KINDS.CONTENT, "The item is of an unknown type."); }
 		if (typeof item.id !== "string" || !UUID_RE.test(item.id)) { throw new VaultError(KINDS.CONTENT, "Item id must not be empty."); }
+		if (isNoteItem(item)) { validateNote(item); return; }
 		if (typeof item.name !== "string" || item.name.trim().length === 0) { throw new VaultError(KINDS.CONTENT, "Name is required."); }
 		requireWellFormed(item.name, "The name");
 		requireWellFormed(item.username, "The username");
@@ -728,23 +750,48 @@
 		if (item.totp != null && !isValidTotpKey(item.totp)) { throw new VaultError(KINDS.CONTENT, "The authenticator key is not valid."); }
 	}
 
+	// A secure note: a name and a text (which may be empty), favorite and dates — nothing of a login.
+	function validateNote(item) {
+		if (typeof item.name !== "string" || item.name.trim().length === 0) { throw new VaultError(KINDS.CONTENT, "Name is required."); }
+		requireWellFormed(item.name, "The name");
+		requireWellFormed(item.notes, "The note's text");
+		if (item.name.length > LIMITS.name) { throw new VaultError(KINDS.CONTENT, "Name must be at most " + LIMITS.name + " characters."); }
+		if (item.notes != null && (typeof item.notes !== "string" || item.notes.length > LIMITS.notes)) { throw new VaultError(KINDS.CONTENT, "The note's text must be at most " + LIMITS.notes + " characters."); }
+		if (item.username != null || item.password != null || item.totp != null || (item.urls != null && (!Array.isArray(item.urls) || item.urls.length > 0))) {
+			throw new VaultError(KINDS.CONTENT, "A secure note has only a name and a text.");
+		}
+		if (!(item.createdAt instanceof Date) || !(item.updatedAt instanceof Date) || isNaN(item.createdAt) || isNaN(item.updatedAt)) { throw new VaultError(KINDS.CONTENT, "Item dates are required."); }
+		if (item.updatedAt < item.createdAt) { throw new VaultError(KINDS.CONTENT, "UpdatedAt must not be earlier than CreatedAt."); }
+		if (typeof item.favorite !== "boolean") { throw new VaultError(KINDS.CONTENT, "Favorite must be a boolean."); }
+	}
+
+	// The lowest content schema version that holds these items (Vault.RequiredSchemaVersion).
+	function requiredSchemaVersion(items) {
+		var version = SCHEMA.LOGINS;
+		for (var i = 0; i < items.length; i++) {
+			if (isNoteItem(items[i])) { return SCHEMA.NOTES; }
+			if (items[i].totp != null) { version = SCHEMA.AUTHENTICATOR_KEYS; }
+		}
+		return version;
+	}
+
 	// The decrypted document as the desktop writes it: compact, "type" first, the login fields, then
-	// the common ones, nulls omitted. Every item is validated and ids must be unique.
+	// the common ones, nulls omitted. A note is "type" and the common ones only. Every item is
+	// validated and ids must be unique.
 	function serializeVault(vault) {
 		if (!isPlainObject(vault) || !Array.isArray(vault.items) || vault.items.length > MAX_ITEMS) { throw new VaultError(KINDS.CONTENT, "The vault's item list is invalid."); }
 		var seen = Object.create(null);
-		var anyKey = false;
 		var parts = vault.items.map(function (item) {
 			validateItem(item);
 			var id = item.id.toLowerCase();
 			if (seen[id]) { throw new VaultError(KINDS.CONTENT, "The vault contains duplicate item identifiers."); }
 			seen[id] = true;
-			var fields = ["\"type\":\"login\""];
-			if (item.username != null) { fields.push("\"Username\":" + jsonString(item.username)); }
-			if (item.password != null) { fields.push("\"Password\":" + jsonString(item.password)); }
-			fields.push("\"Urls\":[" + item.urls.map(jsonString).join(",") + "]");
-			if (item.totp != null) {
-				anyKey = true;
+			var note = isNoteItem(item);
+			var fields = [note ? "\"type\":\"note\"" : "\"type\":\"login\""];
+			if (!note && item.username != null) { fields.push("\"Username\":" + jsonString(item.username)); }
+			if (!note && item.password != null) { fields.push("\"Password\":" + jsonString(item.password)); }
+			if (!note) { fields.push("\"Urls\":[" + item.urls.map(jsonString).join(",") + "]"); }
+			if (!note && item.totp != null) {
 				// Secret is A-Z and 2-7 only, Algorithm one of three names: nothing to escape.
 				fields.push("\"Totp\":{\"Secret\":\"" + item.totp.secret + "\",\"Algorithm\":\"" + item.totp.algorithm +
 					"\",\"Digits\":" + item.totp.digits + ",\"Period\":" + item.totp.period + "}");
@@ -758,9 +805,9 @@
 			fields.push("\"UpdatedAt\":\"" + itemDate(item.updatedAt, item.updatedAtText) + "\"");
 			return "{" + fields.join(",") + "}";
 		});
-		// Version 2 only when an item has a key, so that a vault without one stays readable, byte for
-		// byte as before, by the versions that know only version 1.
-		return utf8("{\"schemaVersion\":" + (anyKey ? 2 : 1) + ",\"items\":[" + parts.join(",") + "]}");
+		// Version 2 only when a login has a key and 3 only when there is a note, so that a vault
+		// without them stays readable, byte for byte as before, by the versions that know only 1 (or 2).
+		return utf8("{\"schemaVersion\":" + requiredSchemaVersion(vault.items) + ",\"items\":[" + parts.join(",") + "]}");
 	}
 
 	// The envelope as the desktop writes it: indented with two spaces, the fields in this order.
@@ -1087,6 +1134,10 @@
 		KINDS: KINDS,
 		MAX_ENVELOPE_BYTES: MAX_ENVELOPE_BYTES,
 		MAX_ITEMS: MAX_ITEMS,
+		SCHEMA: SCHEMA,
+		ITEM_TYPES: ITEM_TYPES,
+		isNoteItem: isNoteItem,
+		requiredSchemaVersion: requiredSchemaVersion,
 		parseEnvelope: parseEnvelope,
 		passwordCandidates: passwordCandidates,
 		keyWrapAad: keyWrapAad,
