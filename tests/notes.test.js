@@ -165,3 +165,54 @@ test("a note is validated: a name of 1 to 200, a text of at most 16384, nothing 
 	vc.validateItem(untyped);
 	assert.throws(() => vc.serializeVault({ items: [note(), note()] }), (e) => e.message.includes("duplicate"));
 });
+
+// ------------------------------------------------------------- the desktop's fixture
+// tests/fixtures/notes/content.json is the desktop's (docs/NOTES.md §6), copied byte for byte: every
+// decrypted document in it is read here into what the desktop read, or refused as it was refused
+// (the two kinds the fixture tells apart), and written back with the version the desktop writes.
+const fs = require("node:fs");
+const path = require("node:path");
+const CONTENT = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "notes", "content.json"), "utf8"));
+const inputOf = (input) => typeof input === "string" ? input : input.parts.map((p) => p.text.repeat(p.repeat)).join("");
+
+test("every case of the desktop's content fixture (tests/fixtures/notes/content.json) is read, refused and written back as the desktop does", () => {
+	assert.equal(CONTENT.schema, 1);
+	assert.equal(CONTENT.cases.length, 41);
+	const kinds = new Set();
+	for (const c of CONTENT.cases) {
+		const input = utf8(inputOf(c.input));
+		if (c.result.refused) {
+			kinds.add(c.result.refused);
+			let error = null;
+			try { vc.parseVault(input); } catch (e) { error = e; }
+			assert.ok(error instanceof vc.VaultError && error.kind === vc.KINDS.CONTENT, c.name);
+			// The web tells the two kinds apart by its message; neither quotes the content.
+			if (c.result.refused === "unsupported_version") { assert.equal(error.message, "Unsupported vault schema version.", c.name); }
+			else { assert.notEqual(error.message, "Unsupported vault schema version.", c.name); }
+			assert.ok(!/FAKE/.test(error.message), c.name);
+			continue;
+		}
+		const vault = vc.parseVault(input);
+		assert.equal(vault.schemaVersion, c.result.schemaVersion, c.name);
+		assert.deepEqual(vault.items.map((i) => {
+			const out = { type: i.type, id: i.id, name: i.name, notes: i.notes, favorite: i.favorite };
+			if (i.type === "login") { out.hasTotp = i.totp !== null; }
+			return out;
+		}), c.result.items, c.name);
+		const written = vc.serializeVault(vault);
+		assert.equal(JSON.parse(text(written)).schemaVersion, c.result.writtenSchemaVersion, c.name);
+		assert.equal(vc.requiredSchemaVersion(vault.items), c.result.writtenSchemaVersion, c.name);
+		// What is written back reads back to the same items.
+		assert.deepEqual(vc.parseVault(written).items.map((i) => [i.type, i.id, i.name, i.notes, i.favorite]), vault.items.map((i) => [i.type, i.id, i.name, i.notes, i.favorite]), c.name);
+	}
+	assert.deepEqual([...kinds].sort(), ["invalid", "unsupported_version"]);
+});
+
+test("a member twice in one object is refused anywhere in the document, as the desktop's reader refuses it", () => {
+	refusedContent(utf8('{"schemaVersion":1,"schemaVersion":1,"items":[]}'), "document member twice");
+	refusedContent(utf8('{"schemaVersion":1,"items":[{"type":"login","Name":"a","Name":"b","Id":"11111111-1111-4111-8111-111111111111","Urls":[]}]}'), "login member twice");
+	refusedContent(utf8('{"schemaVersion":2,"items":[{"type":"login","Name":"a","Id":"11111111-1111-4111-8111-111111111111","Urls":[],"Totp":{"Secret":"GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ","Algorithm":"SHA1","Digits":6,"Period":30,"Period":30}}]}'), "key member twice");
+	refusedContent(utf8('{"schemaVersion":3,"items":[{"type":"note","Name":"a","N\\u006ftes":"x","Notes":"y","Id":"11111111-1111-4111-8111-111111111111"}]}'), "a name written with an escape is the same name");
+	// The same name in two objects, or as a value, is not twice; nor is text that only looks like a name.
+	assert.equal(vc.parseVault(utf8('{"schemaVersion":3,"items":[{"type":"note","Name":"Name","Notes":"\\"Notes\\":{,}[","Id":"11111111-1111-4111-8111-111111111111"},{"type":"note","Name":"Notes","Id":"22222222-2222-4222-8222-222222222222"}]}')).items.length, 2);
+});

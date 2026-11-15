@@ -289,9 +289,50 @@
 		return v;
 	}
 
+	// The desktop's reader refuses a member that is there twice in one object (System.Text.Json with
+	// AllowDuplicateProperties = false), where JSON.parse keeps the last one. This pass over text that
+	// JSON.parse has already read finds such a member, without recursion and without quoting it.
+	function hasMemberTwice(text) {
+		var stack = [];   // one frame for every open array (null) or object ({ names, expectName })
+		var top = null;
+		var length = text.length;
+		var i = 0;
+		while (i < length) {
+			var c = text.charCodeAt(i);
+			if (c === 0x22) {
+				var start = i;
+				var escaped = false;
+				i++;
+				while (i < length) {
+					c = text.charCodeAt(i);
+					if (c === 0x22) { break; }
+					if (c === 0x5C) { escaped = true; i += 2; } else { i++; }
+				}
+				if (top !== null && top.expectName) {
+					var name = escaped ? JSON.parse(text.slice(start, i + 1)) : text.slice(start + 1, i);
+					if (top.names.has(name)) { return true; }
+					top.names.add(name);
+					top.expectName = false;
+				}
+				i++;
+				continue;
+			}
+			if (c === 0x7B) { top = { names: new Set(), expectName: true }; stack.push(top); }
+			else if (c === 0x5B) { top = null; stack.push(null); }
+			else if (c === 0x7D || c === 0x5D) { stack.pop(); top = stack.length > 0 ? stack[stack.length - 1] : null; }
+			else if (c === 0x2C && top !== null) { top.expectName = true; }
+			i++;
+		}
+		return false;
+	}
+
 	function parseVault(plaintext) {
 		var doc;
-		try { doc = JSON.parse(decodeUtf8Strict(plaintext)); }
+		try {
+			var json = decodeUtf8Strict(plaintext);
+			doc = JSON.parse(json);
+			if (hasMemberTwice(json)) { throw new Error("member twice"); }
+		}
 		catch (e) { throw new VaultError(KINDS.CONTENT, "The decrypted vault content is not valid JSON."); }
 		if (!isPlainObject(doc) || !Object.keys(doc).every(function (k) { return k === "schemaVersion" || k === "items"; })) {
 			throw new VaultError(KINDS.CONTENT, "The decrypted vault content is not a vault.");
@@ -333,6 +374,12 @@
 				if (totp === null) { throw new VaultError(KINDS.CONTENT, "The vault contains an invalid item (Totp)."); }
 			}
 			var updatedNormalized = raw.UpdatedAt !== undefined && updated === created && parseDate(raw.UpdatedAt, "UpdatedAt").getTime() !== created.getTime();
+			if (isNote) {
+				// A note is new, so it is read as strictly as the desktop reads every item
+				// (VaultValidation.Validate): a name of 1 to 200, not blank, and a text of at most 16384.
+				if (typeof raw.Name !== "string" || raw.Name.trim().length === 0 || raw.Name.length > LIMITS.name) { throw new VaultError(KINDS.CONTENT, "The vault contains an invalid item (Name)."); }
+				if (raw.Notes !== undefined && raw.Notes !== null && (typeof raw.Notes !== "string" || raw.Notes.length > LIMITS.notes)) { throw new VaultError(KINDS.CONTENT, "The vault contains an invalid item (Notes)."); }
+			}
 			// A note has no login fields; they are there, empty, so that nothing that reads items
 			// has to tell the two apart to stay safe. The serializer writes none of them for a note.
 			return Object.freeze({
