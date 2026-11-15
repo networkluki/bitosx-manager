@@ -403,9 +403,11 @@
 	}
 	function byRecentlyUpdated(a, b) { return (b.updatedAt - a.updatedAt) || byName(a, b); }
 
+	// A secure note is found by its name only: its text is as secret as a password.
 	function matches(item, needle) {
 		if (!needle) { return true; }
 		var n = needle.toLowerCase();
+		if (vc.isNoteItem(item)) { return item.name.toLowerCase().indexOf(n) >= 0; }
 		return item.name.toLowerCase().indexOf(n) >= 0
 			|| (item.username || "").toLowerCase().indexOf(n) >= 0
 			|| item.urls.some(function (u) { return u.toLowerCase().indexOf(n) >= 0; });
@@ -429,8 +431,10 @@
 			? opened.items.length + " item" + (opened.items.length === 1 ? "" : "s")
 			: shown.length + " of " + opened.items.length + " items";
 		if (shown.length === 0) {
+			// The desktop's words (docs/NOTES.md §3.3); the term typed is text in a sentence, never markup.
 			itemsList.appendChild(ui.el("li", { class: "vault-empty" },
-				opened.items.length === 0 ? "This vault has no items yet." : favoritesOnly && !needle ? "No favorites yet." : "No items match."));
+				opened.items.length === 0 ? "No logins or notes yet. Click “Add login” or “Add note” to create your first entry."
+					: favoritesOnly && !needle ? "No favorites yet." : "No logins or notes match “" + needle + "”."));
 			return;
 		}
 		shown.forEach(function (item) {
@@ -441,6 +445,19 @@
 			head.appendChild(title);
 			head.appendChild(ui.el("span", { class: "vault-item__meta" }, "Updated " + ui.formatDate(item.updatedAt)));
 			li.appendChild(head);
+
+			if (vc.isNoteItem(item)) {
+				// Told apart from a login in words, for the eye and for a screen reader alike: the
+				// label is part of the heading, after the name. Nothing of the text is in it.
+				var after = title.firstChild.nextSibling;
+				title.insertBefore(document.createTextNode(" "), after);
+				title.insertBefore(ui.el("span", { class: "vault-item__kind" }, "Secure note"), after);
+				li.classList.add("vault-item--note");
+				li.appendChild(noteRows(item));
+				li.appendChild(noteActions(itemActions(item, false), item));
+				itemsList.appendChild(li);
+				return;
+			}
 
 			var rows = ui.el("dl", { class: "vault-item__rows" });
 			if (item.username) {
@@ -489,6 +506,29 @@
 			itemsList.appendChild(li);
 		});
 		refreshTotp();
+	}
+
+	// A secure note's text is hidden until Show, like a password, and copied through the same path
+	// with its clearing. It is put into the page only as text, only when shown, and never into an
+	// attribute, a title or a label.
+	// The words and the accessible names are the desktop's (docs/NOTES.md §3.2): the names carry the
+	// note's name, never its text, and the mask is ten dots whatever the text's length.
+	var MASK = "••••••••••••";
+	var NOTE_MASK = "••••••••••";
+	function revealLabel(item, shown) { return (shown ? "Hide the text of " : "Show the text of ") + item.name; }
+	function noteRows(item) {
+		var rows = ui.el("dl", { class: "vault-item__rows" });
+		rows.appendChild(ui.el("dt", null, "Text"));
+		var dd = ui.el("dd", null);
+		if (item.notes) {
+			dd.appendChild(ui.el("span", { class: "vault-value vault-secret vault-note-text", "data-secret": "hidden" }, NOTE_MASK));
+			dd.appendChild(ui.el("button", { type: "button", class: "btn ghost small", "data-reveal": "note", "aria-pressed": "false", "aria-label": revealLabel(item, false) }, "Show"));
+			dd.appendChild(ui.el("button", { type: "button", class: "btn ghost small", "data-copy": "note", "aria-label": "Copy the text of " + item.name }, "Copy text"));
+		} else {
+			dd.appendChild(ui.el("span", { class: "vault-note-empty" }, "This note has no text."));
+		}
+		rows.appendChild(dd);
+		return rows;
 	}
 
 	// ---- authenticator codes: computed only while unlocked, only for the items on screen ----
@@ -559,6 +599,15 @@
 		}, function () { ui.notice(notice, "err", "The code could not be computed."); });
 	}
 
+	// A note's Edit and Delete name the note for a screen reader (docs/NOTES.md §3.2).
+	function noteActions(actions, item) {
+		var edit = actions.querySelector("button[data-edit]");
+		var del = actions.querySelector("button[data-delete]");
+		if (edit) { edit.setAttribute("aria-label", "Edit " + item.name); }
+		if (del && del.getAttribute("data-armed") !== "1") { del.setAttribute("aria-label", "Delete " + item.name); }
+		return actions;
+	}
+
 	function itemActions(item, armed) {
 		var actions = ui.el("div", { class: "vault-item__actions" });
 		actions.appendChild(ui.el("button", { type: "button", class: "btn ghost small", "data-edit": "1" }, "Edit"));
@@ -595,14 +644,15 @@
 		if (!item) { return; }
 		var li = btn.closest("li[data-item-id]");
 		if (btn.hasAttribute("data-edit")) { openEditor(item); return; }
+		var actionsOf = function (armed) { var a = itemActions(item, armed); return vc.isNoteItem(item) ? noteActions(a, item) : a; };
 		if (btn.hasAttribute("data-disarm")) {
-			li.replaceChild(itemActions(item, false), btn.parentNode);
+			li.replaceChild(actionsOf(false), btn.parentNode);
 			li.querySelector("button[data-delete]").focus();
 			return;
 		}
 		if (btn.hasAttribute("data-delete")) {
 			if (btn.getAttribute("data-armed") !== "1") {
-				li.replaceChild(itemActions(item, true), btn.parentNode);
+				li.replaceChild(actionsOf(true), btn.parentNode);
 				li.querySelector("button[data-disarm]").focus();
 				return;
 			}
@@ -614,13 +664,18 @@
 			return;
 		}
 		if (btn.hasAttribute("data-copy")) {
-			var value = btn.getAttribute("data-copy") === "password" ? item.password : item.username;
+			var what = btn.getAttribute("data-copy");
+			var value = what === "note" ? (vc.isNoteItem(item) ? item.notes : null) : what === "password" ? item.password : item.username;
 			if (value) { copySecret(value); }
 			return;
 		}
+		var isNoteText = btn.getAttribute("data-reveal") === "note";
+		var secret = isNoteText ? (vc.isNoteItem(item) ? item.notes : null) : item.password;
+		if (!secret) { return; }
 		var span = btn.parentNode.querySelector(".vault-secret");
 		var hidden = span.getAttribute("data-secret") === "hidden";
-		span.textContent = hidden ? item.password : "••••••••••••";
+		span.textContent = hidden ? secret : isNoteText ? NOTE_MASK : MASK;
+		if (isNoteText) { btn.setAttribute("aria-label", revealLabel(item, hidden)); }
 		span.setAttribute("data-secret", hidden ? "shown" : "hidden");
 		btn.textContent = hidden ? "Hide" : "Show";
 		btn.setAttribute("aria-pressed", hidden ? "true" : "false");
@@ -676,7 +731,12 @@
 	});
 
 	// ---- editing (in memory, until Save to server) ----
+	// One form for both kinds of item: for a secure note only the name, the text and the favorite
+	// are shown (and checked); the login's fields stay empty and hidden.
 	var FIELD_IDS = ["edit-name", "edit-username", "edit-password", "edit-totp", "edit-urls", "edit-notes"];
+	var NOTE_FIELD_IDS = ["edit-name", "edit-notes"];
+	var editingNote = false;
+	function activeFieldIds() { return editingNote ? NOTE_FIELD_IDS : FIELD_IDS; }
 	function editorFields() {
 		return { name: $("edit-name").value, username: $("edit-username").value, password: $("edit-password").value,
 			totp: $("edit-totp").value, urls: $("edit-urls").value, notes: $("edit-notes").value, favorite: $("edit-favorite").checked };
@@ -714,6 +774,10 @@
 				var read = vc.readTotpKey(v);
 				return read.refusal ? vc.TOTP_REFUSAL_TEXTS[read.refusal] : null;
 			case "edit-notes":
+				if (editingNote) {
+					if (v.length > L.notes) { return "The text is longer than " + L.notes + " characters."; }
+					return whole(v, "The text");
+				}
 				if (v.length > L.notes) { return "Notes must be at most " + L.notes + " characters."; }
 				return whole(v, "The notes");
 			case "edit-urls":
@@ -757,11 +821,49 @@
 		});
 	});
 
-	function openEditor(item) {
+	// A note's text is masked in the editor until Show, for a new note as for an existing one, and
+	// every editor starts masked (docs/NOTES.md §3.1). A text box cannot be masked as a password box
+	// is, so while masked it is not on the page at all: only the ten dots are, and nothing of the
+	// text reaches the screen or the accessibility tree. Show puts the box back to type or read in.
+	function setEditorKind(note) {
+		editingNote = note;
+		$("edit-login-fields").hidden = note;
+		$("edit-notes-label").textContent = note ? "Text" : "Notes";
+		$("edit-notes").rows = note ? 10 : 3;
+		$("edit-name").placeholder = note ? "e.g. Wi-Fi at home" : "";
+		// A pasted text that is too long is said to be, and blocks Save; it is never silently cut short.
+		if (note) { $("edit-notes").removeAttribute("maxlength"); } else { $("edit-notes").setAttribute("maxlength", String(vc.LIMITS.notes)); }
+		$("edit-notes-controls").hidden = !note;
+		showNoteText(false);
+	}
+	function showNoteText(show) {
+		var masked = editingNote && !show;
+		$("edit-notes").hidden = masked;
+		$("edit-notes-mask").hidden = !masked;
+		$("edit-notes-count").hidden = masked;   // not even its length while masked
+		$("edit-notes-toggle").textContent = show ? "Hide" : "Show";
+		$("edit-notes-toggle").setAttribute("aria-pressed", show ? "true" : "false");
+	}
+	$("edit-notes-toggle").addEventListener("click", function () {
+		var show = $("edit-notes").hidden;
+		showNoteText(show);
+		if (show) { $("edit-notes").focus(); }
+	});
+	// For a note, Save is disabled while the name is blank or the text too long (docs/NOTES.md §3.1).
+	function updateNoteSave() {
+		if (!editingNote) { return; }
+		$("edit-save").disabled = $("edit-name").value.trim().length === 0 || $("edit-notes").value.length > vc.LIMITS.notes;
+	}
+	["edit-name", "edit-notes"].forEach(function (id) { $(id).addEventListener("input", updateNoteSave); });
+
+	// item: the item to edit, or null for a new one; asNote: a new one is a secure note.
+	function openEditor(item, asNote) {
 		if (!opened) { return; }
 		if (editorModified() && !window.confirm("Discard what you typed in the editor?")) { return; }
 		editing = item ? item.id : "";
-		$("vault-editor-title").textContent = item ? "Edit login" : "New login";
+		var note = item ? vc.isNoteItem(item) : !!asNote;
+		setEditorKind(note);
+		$("vault-editor-title").textContent = note ? (item ? "Edit note" : "Add note") : (item ? "Edit login" : "New login");
 		$("edit-name").value = item ? item.name : "";
 		$("edit-username").value = item && item.username ? item.username : "";
 		$("edit-password").value = item && item.password ? item.password : "";
@@ -775,6 +877,7 @@
 		$("edit-favorite").checked = !!(item && item.favorite);
 		FIELD_IDS.forEach(function (id) { showFieldProblem(id, null); });
 		updateNotesCount();
+		updateNoteSave();
 		updateStrength();
 		ui.notice(editorNotice, "ok", "");
 		editorSnapshot = editorFields();
@@ -793,10 +896,12 @@
 		$("edit-favorite").checked = false;
 		$("edit-password-strength").textContent = "";
 		$("edit-notes-count").textContent = "";
+		setEditorKind(false);
 		ui.notice(editorNotice, "ok", "");
 	}
 
-	$("vault-add").addEventListener("click", function () { openEditor(null); });
+	$("vault-add").addEventListener("click", function () { openEditor(null, false); });
+	$("vault-add-note").addEventListener("click", function () { openEditor(null, true); });
 	$("edit-cancel").addEventListener("click", function () { closeEditor(); });
 	$("edit-password-toggle").addEventListener("click", function () {
 		var box = $("edit-password");
@@ -833,7 +938,7 @@
 		ev.preventDefault();
 		if (!opened || editing === null) { return; }
 		var firstBad = null;
-		FIELD_IDS.forEach(function (id) {
+		activeFieldIds().forEach(function (id) {
 			var problem = fieldProblem(id);
 			showFieldProblem(id, problem);
 			if (problem && !firstBad) { firstBad = { id: id, problem: problem }; }
@@ -852,24 +957,8 @@
 		var now = new Date();
 		var created = existing ? existing.createdAt : now;
 		var notes = $("edit-notes").value;
-		var totpRead = vc.readTotpKey($("edit-totp").value);
-		if (totpRead.refusal) { return; }   // checked above with every field; never saved
-		// An unchanged key stays the same object, so its code on screen stays as it is.
-		var totp = totpRead.key && existing && existing.totp && vc.totpKeyText(existing.totp) === vc.totpKeyText(totpRead.key) ? existing.totp : totpRead.key;
-		var item = Object.freeze({
-			id: existing ? existing.id : vc.newId(),
-			type: "login",
-			name: $("edit-name").value.trim(),
-			username: $("edit-username").value.trim() || null,
-			password: $("edit-password").value || null,
-			urls: Object.freeze(splitUrls($("edit-urls").value)),
-			totp: totp,   // removing the text removes the key
-			notes: notes.trim().length > 0 ? notes : null,   // as the desktop editor: whitespace only is no notes
-			favorite: $("edit-favorite").checked,
-			createdAt: created,
-			createdAtText: existing ? existing.createdAtText : null,
-			updatedAt: now < created ? created : now   // Vault.Update: never earlier than CreatedAt
-		});
+		var item = editingNote ? noteFromEditor(existing, notes, created, now) : loginFromEditor(existing, notes, created, now);
+		if (!item) { return; }
 		try { vc.validateItem(item); }
 		catch (err) {
 			ui.notice(editorNotice, "err", err instanceof vc.VaultError ? err.message : "The item could not be saved.");
@@ -885,6 +974,45 @@
 		showImportPlan();
 		ui.notice(notice, "ok", (existing ? "Item updated" : "Item added") + " in this browser. Press Save to server to upload the encrypted vault.");
 	});
+
+	// A secure note: the name, the text, the favorite — and the empty login fields every item carries in memory.
+	function noteFromEditor(existing, notes, created, now) {
+		return Object.freeze({
+			id: existing ? existing.id : vc.newId(),
+			type: vc.ITEM_TYPES.NOTE,
+			name: $("edit-name").value.trim(),
+			username: null,
+			password: null,
+			urls: Object.freeze([]),
+			totp: null,
+			notes: notes.trim().length > 0 ? notes : null,   // as for a login: whitespace only is no text
+			favorite: $("edit-favorite").checked,
+			createdAt: created,
+			createdAtText: existing ? existing.createdAtText : null,
+			updatedAt: now < created ? created : now
+		});
+	}
+
+	function loginFromEditor(existing, notes, created, now) {
+		var totpRead = vc.readTotpKey($("edit-totp").value);
+		if (totpRead.refusal) { return null; }   // checked above with every field; never saved
+		// An unchanged key stays the same object, so its code on screen stays as it is.
+		var totp = totpRead.key && existing && existing.totp && vc.totpKeyText(existing.totp) === vc.totpKeyText(totpRead.key) ? existing.totp : totpRead.key;
+		return Object.freeze({
+			id: existing ? existing.id : vc.newId(),
+			type: "login",
+			name: $("edit-name").value.trim(),
+			username: $("edit-username").value.trim() || null,
+			password: $("edit-password").value || null,
+			urls: Object.freeze(splitUrls($("edit-urls").value)),
+			totp: totp,   // removing the text removes the key
+			notes: notes.trim().length > 0 ? notes : null,   // as the desktop editor: whitespace only is no notes
+			favorite: $("edit-favorite").checked,
+			createdAt: created,
+			createdAtText: existing ? existing.createdAtText : null,
+			updatedAt: now < created ? created : now   // Vault.Update: never earlier than CreatedAt
+		});
+	}
 
 	function removeItem(id) {
 		if (!opened) { return; }

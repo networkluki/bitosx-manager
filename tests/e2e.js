@@ -856,7 +856,7 @@ async function test(name, fn) {
 		assert.equal(await page.locator("#vault-items .vault-item").count(), 1);
 		assert.equal(await page.textContent("#vault-count"), "1 of 3 items");
 		await page.fill("#vault-search", "zzz");
-		assert.match(await page.textContent("#vault-items"), /No items match/);
+		assert.match(await page.textContent("#vault-items"), /No logins or notes match “zzz”\./);
 		// Only the two sync reads went to the server; nothing was uploaded.
 		assert.deepEqual(mock.calls.filter(c => c.path.startsWith("/v1/sync")).map(c => c.method + " " + c.path), ["GET /v1/sync/status", "GET /v1/sync/envelope"]);
 		// Lock.
@@ -2931,6 +2931,267 @@ async function test(name, fn) {
 		await page.close();
 	});
 
+	console.log("vault.bitosx.se — secure notes");
+	const NOTE_TEXT = "Recovery words: quokka zephyr\n<i>platypus</i> line & <script>window.__xss=1</script>\nñu wombat 🔐";
+	const noteItem = (id, name, notes, patch) => Object.assign({ id, type: "note", name, username: null, password: null, urls: [], totp: null, notes, favorite: false,
+		createdAt: new Date("2026-11-02T08:00:00Z"), updatedAt: new Date("2026-11-02T08:00:00Z") }, patch || {});
+	const NOTES = [
+		noteItem("66666666-6666-4666-8666-666666666666", "Safe combination", "left 12, right 34, left 56", { favorite: true, updatedAt: new Date("2026-11-04T08:00:00Z") }),
+		noteItem("77777777-7777-4777-8777-777777777777", "Apartment door", null)
+	];
+	const noteRow = (page, id) => page.locator(`.vault-item[data-item-id="${id}"]`);
+	// Every attribute of every element, and every accessible name and title, as one text.
+	const attributesText = (page) => page.evaluate(() => [...document.querySelectorAll("*")].map((n) => [...n.attributes].map((a) => a.value).join(" ")).join(" "));
+	async function serverText(mock, accountId, password) {
+		const e = mock.envelopes.get(accountId);
+		return Buffer.from((await vcNode.unlock(vcNode.parseEnvelope(new Uint8Array(e.bytes)), password)).plaintext).toString("utf8");
+	}
+
+	await test("secure notes: a new note — the editor shows only name, text (masked until Show) and favorite; in the list it is labelled, its text hidden until Show, copied without being shown, never markup; saved as schema 3", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const { bytes, meta } = fixture("small");
+		mock.seedEnvelope(accountId, bytes);
+		const consoleText = [];
+		const page = await newPage(mock, { beforeRoute: async (p, context) => {
+			await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: vault.origin });
+			p.on("console", (msg) => consoleText.push(msg.text()));
+		} });
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		assert.equal(await page.textContent("#vault-add-note"), "Add note");
+		await page.click("#vault-add-note");
+		await page.waitForSelector("#vault-editor:not([hidden])");
+		assert.equal(await page.textContent("#vault-editor-title"), "Add note");
+		assert.equal(await page.isHidden("#edit-login-fields"), true);
+		for (const id of ["#edit-username", "#edit-password", "#edit-totp", "#edit-urls", "#edit-password-generate"]) { assert.equal(await page.isHidden(id), true, id); }
+		assert.equal(await page.textContent("#edit-notes-label"), "Text");
+		assert.equal(await page.getAttribute("#edit-name", "placeholder"), "e.g. Wi-Fi at home");
+		assert.equal(await page.isVisible("#edit-favorite"), true);
+		assert.equal(await page.evaluate(() => document.activeElement.id), "edit-name");
+		// The text is masked until Show, for a new note too: the box is not on the page, only ten dots.
+		assert.equal(await page.isHidden("#edit-notes"), true);
+		assert.equal(await page.textContent("#edit-notes-mask"), "••••••••••");
+		assert.equal(await page.textContent("#edit-notes-toggle"), "Show");
+		assert.equal(await page.getAttribute("#edit-notes-toggle", "title"), "Show or hide the text");
+		assert.equal(await page.isHidden("#edit-notes-count"), true, "not even the length while masked");
+		// Save is disabled while the name is blank.
+		assert.equal(await page.isDisabled("#edit-save"), true);
+		await page.fill("#edit-name", "   ");
+		assert.equal(await page.isDisabled("#edit-save"), true);
+		await page.fill("#edit-name", "Recovery <b>words</b>");
+		assert.equal(await page.isDisabled("#edit-save"), false);
+		await page.click("#edit-notes-toggle");
+		assert.equal(await page.isVisible("#edit-notes"), true);
+		assert.equal(await page.isHidden("#edit-notes-mask"), true);
+		assert.equal(await page.textContent("#edit-notes-toggle"), "Hide");
+		assert.equal(await page.getAttribute("#edit-notes-toggle", "aria-pressed"), "true");
+		assert.equal(await page.evaluate(() => document.activeElement.id), "edit-notes");
+		// A text that is too long is never cut short: it is said to be, and Save is disabled.
+		assert.equal(await page.getAttribute("#edit-notes", "maxlength"), null);
+		await page.evaluate(() => { const n = document.getElementById("edit-notes"); n.value = "x".repeat(16385); n.dispatchEvent(new Event("input", { bubbles: true })); });
+		assert.equal(await page.textContent("#edit-notes-error"), "The text is longer than 16384 characters.");
+		assert.equal(await page.textContent("#edit-notes-count"), "16385 / 16384 characters");
+		assert.equal(await page.isDisabled("#edit-save"), true);
+		await page.fill("#edit-notes", NOTE_TEXT);
+		assert.equal(await page.isHidden("#edit-notes-error"), true);
+		assert.equal(await page.isDisabled("#edit-save"), false);
+		// Hidden again, the text stays as typed; it is not in the page's text while masked.
+		await page.click("#edit-notes-toggle");
+		assert.equal(await page.isHidden("#edit-notes"), true);
+		assert.ok(!(await page.evaluate(() => document.body.innerText)).includes("quokka"));
+		await page.check("#edit-favorite");
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		assert.equal(await page.inputValue("#edit-notes"), "", "nothing typed stays in the field");
+		assert.equal(await page.evaluate(() => document.getElementById("edit-login-fields").hidden), false, "the editor is a login's again");
+		assert.equal(await page.getAttribute("#edit-notes", "maxlength"), "16384", "a login's notes keep their limit");
+		assert.equal(await page.textContent("#vault-count"), "4 items");
+		assert.match(await page.textContent("#vault-notice"), /^Item added in this browser/);
+		// Labelled as a secure note, in the heading (so a screen reader reads it with the name); a login is not.
+		const li = page.locator(".vault-item--note");
+		assert.equal(await li.count(), 1);
+		assert.equal((await li.locator(".vault-item__name").textContent()).trim(), "Recovery <b>words</b> Secure note ★");
+		assert.equal(await li.locator(".vault-item__name .vault-item__kind").textContent(), "Secure note");
+		assert.equal(await page.locator(".vault-item__kind").count(), 1);
+		assert.equal(await li.locator(".vault-item__name b").count(), 0);
+		// Favorites first, by name: the note sorts among the logins by its name.
+		assert.deepEqual((await page.locator(".vault-item__name").allTextContents()).map((n) => n.trim()),
+			["GitHub ★", "Recovery <b>words</b> Secure note ★", "Bank <script>alert(1)</script>", "Wi-Fi café"]);
+		// No username, password, address or code rows: only the text, hidden.
+		assert.deepEqual(await li.locator("dt").allTextContents(), ["Text"]);
+		assert.equal(await li.locator(".vault-note-text").textContent(), "••••••••••");
+		// The buttons, and accessible names that carry the note's name, never its text.
+		assert.deepEqual(await li.locator("button").allTextContents(), ["Show", "Copy text", "Edit", "Delete"]);
+		assert.deepEqual(await li.locator("button").evaluateAll((b) => b.map((x) => x.getAttribute("aria-label"))),
+			["Show the text of Recovery <b>words</b>", "Copy the text of Recovery <b>words</b>", "Edit Recovery <b>words</b>", "Delete Recovery <b>words</b>"]);
+		const html = await page.content();
+		for (const piece of ["quokka", "platypus", "wombat", "Recovery words:"]) { assert.ok(!html.includes(piece), "the text is in the page before Show: " + piece); }
+		// Show: the text, as text, with its line breaks; Hide puts the mask back.
+		await li.locator('button[data-reveal="note"]').click();
+		assert.equal(await li.locator(".vault-note-text").textContent(), NOTE_TEXT);
+		assert.equal(await li.locator('button[data-reveal="note"]').textContent(), "Hide");
+		assert.equal(await li.locator('button[data-reveal="note"]').getAttribute("aria-pressed"), "true");
+		assert.equal(await li.locator('button[data-reveal="note"]').getAttribute("aria-label"), "Hide the text of Recovery <b>words</b>");
+		assert.equal(await li.locator(".vault-note-text").evaluate((n) => getComputedStyle(n).whiteSpace), "pre-wrap");
+		assert.equal(await page.locator("#vault-items i, #vault-items script, #vault-items b").count(), 0);
+		assert.equal(await page.evaluate(() => window.__xss), undefined);
+		// Shown or not, nothing of the text is in an attribute, a title or a label.
+		const attrs = await attributesText(page);
+		for (const piece of ["quokka", "platypus", "wombat", "Recovery words:"]) { assert.ok(!attrs.includes(piece), "the text is in an attribute: " + piece); }
+		await li.locator('button[data-reveal="note"]').click();
+		assert.equal(await li.locator(".vault-note-text").textContent(), "••••••••••");
+		assert.ok(!(await page.content()).includes("quokka"));
+		// Copy: through the copy path with its clearing, without showing the text.
+		await li.locator('button[data-copy="note"]').click();
+		await page.waitForFunction(() => /^Copied\./.test(document.getElementById("vault-notice").textContent));
+		assert.equal(await page.evaluate(() => navigator.clipboard.readText()), NOTE_TEXT);
+		assert.ok(!(await page.content()).includes("quokka"));
+		// Saved: schema 3, the note with the members every item has and nothing of a login.
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const text = await serverText(mock, accountId, meta.typedPassword);
+		assert.ok(text.startsWith('{"schemaVersion":3,'), text.slice(0, 30));
+		const stored = (await serverItems(mock, accountId, meta.typedPassword)).find((i) => i.type === "note");
+		assert.equal(stored.name, "Recovery <b>words</b>");
+		assert.equal(stored.notes, NOTE_TEXT);
+		assert.equal(stored.favorite, true);
+		const raw = JSON.parse(text).items.find((i) => i.type === "note");
+		assert.deepEqual(Object.keys(raw), ["type", "Id", "Name", "Notes", "Favorite", "CreatedAt", "UpdatedAt"]);
+		// The logins of the vault are written as before.
+		assert.deepEqual(JSON.parse(text).items.slice(0, 3), JSON.parse(meta.plaintextUtf8).items);
+		// Nothing of the text reached the console.
+		assert.ok(consoleText.every((t) => !t.includes("quokka") && !t.includes("wombat")), consoleText.join("\n"));
+		await page.close();
+	});
+
+	await test("secure notes: search finds a note by its name only, never by its text; favorites filter and both sorts treat notes like logins", async () => {
+		const mock = createMockApi();
+		const { meta } = await keyedVault(mock, NOTES);
+		const page = await newPage(mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		assert.equal(await page.textContent("#vault-count"), "5 items");
+		assert.equal(await page.locator(".vault-item--note").count(), 2);
+		await page.fill("#vault-search", "combination");
+		assert.deepEqual(await page.locator("#vault-items .vault-item").evaluateAll((n) => n.map((x) => x.getAttribute("data-item-id"))), [NOTES[0].id]);
+		await page.fill("#vault-search", "right 34");
+		assert.equal(await page.textContent("#vault-items"), "No logins or notes match “right 34”.", "the text is never searched");
+		await page.fill("#vault-search", "door");
+		assert.equal(await page.textContent("#vault-count"), "1 of 5 items");
+		await page.fill("#vault-search", "");
+		await page.check("#vault-favorites");
+		assert.deepEqual((await page.locator(".vault-item__name").allTextContents()).map((n) => n.trim()), ["GitHub ★", "Safe combination Secure note ★"]);
+		await page.uncheck("#vault-favorites");
+		await page.selectOption("#vault-sort", "updated");
+		assert.deepEqual((await page.locator(".vault-item__name").allTextContents()).map((n) => n.trim()),
+			["Safe combination Secure note ★", "Apartment door Secure note", "Wi-Fi café", "GitHub ★", "Bank <script>alert(1)</script>"]);
+		// A note without text says so, and has nothing to show or copy.
+		const door = noteRow(page, NOTES[1].id);
+		assert.equal(await door.locator(".vault-note-empty").textContent(), "This note has no text.");
+		assert.equal(await door.locator("button[data-reveal], button[data-copy]").count(), 0);
+		await page.close();
+	});
+
+	await test("secure notes: edit (the text in the editor, the login's fields hidden), delete with confirmation; the last note gone, the vault is written as before", async () => {
+		const mock = createMockApi();
+		const { accountId, meta } = await keyedVault(mock, NOTES);
+		const page = await newPage(mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		const safe = noteRow(page, NOTES[0].id);
+		await safe.locator("button[data-edit]").click();
+		assert.equal(await page.textContent("#vault-editor-title"), "Edit note");
+		assert.equal(await page.isHidden("#edit-login-fields"), true);
+		assert.equal(await page.inputValue("#edit-name"), "Safe combination");
+		// Masked for an existing note too, until Show.
+		assert.equal(await page.isHidden("#edit-notes"), true);
+		assert.ok(!(await page.evaluate(() => document.body.innerText)).includes("right 34"));
+		await page.click("#edit-notes-toggle");
+		assert.equal(await page.inputValue("#edit-notes"), "left 12, right 34, left 56");
+		assert.equal(await page.isChecked("#edit-favorite"), true);
+		// Cancel asks nothing when nothing was changed.
+		await page.click("#edit-cancel");
+		assert.equal(await page.isHidden("#vault-editor"), true);
+		await safe.locator("button[data-edit]").click();
+		assert.equal(await page.isHidden("#edit-notes"), true, "every editor starts masked");
+		await page.click("#edit-notes-toggle");
+		await page.fill("#edit-notes", "left 99,\nright 1");
+		await page.uncheck("#edit-favorite");
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		assert.match(await page.textContent("#vault-notice"), /^Item updated in this browser/);
+		await safe.locator('button[data-reveal="note"]').click();
+		assert.equal(await safe.locator(".vault-note-text").textContent(), "left 99,\nright 1");
+		// A login opened after a note is a login again in the editor.
+		await page.locator('.vault-item[data-item-id="11111111-1111-4111-8111-111111111111"] button[data-edit]').click();
+		assert.equal(await page.textContent("#vault-editor-title"), "Edit login");
+		assert.equal(await page.isHidden("#edit-login-fields"), false);
+		assert.equal(await page.textContent("#edit-notes-label"), "Notes");
+		await page.click("#edit-cancel");
+		// Delete needs two presses, as for a login. A note without text has no Show and no Copy text.
+		const door = noteRow(page, NOTES[1].id);
+		assert.deepEqual(await door.locator("button").allTextContents(), ["Edit", "Delete"]);
+		await door.locator("button[data-delete]").click();
+		assert.equal(await door.locator("button[data-delete]").textContent(), "Confirm delete");
+		await door.locator("button[data-delete]").click();
+		await page.waitForFunction(() => document.querySelectorAll("#vault-items .vault-item").length === 4);
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		let items = await serverItems(mock, accountId, meta.typedPassword);
+		assert.deepEqual(items.map((i) => i.type + " " + i.name), ["login GitHub", "login Bank <script>alert(1)</script>", "login Wi-Fi café", "note Safe combination"]);
+		const edited = items[3];
+		assert.equal(edited.notes, "left 99,\nright 1");
+		assert.equal(edited.favorite, false);
+		assert.equal(edited.createdAt.toISOString(), "2026-11-02T08:00:00.000Z", "CreatedAt kept");
+		assert.ok(edited.updatedAt > edited.createdAt, "UpdatedAt stamped");
+		// The last note deleted: the vault is schema 1 again, the desktop's bytes for its logins.
+		await noteRow(page, NOTES[0].id).locator("button[data-delete]").click();
+		await noteRow(page, NOTES[0].id).locator("button[data-delete]").click();
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 3/.test(document.getElementById("vault-notice").textContent));
+		assert.equal(await serverText(mock, accountId, meta.typedPassword), meta.plaintextUtf8);
+		await page.close();
+	});
+
+	await test("secure notes: locking clears every shown text, and the text in the editor; signing out too", async () => {
+		const mock = createMockApi();
+		const { meta } = await keyedVault(mock, NOTES);
+		const page = await newPage(mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await noteRow(page, NOTES[0].id).locator('button[data-reveal="note"]').click();
+		assert.ok((await page.content()).includes("right 34"));
+		await page.click("#vault-lock");
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.locator(".vault-note-text").count(), 0);
+		assert.ok(!(await page.content()).includes("right 34"));
+		// The editor with a note's text in it, and a lock.
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await noteRow(page, NOTES[0].id).locator("button[data-edit]").click();
+		assert.equal(await page.inputValue("#edit-notes"), "left 12, right 34, left 56");
+		await page.click("#edit-notes-toggle");
+		assert.equal(await page.isVisible("#edit-notes"), true);
+		await page.click("#vault-lock");
+		await page.waitForSelector("#vault-unlock-form:not([hidden])");
+		assert.equal(await page.inputValue("#edit-notes"), "");
+		assert.equal(await page.isHidden("#vault-editor"), true);
+		assert.equal(await page.evaluate(() => document.getElementById("edit-login-fields").hidden), false);
+		// Signing out with a text shown.
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await noteRow(page, NOTES[0].id).locator('button[data-reveal="note"]').click();
+		await page.click("#logout");
+		await page.waitForSelector("#login-panel:not([hidden])");
+		assert.ok(!(await page.content()).includes("right 34"));
+		await page.close();
+	});
+
 	console.log("vault.bitosx.se — import and export");
 	const conformance = require("./import-conformance.js");
 	const ieNode = require("../vault/public/assets/js/import-export.js")(vcNode);
@@ -3888,6 +4149,7 @@ async function test(name, fn) {
 		await page.waitForSelector("#vault-items-section:not([hidden])");
 		const downloads = [];
 		page.on("download", (d) => downloads.push(d));
+		assert.equal(await page.textContent("#vault-items"), "No logins or notes yet. Click “Add login” or “Add note” to create your first entry.");
 		// Nothing to export: no file is made of an empty vault, and no password is asked for.
 		await page.click("#vault-export");
 		assert.equal(await page.textContent("#vault-export-notice"), "This vault has no items, so there is nothing to export.");
