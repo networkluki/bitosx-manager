@@ -8,7 +8,7 @@ WebAssembly build the web vault needs (`vault/public/assets/vendor/hash-wasm/`, 
 | Hostname | Directory | Purpose | Talks to |
 |---|---|---|---|
 | `bitosx.se` | `www/public/` | Public product page: what BitosX is, how the vault is protected, what works today, live API status, roadmap | `api.bitosx.se` (`GET /health`, `GET /version` only) |
-| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code; since phase 8 change the account password while signed in; since phase 10 add, rename and remove passkeys and sign in with one) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set; since phase 8 with the desktop's generator, favorites and sorting, and a download of the encrypted backup; since phase 11 it imports the logins other password managers export and exports the vault unencrypted; since phase 12 a login can hold an authenticator key and the vault shows its current code | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*` including `POST /v1/account/password` and `/v1/account/passkeys*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
+| `vault.bitosx.se` | `vault/public/` | Web **account** app (register, verify email + set account password, sign in, list and revoke sessions, sign out everywhere; since phase 6 reset a forgotten account password by emailed link and delete the account; since phase 7 set up TOTP two-factor and sign in with a code; since phase 8 change the account password while signed in; since phase 10 add, rename and remove passkeys and sign in with one) and, since phase 4, the **web vault**: the encrypted envelope the desktop synced is opened in the browser with the master password; since phase 5 it can be edited there and uploaded with compare-and-set; since phase 8 with the desktop's generator, favorites and sorting, and a download of the encrypted backup; since phase 11 it imports the logins other password managers export and exports the vault unencrypted; since phase 12 a login can hold an authenticator key and the vault shows its current code; since phase 13 the vault holds secure notes next to logins | `api.bitosx.se` (`/v1/auth/*`, `/v1/account/*` including `POST /v1/account/password` and `/v1/account/passkeys*`, `GET /v1/sync/status`, `GET /v1/sync/envelope`, `PUT /v1/sync/envelope`) |
 | `api.bitosx.se` | — | The account API. Lives in [`networkluki/bitosx-api`](https://github.com/networkluki/bitosx-api) and is operated alongside the desktop app; nothing here | — |
 
 The desktop app lives in [`networkluki/bitosx`](https://github.com/networkluki/bitosx).
@@ -410,7 +410,7 @@ JavaScript (`readTotpKey`, `totpCode`, `formatTotpCode`, the stored form in `par
   and earlier, refuse a version 2 vault with their existing "unsupported schema version" error: they
   never get far enough to save, so nothing is lost, but they cannot open it until they are updated.
   Removing the last key makes the vault version 1 again on the next save. A key in a version 1
-  document, a `"Totp": null`, version 3 and above, and a key that is not exactly valid are refused as
+  document, a `"Totp": null`, version 3 and above (since web 0.10.0: 4 and above, see phase 13), and a key that is not exactly valid are refused as
   any invalid content is, without quoting it.
 - **Both factors in one vault.** Keeping a site's key next to its password means that whoever opens
   the vault has both factors of that login. That is the user's choice, as in other password managers;
@@ -439,6 +439,71 @@ desktop's own fixtures and code are what both clients are held to).
 **Where this client differs from the desktop.** A stored `Digits` or `Period` written with a fraction
 or an exponent (`6.0`, `6e0`): the desktop refuses the document; `JSON.parse` sees the number 6, and
 this page reads it. Neither client writes such a number.
+
+## Secure notes (phase 13)
+
+Web `0.10.0`, desktop `0.16.0`. No server change. Besides logins, a vault holds **secure notes**: a
+name and a text, nothing else — for what has no website (a recovery code, a PIN, a licence key, the
+answers to security questions). The specification is the desktop application's `docs/NOTES.md`
+(`networkluki/bitosx`), which both clients follow, words included; `vault-crypto.js` holds the stored
+form (`parseVault`, `serializeVault`, `validateItem`, `requiredSchemaVersion`, `isNoteItem`) and
+`vault.js` the page around it.
+
+- **Creating and editing.** *Add note*, next to *Add login*, opens the editor with only *Name*,
+  *Text* and *Favorite* (*Add note* / *Edit note*). The text is **masked until Show**, for a new note
+  as for an existing one, and every editor starts masked. A text box cannot be masked the way a
+  password box is, so while masked it is not on the page at all: only ten dots are, with *Show*, and
+  not even the text's length is shown. *Save item* is disabled while the name is blank or the text is
+  longer than 16,384 characters ("The text is longer than 16384 characters."); a pasted text is never
+  cut short. The name is saved trimmed, the text exactly as typed, and a blank text is no text.
+- **The list.** A note is a card with the label *Secure note* in its heading, after the name, so a
+  screen reader reads the two together; logins have no label. The text is hidden as ten dots
+  whatever its length, until *Show*; shown, it is plain text of several lines, never markup. *Copy
+  text* goes through the page's copy path, so the clipboard is cleared after 30 seconds as for a
+  password. A note without text says so and has neither *Show* nor *Copy text*. The buttons'
+  accessible names carry the note's name ("Show the text of NAME", "Copy the text of NAME", "Edit
+  NAME", "Delete NAME"), never its text.
+- **Search, favorites, order.** Search matches a note by its **name only**, never its text.
+  Favorites and both sorts treat notes like logins. An empty vault says "No logins or notes yet.
+  Click “Add login” or “Add note” to create your first entry.", a search without results "No logins
+  or notes match “TERM”.".
+- **Where the text is not.** Never in an attribute, a title, an accessible name, a notice, an error
+  or the console; it is in the page only while shown, or while the editor is open with *Show*.
+  Locking, signing out and the idle lock clear every shown text and the editor. In memory it is as
+  secret as a password, and leaves the browser only inside the encrypted vault. The web vault has no
+  password-health overview; nothing that looks at passwords (the strength estimate in the editor)
+  looks at a note.
+- **Compatibility.** A note is stored as `{"type":"note","Id","Name","Notes","Favorite","CreatedAt",
+  "UpdatedAt"}` — the members every item has, nothing of a login; `Notes` is left out when there is
+  no text. The vault's content is written with the lowest schema version that holds it: **1** without
+  keys and notes, **2** with an authenticator key and no note, **3** with at least one note. A vault
+  without notes is therefore written byte for byte as before. Versions 1 to 3 are read; a note in a
+  version 1 or 2 document, version 4 and above, a note with a login member or any unknown member, and
+  a member that is in one object twice are refused, without quoting the content. **Web `0.9.0` and
+  earlier, and desktop `0.15.0` and earlier, refuse a vault that holds a note** with their existing
+  "unsupported schema version" error: nothing is lost — they never get far enough to save over it —
+  but they cannot open that vault until they are updated, or until every note is deleted with a newer
+  client (the next save then writes version 2 or 1 again).
+
+**Verified:** `tests/notes.test.js` holds `vault-crypto.js` to the schema rules and to the desktop's
+content fixture (`tests/fixtures/notes/content.json`, copied byte for byte: all 41 documents give the
+desktop's items, refusal kind and written-back version). The mocked suite creates a note (the editor's
+masking, *Save item* disabled, the labels and accessible names, *Show*, *Copy text*, markup as text, no
+text in any attribute or console message), saves it as schema 3, searches, filters, sorts, edits and
+deletes notes (the last one gone, the vault is the desktop's bytes again), and locks and signs out with
+a text shown and with the editor open. The live suite saves a note to the real API and finds it,
+with its text, after signing in again. **Not verified:** browsers other than headless Chromium;
+screen readers (the accessible names are checked as attributes, not heard); a real desktop opening a
+browser-written version 3 vault through `api.bitosx.se`.
+
+**Where this client differs from the desktop.** The desktop refuses an item whose `"type"` is not its
+first member; this page does not look at the order of members (no client writes another order). The
+desktop reads a login's name and notes as strictly as it writes them; this page reads logins as it
+always has (a note is read as strictly as the desktop reads it). The words follow `docs/NOTES.md` §3
+except where the page has its own way already: the toolbar button is *Add note* (the page's login
+button has no "+"), the login editor's title stays *New login*, a delete is asked for with the page's
+*Confirm delete* / *Keep it*, copying says what the page's copy path says, and the favorite mark is a
+star in the heading, not a button. The text is not made unselectable once shown.
 
 ## What phase 1 was
 
@@ -685,6 +750,10 @@ Since phase 12, before the export: an authenticator key added in the editor (the
 computed in Node for the page's own clock) → *Save to server*: the server's copy is content schema 2
 and holds the key → signed in again in a second browser profile whose clock is held at a fixed
 instant, the vault opened: the code shown is the one computed in Node for that instant; locking clears it.
+Since phase 13, after the encrypted backup: a secure note added in the page (its text typed after
+*Show*) → *Save to server*: the server's copy is content schema 3 and holds the note, its text exactly,
+next to the logins and the key → reload, sign in again, re-open: the card is labelled *Secure note*, its
+text hidden until *Show* and then exactly what was saved; locking clears it.
 It runs in a few minutes, mostly waiting for TOTP steps.
 
 **The page origin is `http://localhost:8788`** (the devstack's default since phase 10: `localhost` is a
@@ -723,7 +792,7 @@ curl -sI -X OPTIONS https://api.bitosx.se/v1/auth/login \
 
 ## Versioning
 
-`web v0.9.0` (phase 12, authenticator codes in logins; `v0.8.1` two fixes to the import: a hidden tab is kept unlocked only while the file chooser is open, and an address with a backslash before the `@` is not imported; `v0.8.0` phase 11, import and export; `v0.7.0` phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
+`web v0.10.0` (phase 13, secure notes; `v0.9.0` phase 12, authenticator codes in logins; `v0.8.1` two fixes to the import: a hidden tab is kept unlocked only while the file chooser is open, and an address with a backslash before the `@` is not imported; `v0.8.0` phase 11, import and export; `v0.7.0` phase 10, passkeys; `v0.6.0` phase 8, fine-tuning and account controls; `v0.5.0` phase 7 two-factor sign-in and setup, `v0.4.0` phase 6 account recovery and deletion, `v0.3.0` phase 5 editing in the browser, `v0.2.0` the read-only web vault, `v0.1.0` phase 1). Bump the version in the footers and in
 the `?v=` cache-busting query on the stylesheet links together (the e2e hygiene test checks it). The
-desktop app (`0.15.0`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
+desktop app (`0.16.0`) and the API (`0.1.0`) have their own version numbers, shown in the footer of the
 product page for orientation only.
