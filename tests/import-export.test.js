@@ -58,7 +58,7 @@ const NEEDS_XML_PARSER = [
 test("conformance: the fixture directory is complete (every input belongs to exactly one expected file)", () => {
 	const all = fs.readdirSync(conformance.DIRECTORY).filter((n) => n !== "README.md");
 	const expectedFiles = conformance.expectedFiles();
-	assert.equal(expectedFiles.length, 48);   // 44, and since phase 12 four with authenticator keys
+	assert.equal(expectedFiles.length, 51);   // 44, since phase 12 four with authenticator keys, since phase 13 three with secure notes
 	const inputs = all.filter((n) => !n.endsWith(conformance.EXPECTED_SUFFIX)).sort();
 	const named = expectedFiles.map((n) => conformance.readExpected(n).input.file).filter((n) => typeof n === "string").sort();
 	assert.deepEqual(named, inputs);
@@ -404,7 +404,10 @@ test("csv: the alias table of the specification, name by name", () => {
 	}
 	for (const column of ["favorite", "fav"]) { assert.equal(only(parse(column + ",name,password\n1,a,b\n").entries).favorite, true, column); }
 	assert.deepEqual(only(parse("fields,name,password\nk: v,a,b\n").entries).customFields, [{ name: "k", value: "v" }]);
-	assert.deepEqual(parse("type,name,password\nnote,a,b\n").unsupported, { secure_note: 1 });
+	// A note row (since phase 13): a note, of which the password cell is not read.
+	const noteRow = parse("type,name,password\nnote,a,b\n");
+	assert.deepEqual(noteRow.unsupported, {});
+	assert.deepEqual([only(noteRow.entries).kind, only(noteRow.entries).name, only(noteRow.entries).password], ["note", "a", ""]);
 });
 
 test("csv: the label is the exporter whose header this is exactly, and CSV otherwise", () => {
@@ -451,12 +454,13 @@ test("csv: short rows have empty values; a value beyond the last column means th
 	]);
 });
 
-test("csv: only the type 'note' is not a login; favorite is 1 or true; both after trimming, in lower case", () => {
+test("csv: only the type 'note' is not a login (a secure note since phase 13); favorite is 1 or true; both after trimming, in lower case", () => {
 	const p = parse("type,favorite,name,password\nnote,,a,b\n NOTE\u0085,,a,b\nNote,,a,b\nnotes,1,n1,p\nlogin, TRUE ,n2,p\n,true\u00A0,n3,p\nsecurenote,yes,n4,p\n2,0,n5,p\n,True,n6,p\n,\u2003 1,n7,p\n,11,n8,p\n");
 	assert.equal(p.records, 11);
-	assert.deepEqual(p.unsupported, { secure_note: 3 });
-	assert.deepEqual(p.entries.map((e) => [e.position, e.name, e.favorite]), [
-		[4, "n1", true], [5, "n2", true], [6, "n3", true], [7, "n4", false], [8, "n5", false], [9, "n6", true], [10, "n7", true], [11, "n8", false]
+	assert.deepEqual(p.unsupported, {});
+	assert.deepEqual(p.entries.map((e) => [e.position, e.kind, e.name, e.favorite]), [
+		[1, "note", "a", false], [2, "note", "a", false], [3, "note", "a", false],
+		[4, "login", "n1", true], [5, "login", "n2", true], [6, "login", "n3", true], [7, "login", "n4", false], [8, "login", "n5", false], [9, "login", "n6", true], [10, "login", "n7", true], [11, "login", "n8", false]
 	]);
 });
 
@@ -724,14 +728,15 @@ test("bitwarden: a login with everything is read as Bitwarden writes it", () => 
 			"passwordHistory": [{"lastUsedDate": "2026-01-01T00:00:00.000Z", "password": "FAKE-old"}], "collectionIds": null}]}`);
 	assert.equal(p.records, 1);
 	assert.deepEqual(only(p.entries), {
-		position: 1, name: " Example ", username: " fake.user ", password: " FAKE pw ", notes: "n", favorite: true,
+		position: 1, kind: "login", name: " Example ", username: " fake.user ", password: " FAKE pw ", notes: "n", favorite: true,
 		addresses: ["https://example.com/login", "androidapp://com.example"], totp: "FAKESECRET", folder: "Work",
 		customFields: [{ name: "PIN", value: "0000" }, { name: "linked", value: "" }, { name: "", value: "nameless" }], problem: null
 	});
 });
 
 test("bitwarden: kinds are told by the number, written any way JSON allows; everything else is counted and left out", () => {
-	const kinds = { 2: "secure_note", 3: "card", 4: "identity", 5: "ssh_key", 6: "bank_account", 7: "drivers_license", 8: "passport", 9: "other", 0: "other", "-1": "other", "1.5": "other", "1e999": "other", "2.5": "other", "100": "other" };
+	// 2, a secure note, is read as a note since phase 13 (below).
+	const kinds = { 3: "card", 4: "identity", 5: "ssh_key", 6: "bank_account", 7: "drivers_license", 8: "passport", 9: "other", 0: "other", "-1": "other", "1.5": "other", "1e999": "other", "2.5": "other", "100": "other" };
 	for (const [type, kind] of Object.entries(kinds)) {
 		const p = parse(bitwarden(`{"type": ${type}, "name": "x"}`));
 		assert.deepEqual(p.unsupported, { [kind]: 1 }, type);
@@ -741,14 +746,19 @@ test("bitwarden: kinds are told by the number, written any way JSON allows; ever
 	for (const type of ["1", "1.0", "1e0", "10e-1", "0.1E+1", "1.00000000000000000001", "100e-2"]) {
 		assert.equal(parse(bitwarden(`{"type": ${type}, "name": "x"}`)).entries.length, 1, type);
 	}
-	for (const type of ["2.0", "20e-1"]) { assert.deepEqual(parse(bitwarden(`{"type": ${type}}`)).unsupported, { secure_note: 1 }, type); }
+	for (const type of ["2", "2.0", "20e-1"]) {
+		const p = parse(bitwarden(`{"type": ${type}, "name": "x"}`));
+		assert.deepEqual(p.unsupported, {}, type);
+		assert.deepEqual([only(p.entries).kind, only(p.entries).name], ["note", "x"], type);
+	}
 	// Not a number, or no type, or not an object at all: other.
 	for (const item of ["{\"name\": \"no type\"}", "{\"type\": \"1\"}", "{\"type\": null}", "{\"type\": true}", "{\"type\": [1]}", "{\"type\": {}}", "null", "1", "\"login\"", "[]", "true"]) {
 		assert.deepEqual(parse(bitwarden(item)).unsupported, { other: 1 }, item);
 	}
 	// In the order of the fixtures, kinds with none absent.
 	const mixed = parse(bitwarden([9, 3, 2, 8, 2, 5].map((t) => `{"type": ${t}}`).join(",")));
-	assert.deepEqual(Object.entries(mixed.unsupported), [["secure_note", 2], ["card", 1], ["ssh_key", 1], ["passport", 1], ["other", 1]]);
+	assert.deepEqual(Object.entries(mixed.unsupported), [["card", 1], ["ssh_key", 1], ["passport", 1], ["other", 1]]);
+	assert.deepEqual(mixed.entries.map((e) => [e.position, e.kind]), [[3, "note"], [5, "note"]]);
 });
 
 test("bitwarden: an item in the trash is counted and left out, whatever it is; an archived item is an ordinary item", () => {
@@ -764,7 +774,7 @@ test("bitwarden: an item in the trash is counted and left out, whatever it is; a
 });
 
 test("bitwarden: a member that is absent, null or of another type counts as absent", () => {
-	const absent = { position: 1, name: "", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "", customFields: [], problem: null };
+	const absent = { position: 1, kind: "login", name: "", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "", customFields: [], problem: null };
 	for (const item of [
 		"{\"type\": 1}",
 		"{\"type\": 1, \"name\": null, \"notes\": null, \"favorite\": null, \"login\": null, \"fields\": null, \"folderId\": null}",
@@ -809,10 +819,13 @@ test("json: only a member an object has itself is read, whatever every object in
 		const p = parse("{\"items\": [{\"type\": 1, \"login\": {}, \"fields\": [{}]}, {}, {\"type\": 2}], \"folders\": [{}]}");
 		assert.equal(p.format, "bitwarden_json");
 		assert.equal(p.inTrash, 0);
-		assert.deepEqual(Object.assign({}, p.unsupported), { secure_note: 1, other: 1 });
-		assert.deepEqual(only(p.entries).customFields.map((f) => [f.name, f.value]), [["", ""]]);
-		assert.deepEqual([only(p.entries).name, only(p.entries).username, only(p.entries).password, only(p.entries).notes, only(p.entries).favorite, only(p.entries).folder, only(p.entries).totp, only(p.entries).addresses.length],
+		assert.deepEqual(Object.assign({}, p.unsupported), { other: 1 });
+		// The login, and (since phase 13) the secure note, read nothing inherited.
+		assert.deepEqual(p.entries.map((e) => e.kind), ["login", "note"]);
+		assert.deepEqual(p.entries[0].customFields.map((f) => [f.name, f.value]), [["", ""]]);
+		assert.deepEqual([p.entries[0].name, p.entries[0].username, p.entries[0].password, p.entries[0].notes, p.entries[0].favorite, p.entries[0].folder, p.entries[0].totp, p.entries[0].addresses.length],
 			["", "", "", "", false, "", "", 0]);
+		assert.deepEqual([p.entries[1].name, p.entries[1].notes, p.entries[1].favorite, p.entries[1].folder, p.entries[1].customFields.length], ["", "", false, "", 0]);
 		assert.equal(refusalCode("{\"format\": \"bitosx-export\"}"), "unsupported_version");
 		const own = parse("{\"format\": \"bitosx-export\", \"version\": 1, \"items\": [{\"type\": \"login\"}, {}]}");
 		assert.deepEqual([only(own.entries).name, only(own.entries).password, only(own.entries).addresses.length, own.unsupported.other], ["", "", 0, 1]);
@@ -852,14 +865,16 @@ test("bitosx: logins are read leniently, members it does not know are ignored, a
 		{"type": "login", "name": null, "username": 1, "password": false, "urls": "https://example.com", "notes": {}, "favorite": "true"},
 		{"type": "note", "name": "x"}, {"type": 1}, {"name": "no type"}, "login", null, []]}`);
 	assert.equal(p.records, 9);
-	assert.deepEqual(p.unsupported, { other: 6 });
+	// {"type": "note"} is a secure note since phase 13; the rest is other.
+	assert.deepEqual(p.unsupported, { other: 5 });
 	assert.equal(p.inTrash, 0);
 	assert.deepEqual(p.entries, [
 		// "totp" is a member it knows since phase 12, and a string is not a key: the entry is not
 		// imported (totp_invalid); the other unknown members are still ignored.
-		{ position: 1, name: " Example ", username: " u ", password: " p ", notes: " n ", favorite: true, addresses: ["https://example.com/", "", " example.org "], totp: "", folder: "", customFields: [], problem: null, totpInvalid: true },
-		{ position: 2, name: "", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "", customFields: [], problem: null },
-		{ position: 3, name: "", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "", customFields: [], problem: null }
+		{ position: 1, kind: "login", name: " Example ", username: " u ", password: " p ", notes: " n ", favorite: true, addresses: ["https://example.com/", "", " example.org "], totp: "", folder: "", customFields: [], problem: null, totpInvalid: true },
+		{ position: 2, kind: "login", name: "", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "", customFields: [], problem: null },
+		{ position: 3, kind: "login", name: "", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "", customFields: [], problem: null },
+		{ position: 4, kind: "note", name: "x", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "", customFields: [], problem: null }
 	]);
 });
 
@@ -978,13 +993,13 @@ test("xml: entries are read from the strings of every Entry directly inside a Gr
 	assert.deepEqual(parsed.unsupported, {});
 	assert.deepEqual(parsed.ignoredColumns, []);
 	assert.deepEqual(parsed.entries, [
-		{ position: 1, name: " Example ", username: " fake.user ", password: "   ", notes: "line one\nline two", favorite: false, addresses: ["example.com"], totp: "", folder: "",
+		{ position: 1, kind: "login", name: " Example ", username: " fake.user ", password: "   ", notes: "line one\nline two", favorite: false, addresses: ["example.com"], totp: "", folder: "",
 			// "otp" holds a link whose key is too short: it stays a custom field, and the entry says why it is no key.
 			customFields: [{ name: "otp", value: "otpauth://totp/x?secret=FAKE" }, { name: "Custom", value: " value " }, { name: "Empty", value: "" }, { name: "NoValue", value: "" }], problem: null,
 			totpRefusal: "secret_too_short" },
-		{ position: 2, name: "pre <cdata> post", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "Internet",
+		{ position: 2, kind: "login", name: "pre <cdata> post", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "Internet",
 			customFields: [{ name: "title", value: "lower case key" }], problem: null },
-		{ position: 3, name: "deep one", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "Internet/Deep", customFields: [], problem: null }
+		{ position: 3, kind: "login", name: "deep one", username: "", password: "", notes: "", favorite: false, addresses: [], totp: "", folder: "Internet/Deep", customFields: [], problem: null }
 	]);
 });
 
@@ -1388,7 +1403,7 @@ test("the plan: extras, added https:// and derived names are counted over the en
 	];
 	const p = plan(csv(rows, header));
 	// "S" is no authenticator key (too short): it stays an extra, and is counted as a key that could not be read.
-	assert.deepEqual(p.counts, { toAdd: 2, duplicates: 1, notImported: 1, empty: 0, httpsAdded: 3, namesDerived: 1, totpKeys: 0, totpUnreadable: 1, vaultItemsBefore: 0, vaultItemsAfter: 2, exceedsVaultItemLimit: false });
+	assert.deepEqual(p.counts, { toAdd: 2, notesToAdd: 0, duplicates: 1, notImported: 1, empty: 0, httpsAdded: 3, namesDerived: 1, totpKeys: 0, totpUnreadable: 1, vaultItemsBefore: 0, vaultItemsAfter: 2, exceedsVaultItemLimit: false });
 	assert.deepEqual(Object.entries(p.extras), [["totp", 1], ["folder", 1], ["other_address", 1], ["custom_field", 3]]);
 	// With the duplicates imported too, theirs count as well.
 	const all = plan(csv(rows, header), [], { importDuplicates: true });
@@ -1678,9 +1693,10 @@ test("export: the file name is BitosX-export-YYYY-MM-DD with the local date", ()
 // What the web vault holds after it opened a vault the desktop wrote with these items.
 function fixtureVaultItems() {
 	const exported = JSON.parse(text(fs.readFileSync(path.join(conformance.DIRECTORY, "bitosx-export.json"))));
+	// Since phase 13 two of them are secure notes, which have none of a login's members.
 	return exported.items.map((it, i) => Object.freeze({
-		id: "0b1705e0-0000-4000-8000-" + String(i + 1).padStart(12, "0"), type: "login", name: it.name,
-		username: it.username === "" ? null : it.username, password: it.password === "" ? null : it.password, urls: Object.freeze(it.urls.slice()),
+		id: "0b1705e0-0000-4000-8000-" + String(i + 1).padStart(12, "0"), type: it.type, name: it.name,
+		username: !it.username ? null : it.username, password: !it.password ? null : it.password, urls: Object.freeze((it.urls || []).slice()),
 		notes: it.notes === "" ? null : it.notes, favorite: it.favorite,
 		totp: it.totp == null ? null : Object.freeze({ secret: it.totp.secret, algorithm: it.totp.algorithm, digits: it.totp.digits, period: it.totp.period }),
 		// The vault's document says "+00:00" where the export says "Z".
@@ -1691,7 +1707,8 @@ function fixtureVaultItems() {
 
 test("export: this vault's own exports of the fixture vault read back to the candidates of the desktop's two exports", () => {
 	const items = fixtureVaultItems();
-	assert.equal(items.length, 8);
+	assert.equal(items.length, 10);   // eight logins, and since phase 13 two notes
+	assert.equal(ie.countNotes(items), 2);
 	for (const [format, name] of [[ie.EXPORT_JSON, "bitosx-export.json.expected.json"], [ie.EXPORT_CSV, "bitosx-export.csv.expected.json"]]) {
 		const expected = conformance.readExpected(name);
 		const bytes = ie.exportVault(items, format, new Date("2026-11-10T12:00:00Z"));
@@ -1717,12 +1734,13 @@ test("export then import: into the vault it came from, JSON adds nothing; CSV ad
 	const csvPlan = plan(ie.exportCsv(items), items);
 	assert.equal(csvPlan.label, "Chrome or Edge (CSV)");
 	assert.equal(ie.countItemsWithSeveralUrls(items), 2);
-	assert.deepEqual([csvPlan.counts.toAdd, csvPlan.counts.duplicates, csvPlan.counts.notImported, csvPlan.counts.empty], [2, items.length - 2, 0, 0]);
+	// The CSV file holds no notes (since phase 13): the two are neither added nor duplicates.
+	assert.deepEqual([csvPlan.counts.toAdd, csvPlan.counts.duplicates, csvPlan.counts.notImported, csvPlan.counts.empty], [2, items.length - 2 - 2, 0, 0]);
 	assert.deepEqual(csvPlan.candidates.filter((c) => c.status === "add").map((c) => c.name), ["Two addresses", "Three addresses"]);
 	// Into an empty vault everything comes back as it was stored (the name trimmed, as an import does).
 	const back = ie.createItems(plan(ie.exportJson(items, at), []), at);
-	assert.deepEqual(back.map((i) => [i.name, i.username, i.password, [...i.urls], i.notes, i.favorite]),
-		items.map((i) => [ie._trim(i.name), i.username, i.password, [...i.urls], i.notes, i.favorite]));
+	assert.deepEqual(back.map((i) => [i.type, i.name, i.username, i.password, [...i.urls], i.notes, i.favorite]),
+		items.map((i) => [i.type, ie._trim(i.name), i.username, i.password, [...i.urls], i.notes, i.favorite]));
 });
 
 test("export then import: every item of a vault of generated values survives both formats unchanged", () => {
@@ -1761,7 +1779,8 @@ test("texts: every code has its fixed text, and a refusal carries the code, the 
 	assert.equal(ie.REASON_TEXTS.totp_invalid, "The authenticator key in the file is not valid.");
 	assert.equal(ie.EXTRA_TEXTS.totp, "authenticator keys that could not be read");
 	assert.deepEqual(Object.keys(ie.EXTRA_TEXTS), ["totp", "folder", "other_address", "custom_field"]);
-	assert.deepEqual(Object.keys(ie.UNSUPPORTED_TEXTS), ["secure_note", "card", "identity", "ssh_key", "bank_account", "drivers_license", "passport", "other"]);
+	// secure_note was a kind until phase 13: Bitwarden's secure notes are imported as notes since.
+	assert.deepEqual(Object.keys(ie.UNSUPPORTED_TEXTS), ["card", "identity", "ssh_key", "bank_account", "drivers_license", "passport", "other"]);
 	const r = refusal("name,password\n\"FAKE-secret-marker");
 	assert.deepEqual([r.name, r.code, r.line, r.message], ["ImportRefused", "invalid_csv", 2, ie.REFUSAL_TEXTS.invalid_csv]);
 	assert.ok(r instanceof Error);
@@ -1924,4 +1943,35 @@ test("export: the key is written after the addresses, and BitosX's export reads 
 	// CSV has no column for it: unchanged.
 	assert.equal(text(ie.exportCsv([keyed])), text(ie.exportCsv([item({ name: "Keyed" })])));
 	assert.equal(ie.countItemsWithTotp([keyed, item({ name: "plain" })]), 1);
+});
+
+// -------------------------------------------------------- secure notes (phase 13, §7.7, §11)
+test("notes: the JSON export writes a note with none of a login's members, in the desktop's order; CSV leaves it out and says how many", () => {
+	const note = item({ id: "0b1705e0-0000-4000-8000-0000000000b1", type: "note", name: "Wi-Fi", notes: "Key: FAKE\r\n<b>x</b>", favorite: true });
+	const bare = item({ id: "0b1705e0-0000-4000-8000-0000000000b2", type: "note", name: "Only a name", notes: null });
+	const login = item({ name: "Login", password: "FAKE-pw" });
+	const doc = JSON.parse(text(ie.exportJson([login, note, bare], at)));
+	assert.deepEqual(Object.keys(doc.items[1]), ["type", "name", "notes", "favorite", "createdAt", "updatedAt"]);
+	assert.deepEqual(doc.items[1], { type: "note", name: "Wi-Fi", notes: "Key: FAKE\r\n<b>x</b>", favorite: true, createdAt: "2025-03-04T05:06:07Z", updatedAt: "2025-03-04T05:06:07Z" });
+	assert.equal(doc.items[2].notes, "", "no text is the empty string");
+	assert.equal(doc.version, 1);
+	assert.equal(text(ie.exportCsv([login, note, bare])), "name,url,username,password,note\r\n\"Login\",\"\",\"\",\"FAKE-pw\",\"\"\r\n");
+	assert.equal(ie.countNotes([login, note, bare]), 2);
+	assert.equal(ie.countNotes([login]), 0);
+	// Read back into an empty vault: the notes are notes again, an empty text none.
+	const back = ie.createItems(plan(ie.exportJson([login, note, bare], at), []), at);
+	assert.deepEqual(back.map((i) => [i.type, i.name, i.notes, i.favorite, i.username, i.password, i.urls.length, i.totp]),
+		[["login", "Login", null, false, null, "FAKE-pw", 0, null], ["note", "Wi-Fi", "Key: FAKE\r\n<b>x</b>", true, null, null, 0, null], ["note", "Only a name", null, false, null, null, 0, null]]);
+	back.forEach((i) => vc.validateItem(i));
+	assert.ok(Object.isFrozen(back[1]) && Object.isFrozen(back[1].urls));
+});
+
+test("notes: a note is the duplicate of a note with the same name and text as stored, never of a login; the plan counts the notes to add", () => {
+	const file = "type,name,notes,password\nnote,Same,text,\nnote,Same,other text,\n,Same,text,\nnote,  Same  ,text,\n";
+	const vault = [{ type: "note", name: " Same ", notes: "text" }, { name: "Same", username: null, password: "FAKE-other", urls: [], notes: "text" }];
+	const p = plan(utf8(file), vault);
+	assert.deepEqual(p.candidates.map((c) => [c.type, c.status]), [["note", "duplicate"], ["note", "add"], ["login", "add"], ["note", "duplicate"]]);
+	assert.deepEqual([p.counts.toAdd, p.counts.notesToAdd, p.counts.duplicates], [2, 1, 2]);
+	// A vault note without text equals a note of the file without text.
+	assert.equal(plan(utf8("type,name,password\nnote,N,\n"), [{ type: "note", name: "N", notes: null }]).counts.duplicates, 1);
 });

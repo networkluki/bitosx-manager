@@ -3192,6 +3192,53 @@ async function test(name, fn) {
 		await page.close();
 	});
 
+	await test("secure notes: the desktop's own vault with notes (tests/fixtures/notes.vault.json) opens and shows its items as the desktop read them; the text is text, never markup", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", "correct horse battery");
+		const { bytes, meta } = fixture("notes");
+		mock.seedEnvelope(accountId, bytes);
+		const page = await newPage(mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		assert.equal(await page.textContent("#vault-count"), meta.items.length + " items");
+		for (const it of meta.items) {
+			const card = noteRow(page, it.id);
+			assert.equal(await card.count(), 1, it.name);
+			assert.equal(await card.evaluate((li) => li.classList.contains("vault-item--note")), it.type === "note", it.name);
+			const heading = (await card.locator(".vault-item__name").textContent()).trim();
+			assert.equal(heading, it.name + (it.type === "note" ? " Secure note" : "") + (it.favorite ? " ★" : ""), it.name);
+			if (it.type !== "note") { assert.equal(await card.locator("dd[data-totp]").count(), it.hasTotp ? 1 : 0, it.name); continue; }
+			if (it.notes === null) {
+				assert.equal(await card.locator(".vault-note-empty").textContent(), "This note has no text.");
+				continue;
+			}
+			assert.equal(await card.locator(".vault-note-text").textContent(), "••••••••••");
+			assert.ok(!(await page.content()).includes("FAKE-wifi-key"), "the text is not in the page before Show");
+			await card.locator('button[data-reveal="note"]').click();
+			assert.equal(await card.locator(".vault-note-text").textContent(), it.notes);
+		}
+		assert.equal(await page.locator("#vault-items script, #vault-items b").count(), 0, "markup in a name or a text is text");
+		// Search by a word of the text finds nothing; by a word of the name, the note.
+		await page.fill("#vault-search", "FAKE-wifi-key");
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 0);
+		await page.fill("#vault-search", "only a name");
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 1);
+		await page.click("#vault-lock");
+		assert.ok(!(await page.content()).includes("FAKE-wifi-key"), "locking clears the text");
+		// A note opened in the editor and saved as it is, then Save to server: every item of the desktop's vault is still what it was.
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await noteRow(page, meta.items[1].id).locator("button[data-edit]").click();
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const saved = await serverItems(mock, accountId, meta.typedPassword);
+		assert.deepEqual(saved.map((i) => [i.id, i.type, i.name, i.notes, i.favorite]), meta.items.map((i) => [i.id, i.type, i.name, i.notes, i.favorite]));
+		await page.close();
+	});
+
 	console.log("vault.bitosx.se — import and export");
 	const conformance = require("./import-conformance.js");
 	const ieNode = require("../vault/public/assets/js/import-export.js")(vcNode);
@@ -3230,7 +3277,7 @@ async function test(name, fn) {
 		URL.revokeObjectURL = (url) => { window.__urls.revoked.push(url); return revoke(url); };
 	});
 
-	await test("import: every conformance fixture gives in Chromium exactly what the desktop makes of it — all 48 files, KeePass XML through DOMParser", async () => {
+	await test("import: every conformance fixture gives in Chromium exactly what the desktop makes of it — all 51 files, KeePass XML through DOMParser", async () => {
 		const mock = createMockApi();
 		const page = await newPage(mock);
 		const refusedStyles = [];
@@ -3257,8 +3304,8 @@ async function test(name, fn) {
 			const start = (expected.input.file ? importFixture(expected.input.file).toString("latin1") : expected.input.parts[0].text).trimStart();
 			if (start.startsWith("<")) { xmlFiles++; }
 		}
-		assert.equal(files, 48);
-		assert.equal(cases, 64);   // 55, and since phase 12 the cases of the four fixtures with authenticator keys
+		assert.equal(files, 51);   // since phase 13 three with secure notes
+		assert.equal(cases, 72);   // 55, since phase 12 the cases of the four fixtures with authenticator keys, since phase 13 the eight of the three with secure notes
 		assert.equal(xmlFiles, 12, "the XML fixtures: ten that reach the parser (keepass-totp.xml since phase 12), two refused before it");
 		assert.ok(outcomes.keepass_xml >= 3 && outcomes.nested_too_deeply >= 2 && outcomes.protected_values >= 1 && outcomes.doctype >= 2 && outcomes.too_many_entries >= 3, JSON.stringify(outcomes));
 		// Exactly the two messages Chromium's error document causes for each damaged XML file, and no other.
@@ -3331,8 +3378,9 @@ async function test(name, fn) {
 			const ie = window.bitosxImportExport;
 			// What the page holds after it opened a vault the desktop wrote with these items.
 			const held = items.map((it, i) => ({
-				id: "0b1705e0-0000-4000-8000-" + String(i + 1).padStart(12, "0"), type: "login", name: it.name, username: it.username || null, password: it.password || null,
-				urls: it.urls, notes: it.notes || null, favorite: it.favorite, totp: it.totp || null, createdAt: new Date(it.createdAt), createdAtText: it.createdAt.replace(/Z$/, "+00:00"),
+				// Since phase 13 two of them are secure notes, with none of a login's members.
+				id: "0b1705e0-0000-4000-8000-" + String(i + 1).padStart(12, "0"), type: it.type, name: it.name, username: it.username || null, password: it.password || null,
+				urls: it.urls || [], notes: it.notes || null, favorite: it.favorite, totp: it.totp || null, createdAt: new Date(it.createdAt), createdAtText: it.createdAt.replace(/Z$/, "+00:00"),
 				updatedAt: new Date(it.updatedAt), updatedAtText: it.updatedAt.replace(/Z$/, "+00:00")
 			}));
 			const base64 = (bytes) => { let s = ""; bytes.forEach((b) => { s += String.fromCharCode(b); }); return btoa(s); };
@@ -3543,10 +3591,13 @@ async function test(name, fn) {
 		await page.click("#vault-import");
 		const preview = await previewOf(page, "bitwarden.json", importFixture("bitwarden.json"));
 		const expected = conformance.readExpected("bitwarden.json.expected.json").cases[0].result;
-		assert.match(preview.count, new RegExp("^" + expected.counts.toAdd + " logins would be added"));
+		// Since phase 13 the file's secure note is imported as a note, counted apart from the logins.
+		assert.equal(expected.counts.notesToAdd, 1);
+		assert.match(preview.count, new RegExp("^" + (expected.counts.toAdd - 1) + " logins and 1 note would be added"));
+		assert.equal(preview.button, "Import " + expected.counts.toAdd + " items");
 		assert.deepEqual(Object.keys(expected.unsupported), Object.keys(ieNode.UNSUPPORTED_TEXTS), "the fixture has an item of every kind");
-		assert.ok(preview.lines.includes("Not logins, and not imported: " + Object.keys(expected.unsupported).map((k) => ieNode.UNSUPPORTED_TEXTS[k] + " (" + expected.unsupported[k] + ")").join(", ") + "."), preview.lines.join("\n"));
-		assert.ok(preview.lines.some((l) => l.startsWith("Not logins, and not imported: secure notes (1), cards (1), identities (1), SSH keys (1), bank accounts (1), driver's licences (1), passports (1), other items (")));
+		assert.ok(preview.lines.includes("Neither logins nor secure notes, and not imported: " + Object.keys(expected.unsupported).map((k) => ieNode.UNSUPPORTED_TEXTS[k] + " (" + expected.unsupported[k] + ")").join(", ") + "."), preview.lines.join("\n"));
+		assert.ok(preview.lines.some((l) => l.startsWith("Neither logins nor secure notes, and not imported: cards (1), identities (1), SSH keys (1), bank accounts (1), driver's licences (1), passports (1), other items (")));
 		assert.ok(preview.lines.includes("In the trash or the recycle bin of the file, and not imported: 1."));
 		const leftOut = preview.lines.find((l) => l.startsWith("Left out, because BitosX has no field for them: "));
 		// Since phase 12 the file's authenticator key is read, so it is no longer among what BitosX has no field for.
@@ -4205,6 +4256,75 @@ async function test(name, fn) {
 		assert.equal(downloads.length, 1, "only the export before the lock was written");
 		assert.equal(await page.evaluate(() => window.__urls.created.length), 1);
 		assert.equal(await page.textContent("#vault-notice"), "Vault locked.");
+		await context.close();
+	});
+
+	await test("import: Bitwarden's secure notes come in as notes — counted apart in the preview, labelled in the list, their text hidden; saved as schema 3", async () => {
+		const mock = createMockApi();
+		const { page, accountId, meta } = await openedVault(mock);
+		await page.click("#vault-import");
+		const expected = conformance.readExpected("bitwarden-notes.json.expected.json").cases[0].result;
+		const notes = expected.counts.notesToAdd, logins = expected.counts.toAdd - expected.counts.notesToAdd;
+		assert.ok(notes > 1 && logins > 0, "the fixture adds notes and a login");
+		const preview = await previewOf(page, "bitwarden.json", importFixture("bitwarden-notes.json"));
+		assert.equal(preview.count, `${logins} login${logins === 1 ? "" : "s"} and ${notes} notes would be added to the vault in this browser (it holds 3 now). Nothing is added until you press the button below, and nothing is on the server until you then press Save to server.`);
+		assert.equal(preview.button, `Import ${expected.counts.toAdd} items`);
+		// Nothing of a text is in the preview.
+		const panel = await page.textContent("#vault-import-panel");
+		for (const c of expected.candidates) { if (c.type === "note" && c.notes.length > 12 && !c.nameWasDerived) { assert.ok(!panel.includes(c.notes), "a note's text is in the preview"); } }
+		await page.click("#import-confirm");
+		await page.waitForSelector("#vault-import-panel", { state: "hidden" });
+		assert.match(await page.textContent("#vault-notice"), new RegExp(`^Imported ${logins} logins? and ${notes} notes into the vault in this browser`));
+		assert.equal(await page.locator(".vault-item--note").count(), notes);
+		await page.click("#vault-save");
+		await page.waitForFunction(() => /Saved: the server now holds revision 2/.test(document.getElementById("vault-notice").textContent));
+		const e = mock.envelopes.get(accountId);
+		const plaintext = (await vcNode.unlock(vcNode.parseEnvelope(new Uint8Array(e.bytes)), meta.typedPassword)).plaintext;
+		assert.ok(Buffer.from(plaintext).toString("utf8").startsWith('{"schemaVersion":3,'));
+		const stored = vcNode.parseVault(plaintext).items.slice(3);
+		assert.deepEqual(stored.map((i) => [i.type, i.name, i.notes || "", i.favorite]),
+			expected.candidates.filter((c) => c.status === "add").map((c) => [c.type, c.name, c.notes, c.favorite]));
+		await page.close();
+	});
+
+	await test("export: a CSV file leaves the notes out and the dialog and the result say how many; the JSON file holds them as the desktop writes them", async () => {
+		const mock = createMockApi();
+		const accountId = mock.seedAccount("user@example.com", PASSWORD);
+		const { bytes, meta } = fixture("notes");
+		mock.seedEnvelope(accountId, bytes);
+		const context = await browser.newContext({ acceptDownloads: true });
+		const page = await context.newPage();
+		watchConsole(page, errors);
+		await routeApi(page, mock);
+		await signedIn(mock, page);
+		await unlockWith(page, meta.typedPassword);
+		await page.waitForSelector("#vault-items-section:not([hidden])");
+		await page.click("#vault-export");
+		assert.equal(await page.textContent("#export-notes"), "2 notes are not in a CSV file; only the JSON file holds them.");
+		assert.equal(await page.isHidden("#export-notes"), false);
+		await page.check("#export-format-json");
+		assert.equal(await page.isHidden("#export-notes"), true);
+		await page.check("#export-format-csv");
+		await page.check("#export-ack");
+		await page.fill("#export-master-password", meta.typedPassword);
+		const [csv] = await Promise.all([page.waitForEvent("download"), page.click("#export-submit")]);
+		const csvText = fs.readFileSync(await csv.path(), "utf8");
+		assert.equal(csvText.split("\r\n").length, 4, "the header, the two logins, and the end of the last line");
+		assert.ok(!csvText.includes("FAKE-wifi-key") && !csvText.includes("only a name"));
+		assert.match(await page.textContent("#vault-notice"), /^Exported 2 logins to BitosX-export-\d{4}-\d{2}-\d{2}\.csv\. 2 notes are not in it; only a JSON file holds them\. That file is not encrypted/);
+		await page.click("#vault-export");
+		await page.check("#export-format-json");
+		await page.check("#export-ack");
+		await page.fill("#export-master-password", meta.typedPassword);
+		const [json] = await Promise.all([page.waitForEvent("download"), page.click("#export-submit")]);
+		const doc = JSON.parse(fs.readFileSync(await json.path(), "utf8"));
+		const notes = doc.items.filter((i) => i.type === "note");
+		assert.deepEqual(notes.map((n) => Object.keys(n)), [["type", "name", "notes", "favorite", "createdAt", "updatedAt"], ["type", "name", "notes", "favorite", "createdAt", "updatedAt"]]);
+		assert.deepEqual(notes.map((n) => [n.name, n.notes, n.favorite]), meta.items.filter((i) => i.type === "note").map((i) => [i.name, i.notes || "", i.favorite]));
+		assert.match(await page.textContent("#vault-notice"), /^Exported 2 logins and 2 notes to BitosX-export-\d{4}-\d{2}-\d{2}\.json\. That file is not encrypted/);
+		// Read back into the vault it came from: nothing is added.
+		const held = vcNode.parseVault(Buffer.from(meta.plaintextUtf8, "utf8")).items;
+		assert.equal(ieNode.planImport(ieNode.parseImport(new Uint8Array(fs.readFileSync(await json.path()))), held, {}).counts.toAdd, 0);
 		await context.close();
 	});
 

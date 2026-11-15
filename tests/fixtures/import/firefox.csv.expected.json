@@ -27,6 +27,7 @@
         ],
         "counts": {
           "toAdd": 5,
+          "notesToAdd": 0,
           "duplicates": 1,
           "notImported": 0,
           "empty": 0,
@@ -44,6 +45,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -68,6 +70,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -92,6 +95,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -116,6 +120,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -140,6 +145,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -164,6 +170,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -212,6 +219,7 @@
         ],
         "counts": {
           "toAdd": 5,
+          "notesToAdd": 0,
           "duplicates": 1,
           "notImported": 0,
           "empty": 0,
@@ -229,6 +237,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -253,6 +262,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -277,6 +287,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -301,6 +312,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -325,6 +337,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -349,6 +362,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,

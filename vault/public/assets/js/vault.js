@@ -1260,6 +1260,13 @@
 	var ENVELOPE_MARGIN_BYTES = 32 * 1024;
 
 	function countOf(n, one, many) { return n + " " + (n === 1 ? one : many); }
+	// "3 logins", "1 note", "3 logins and 1 note": the notes are counted apart from the logins
+	// (docs/IMPORT_EXPORT.md §9); a count without notes reads as it always has.
+	function loginsAndNotes(logins, notes) {
+		if (notes === 0) { return countOf(logins, "login", "logins"); }
+		if (logins === 0) { return countOf(notes, "note", "notes"); }
+		return countOf(logins, "login", "logins") + " and " + countOf(notes, "note", "notes");
+	}
 	// Text of a file for a list: cut short for the eye (what is imported is never cut short).
 	function shortened(text, max) {
 		if (text.length <= max) { return text; }
@@ -1348,12 +1355,14 @@
 		function line(text) { var li = ui.el("li", null, text); importSummary.appendChild(li); return li; }
 		line("Format: " + plan.label + ". The file holds " + countOf(plan.records, "entry", "entries") + ".");
 		if (c.duplicates > 0) {
+			var noteDuplicates = plan.candidates.some(function (candidate) { return candidate.duplicate && candidate.type === "note"; });
 			line(plan.options.importDuplicates
 				? countOf(c.duplicates, "duplicate is", "duplicates are") + " imported too."
-				: countOf(c.duplicates, "duplicate is", "duplicates are") + " skipped: the vault, or an earlier entry of the file, already has the same name, username, password and web addresses.");
+				: countOf(c.duplicates, "duplicate is", "duplicates are") + " skipped: the vault, or an earlier entry of the file, already has the same name, username, password and web addresses" +
+					(noteDuplicates ? " (for a secure note: the same name and text)." : "."));
 		}
 		if (c.notImported > 0) { line(c.notImported === 1 ? "1 entry is not imported; it is listed below with the reason." : c.notImported + " entries are not imported; they are listed below, each with its reason."); }
-		if (Object.keys(plan.unsupported).length > 0) { line("Not logins, and not imported: " + kindsInWords(plan.unsupported, ie.UNSUPPORTED_TEXTS) + "."); }
+		if (Object.keys(plan.unsupported).length > 0) { line("Neither logins nor secure notes, and not imported: " + kindsInWords(plan.unsupported, ie.UNSUPPORTED_TEXTS) + "."); }
 		if (plan.inTrash > 0) { line("In the trash or the recycle bin of the file, and not imported: " + plan.inTrash + "."); }
 		if (c.empty > 0) { line("Entries with nothing in them, passed over: " + c.empty + "."); }
 		if (Object.keys(plan.extras).length > 0) {
@@ -1367,7 +1376,14 @@
 				" imported without one: the text is " + (plan.options.copyExtrasToNotes ? "copied into the notes." : "left out unless you tick the first box below."));
 		}
 		if (c.httpsAdded > 0) { line("https:// is put in front of " + countOf(c.httpsAdded, "address that has", "addresses that have") + " no scheme."); }
-		if (c.namesDerived > 0) { line(countOf(c.namesDerived, "entry has", "entries have") + " no name and " + (c.namesDerived === 1 ? "is" : "are") + " named after " + (c.namesDerived === 1 ? "its" : "their") + " address or username."); }
+		if (c.namesDerived > 0) {
+			// A nameless note is named after the first line of its text that is not blank (§7.7).
+			var derivedNotes = plan.candidates.filter(function (candidate) { return candidate.status === "add" && candidate.nameWasDerived && candidate.type === "note"; }).length;
+			var after = derivedNotes === 0 ? (c.namesDerived === 1 ? "its" : "their") + " address or username"
+				: derivedNotes === c.namesDerived ? "the first line of " + (c.namesDerived === 1 ? "its" : "their") + " text"
+				: "their address or username, or (a secure note) the first line of its text";
+			line(countOf(c.namesDerived, "entry has", "entries have") + " no name and " + (c.namesDerived === 1 ? "is" : "are") + " named after " + after + ".");
+		}
 		if (plan.ignoredColumns.length > 0) {
 			var columns = line("Columns of the file that are not read: ");
 			plan.ignoredColumns.slice(0, LIST_LIMIT).forEach(function (name, i) {
@@ -1396,10 +1412,10 @@
 		importPreview.hidden = false;
 		var blocked = c.exceedsVaultItemLimit;
 		importConfirm.disabled = c.toAdd === 0 || blocked;
-		importConfirm.textContent = c.toAdd === 0 ? "Nothing to import" : "Import " + countOf(c.toAdd, "login", "logins");
+		importConfirm.textContent = c.toAdd === 0 ? "Nothing to import" : "Import " + (c.notesToAdd > 0 ? countOf(c.toAdd, "item", "items") : countOf(c.toAdd, "login", "logins"));
 		importCount.textContent = c.toAdd === 0
 			? "Nothing would be added to the vault."
-			: countOf(c.toAdd, "login", "logins") + " would be added to the vault in this browser (it holds " + c.vaultItemsBefore + " now). Nothing is added until you press the button below, and nothing is on the server until you then press Save to server.";
+			: loginsAndNotes(c.toAdd - c.notesToAdd, c.notesToAdd) + " would be added to the vault in this browser (it holds " + c.vaultItemsBefore + " now). Nothing is added until you press the button below, and nothing is on the server until you then press Save to server.";
 		ui.notice(importNotice, blocked ? "err" : "ok", blocked ? ie.REFUSAL_TEXTS.vault_item_limit : "");
 	}
 
@@ -1467,7 +1483,7 @@
 		closeImport();   // lets go of the logins of the file and of the plan
 		markChanged();
 		renderItems();
-		ui.notice(notice, "ok", "Imported " + countOf(items.length, "login", "logins") + " into the vault in this browser" + (left.length > 0 ? " (" + left.join(", ") + ")" : "") +
+		ui.notice(notice, "ok", "Imported " + loginsAndNotes(c.toAdd - c.notesToAdd, c.notesToAdd) + " into the vault in this browser" + (left.length > 0 ? " (" + left.join(", ") + ")" : "") +
 			". Nothing is on the server until you press Save to server. " + ie.TEXTS.fileStillHoldsPasswords);
 		$("vault-import").focus();
 	});
@@ -1487,6 +1503,7 @@
 	var exportProgress = $("export-progress");
 	var exportSeveralUrls = $("export-several-urls");
 	var exportTotp = $("export-totp");
+	var exportNotes = $("export-notes");
 	var exportBusy = false;
 	var exportRuns = 0;   // changes with every export and every reset; a check that finishes later writes nothing
 
@@ -1501,6 +1518,10 @@
 		var keyed = opened ? ie.countItemsWithTotp(opened.items) : 0;
 		exportTotp.hidden = keyed === 0 || exportFormat() !== ie.EXPORT_CSV;
 		exportTotp.textContent = countOf(keyed, "item has", "items have") + " an authenticator key. A CSV file does not hold authenticator keys; only JSON keeps them.";
+		// Secure notes have no place in a CSV file (§11.1): the desktop's words.
+		var notes = opened ? ie.countNotes(opened.items) : 0;
+		exportNotes.hidden = notes === 0 || exportFormat() !== ie.EXPORT_CSV;
+		exportNotes.textContent = notes === 1 ? "1 note is not in a CSV file; only the JSON file holds it." : notes + " notes are not in a CSV file; only the JSON file holds them.";
 		exportAck.disabled = none || exportBusy;
 		exportPassword.disabled = none || exportBusy;
 		exportSubmit.disabled = none || exportBusy || !exportAck.checked;
@@ -1579,13 +1600,17 @@
 				}
 				// What is written is what the check was for: the items of this moment.
 				var now = new Date();
-				var count = o.items.length;
+				var notes = ie.countNotes(o.items);
+				var logins = o.items.length - notes;
 				var name = ie.exportFileName(format, now);
 				var bytes = ie.exportVault(o.items, format, now);
 				try { saveBytes(bytes, name, true); }
 				finally { bytes.fill(0); }   // the Blob has its own copy, which goes with its URL
 				closeExport();
-				ui.notice(notice, "warn", "Exported " + countOf(count, "login", "logins") + " to " + name + ". That file is not encrypted: it holds every password in plain text. " +
+				// A CSV file holds no notes, and the result says so, as the dialog did.
+				var what = format === ie.EXPORT_CSV ? countOf(logins, "login", "logins") : loginsAndNotes(logins, notes);
+				var leftOut = format === ie.EXPORT_CSV && notes > 0 ? " " + (notes === 1 ? "1 note is not in it; only a JSON file holds it." : notes + " notes are not in it; only a JSON file holds them.") : "";
+				ui.notice(notice, "warn", "Exported " + what + " to " + name + "." + leftOut + " That file is not encrypted: it holds every password in plain text. " +
 					"Keep it only as long as you need it, and delete it afterwards.");
 				$("vault-export").focus();
 			})

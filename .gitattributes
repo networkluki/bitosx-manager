@@ -7,3 +7,5 @@ tests/fixtures/totp.vault.json -text
 tests/fixtures/totp.meta.json -text
 # The content-schema fixture of secure notes is the desktop's too (docs/NOTES.md §6), compared byte for byte.
 tests/fixtures/notes/** -text
+tests/fixtures/notes.vault.json -text
+tests/fixtures/notes.meta.json -text

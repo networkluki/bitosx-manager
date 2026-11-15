@@ -121,6 +121,22 @@
       "favorite": false,
       "createdAt": "2025-03-11T05:06:07.8641969Z",
       "updatedAt": "2026-04-12T06:07:08Z"
+    },
+    {
+      "type": "note",
+      "name": "Wi-Fi at home",
+      "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"\r\n<b>not markup</b> åäö",
+      "favorite": true,
+      "createdAt": "2025-03-12T05:06:07.9876536Z",
+      "updatedAt": "2026-04-13T06:07:08Z"
+    },
+    {
+      "type": "note",
+      "name": "A note with only a name",
+      "notes": "",
+      "favorite": false,
+      "createdAt": "2025-03-13T05:06:08.1111103Z",
+      "updatedAt": "2026-04-14T06:07:08Z"
     }
   ]
 }

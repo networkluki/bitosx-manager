@@ -14,12 +14,13 @@
       "result": {
         "format": "bitosx_json",
         "label": "BitosX (JSON)",
-        "records": 8,
+        "records": 10,
         "unsupported": {},
         "inTrash": 0,
         "ignoredColumns": [],
         "counts": {
-          "toAdd": 8,
+          "toAdd": 10,
+          "notesToAdd": 2,
           "duplicates": 0,
           "notImported": 0,
           "empty": 0,
@@ -28,13 +29,14 @@
           "totpKeys": 2,
           "totpUnreadable": 0,
           "vaultItemsBefore": 0,
-          "vaultItemsAfter": 8,
+          "vaultItemsAfter": 10,
           "exceedsVaultItemLimit": false
         },
         "extras": {},
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -64,6 +66,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -94,6 +97,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -118,6 +122,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -142,6 +147,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -164,6 +170,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -188,6 +195,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -212,6 +220,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -220,6 +229,52 @@
             "password": "FAKE\\pw\\\\two",
             "urls": [],
             "notes": "C:\\Users\\fake\\file.txt",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Wi-Fi at home",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"\r\n<b>not markup</b> åäö",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A note with only a name",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,
@@ -302,32 +357,44 @@
           "username": "DOMAIN\\fake.user",
           "password": "FAKE\\pw\\\\two",
           "urls": []
+        },
+        {
+          "type": "note",
+          "name": "Wi-Fi at home",
+          "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"\r\n<b>not markup</b> åäö"
+        },
+        {
+          "type": "note",
+          "name": "A note with only a name",
+          "notes": ""
         }
       ],
       "result": {
         "format": "bitosx_json",
         "label": "BitosX (JSON)",
-        "records": 8,
+        "records": 10,
         "unsupported": {},
         "inTrash": 0,
         "ignoredColumns": [],
         "counts": {
           "toAdd": 0,
-          "duplicates": 8,
+          "notesToAdd": 0,
+          "duplicates": 10,
           "notImported": 0,
           "empty": 0,
           "httpsAdded": 0,
           "namesDerived": 0,
           "totpKeys": 0,
           "totpUnreadable": 0,
-          "vaultItemsBefore": 8,
-          "vaultItemsAfter": 8,
+          "vaultItemsBefore": 10,
+          "vaultItemsAfter": 10,
           "exceedsVaultItemLimit": false
         },
         "extras": {},
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -357,6 +424,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -387,6 +455,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -411,6 +480,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -435,6 +505,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -457,6 +528,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -481,6 +553,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -505,6 +578,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -513,6 +587,52 @@
             "password": "FAKE\\pw\\\\two",
             "urls": [],
             "notes": "C:\\Users\\fake\\file.txt",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "type": "note",
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Wi-Fi at home",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"\r\n<b>not markup</b> åäö",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "type": "note",
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "A note with only a name",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
             "favorite": false,
             "nameWasDerived": false,
             "httpsAdded": 0,

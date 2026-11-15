@@ -14,10 +14,11 @@ the desktop does.
 | `unicode-canonical` | 1 MiB, t=1, p=1 | canonical encoding (spaces → U+0020, NFC) of a non-ASCII password typed in NFC | the password must open it however it is typed |
 | `unicode-legacy-nfd` | 1 MiB, t=1, p=1 | the raw NFD bytes, as desktop versions before 0.6.0 keyed vaults | the legacy candidates still open it |
 | `totp` | 1 MiB, t=1, p=1 | canonical encoding of `correct horse battery` | phase 12: content schema 2, three logins with authenticator keys (SHA1/6/30, SHA256/8/60, SHA512/7/45) and one without; the meta file also holds `totpCodes`, each key's code at three moments, made by the desktop's `TotpGenerator`. A copy of the desktop's `tests/fixtures/web/` (docs/TOTP.md §7.3), byte for byte |
+| `notes` | 1 MiB, t=1, p=1 | canonical encoding of `correct horse battery` | phase 13: content schema 3, two secure notes (a favorite one with CR LF and LF, text outside ASCII, an emoji, a tab, `<script>` and `**…**`; one with only a name, no `Notes` member) and two logins, one with an authenticator key; the meta file also holds `items`, what the desktop reads from it in order. A copy of the desktop's `tests/fixtures/web/notes.*` (docs/NOTES.md §6.2) at commit `9c4acb0faa3c7dfd66788fe1ff4f5a2458df1eaa`, byte for byte |
 | `strong` | 256 MiB, t=3, p=4 (what the desktop creates new vaults with) | canonical encoding | the opt-in slow test (`BITOSX_TEST_SLOW=1`, `BITOSX_E2E_SLOW=1`) |
 
 `notes/content.json` is the desktop's content-schema fixture of phase 13 (secure notes), a copy of
-its `tests/fixtures/notes/` at commit `6e8aa3570dd8eef065a8ad6d3d7fef5719d8791c`, byte for byte
+its `tests/fixtures/notes/` at commit `9c4acb0faa3c7dfd66788fe1ff4f5a2458df1eaa` (unchanged since `6e8aa35`), byte for byte
 (docs/NOTES.md §6): 41 decrypted vault documents, each with what the desktop reads from it (or
 which of two kinds of refusal it is) and the schema version it writes it back with.
 `node --test tests/notes.test.js` holds `vault-crypto.js` to every case.

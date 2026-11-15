@@ -20,6 +20,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 5,
+          "notesToAdd": 0,
           "duplicates": 0,
           "notImported": 14,
           "empty": 0,
@@ -35,6 +36,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -64,6 +66,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -93,6 +96,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -122,6 +126,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -146,6 +151,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -170,6 +176,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -194,6 +201,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -218,6 +226,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -242,6 +251,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -266,6 +276,7 @@
           },
           {
             "position": 10,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -290,6 +301,7 @@
           },
           {
             "position": 11,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -314,6 +326,7 @@
           },
           {
             "position": 12,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -338,6 +351,7 @@
           },
           {
             "position": 13,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -362,6 +376,7 @@
           },
           {
             "position": 14,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -386,6 +401,7 @@
           },
           {
             "position": 15,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -410,6 +426,7 @@
           },
           {
             "position": 16,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -434,6 +451,7 @@
           },
           {
             "position": 17,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -458,6 +476,7 @@
           },
           {
             "position": 18,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -482,6 +501,7 @@
           },
           {
             "position": 19,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -523,6 +543,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 5,
+          "notesToAdd": 0,
           "duplicates": 0,
           "notImported": 14,
           "empty": 0,
@@ -538,6 +559,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -567,6 +589,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -596,6 +619,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -625,6 +649,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -649,6 +674,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -673,6 +699,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -697,6 +724,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -721,6 +749,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -745,6 +774,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -769,6 +799,7 @@
           },
           {
             "position": 10,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -793,6 +824,7 @@
           },
           {
             "position": 11,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -817,6 +849,7 @@
           },
           {
             "position": 12,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -841,6 +874,7 @@
           },
           {
             "position": 13,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -865,6 +899,7 @@
           },
           {
             "position": 14,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -889,6 +924,7 @@
           },
           {
             "position": 15,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -913,6 +949,7 @@
           },
           {
             "position": 16,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -937,6 +974,7 @@
           },
           {
             "position": 17,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -961,6 +999,7 @@
           },
           {
             "position": 18,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",
@@ -985,6 +1024,7 @@
           },
           {
             "position": 19,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "totp_invalid",

@@ -72,8 +72,9 @@
 		other_address: "addresses that are not web addresses",
 		custom_field: "custom fields"
 	});
+	// (Until web 0.9.0 Bitwarden's secure notes were a kind of their own here, secure_note; since
+	// 0.10.0 they are imported as notes, §7.7.)
 	var UNSUPPORTED_TEXTS = Object.freeze({
-		secure_note: "secure notes",
 		card: "cards",
 		identity: "identities",
 		ssh_key: "SSH keys",
@@ -292,7 +293,7 @@
 		["KeePassXC (CSV)", ["group", "title", "username", "password", "url", "notes"]],
 		["KeePass 1.x (CSV)", KEEPASS1_HEADER]
 	];
-	var UNSUPPORTED_ORDER = ["secure_note", "card", "identity", "ssh_key", "bank_account", "drivers_license", "passport", "other"];
+	var UNSUPPORTED_ORDER = ["card", "identity", "ssh_key", "bank_account", "drivers_license", "passport", "other"];
 	var EXTRA_ORDER = ["totp", "folder", "other_address", "custom_field"];
 
 	function sameList(a, b) {
@@ -316,10 +317,12 @@
 			unsupported: countsInOrder(unsupported, UNSUPPORTED_ORDER), inTrash: inTrash, ignoredColumns: ignoredColumns
 		};
 	}
-	// One login as a file holds it, before anything is normalised.
-	function importEntry(position) {
+	// One login, or one secure note (kind "note", §7.7), as a file holds it, before anything is
+	// normalised. Of a note only the name, the notes (its text), the favorite mark, the folder and
+	// the custom fields are ever set.
+	function importEntry(position, kind) {
 		return {
-			position: position, name: "", username: "", password: "", notes: "", favorite: false,
+			position: position, kind: kind === "note" ? "note" : "login", name: "", username: "", password: "", notes: "", favorite: false,
 			addresses: [], totp: "", folder: "", customFields: [], problem: null
 			// Set by a reader only when it applies: totpKey, a key the reader read itself (KeePass
 			// strings, BitosX's own export); totpRefusal, why one it found could not be read (KeePass:
@@ -411,22 +414,22 @@
 			records++;
 			if (records > MAX_ENTRIES) { throw new ImportRefused("too_many_entries"); }
 
-			// The one value of a type column that is known to mean "not a login": Bitwarden's notes.
-			if (toLowerAscii(trim(cell(values, typeColumn))) === "note") {
-				unsupported.secure_note = (unsupported.secure_note || 0) + 1;
-				continue;
-			}
+			// The one value of a type column that is known to mean "not a login": Bitwarden's secure
+			// notes (§3.5). Of a note its address, username, password and key cells are not read.
+			var isNote = toLowerAscii(trim(cell(values, typeColumn))) === "note";
 
-			var entry = importEntry(records);
-			var addressCell = cell(values, urlColumn);
+			var entry = importEntry(records, isNote ? "note" : "login");
 			var favorite = toLowerAscii(trim(cell(values, favoriteColumn)));
 			entry.name = cell(values, nameColumn);
-			entry.username = cell(values, usernameColumn);
-			entry.password = cell(values, passwordColumn);
 			entry.notes = cell(values, notesColumn);
 			entry.favorite = favorite === "1" || favorite === "true";
-			entry.addresses = addressCell.length === 0 ? [] : addressesAreCommaSeparated ? addressCell.split(",") : [addressCell];
-			entry.totp = cell(values, totpColumn);
+			if (!isNote) {
+				var addressCell = cell(values, urlColumn);
+				entry.username = cell(values, usernameColumn);
+				entry.password = cell(values, passwordColumn);
+				entry.addresses = addressCell.length === 0 ? [] : addressesAreCommaSeparated ? addressCell.split(",") : [addressCell];
+				entry.totp = cell(values, totpColumn);
+			}
 			entry.folder = cell(values, folderColumn);
 			entry.customFields = readCustomFieldsCell(cell(values, customFieldColumn));
 			// A value that is not empty to the right of the header's last column: an unquoted comma
@@ -548,8 +551,8 @@
 		throw new ImportRefused("not_recognised");
 	}
 
-	// §4.2. Bitwarden numbers its kinds, and a login is 1.
-	var BITWARDEN_KINDS = { 2: "secure_note", 3: "card", 4: "identity", 5: "ssh_key", 6: "bank_account", 7: "drivers_license", 8: "passport" };
+	// §4.2. Bitwarden numbers its kinds: a login is 1, a secure note 2 (imported as a note, §7.7).
+	var BITWARDEN_KINDS = { 3: "card", 4: "identity", 5: "ssh_key", 6: "bank_account", 7: "drivers_license", 8: "passport" };
 	function readBitwardenExport(root, items) {
 		if (items.length > MAX_ENTRIES) { throw new ImportRefused("too_many_entries"); }
 
@@ -574,10 +577,11 @@
 			if (hasOwn.call(item, "deletedDate") && item.deletedDate !== null) { inTrash++; continue; }
 			var type = member(item, "type");
 			if (typeof type !== "number") { count(unsupported, "other"); continue; }
-			if (type !== 1) { count(unsupported, hasOwn.call(BITWARDEN_KINDS, type) ? BITWARDEN_KINDS[type] : "other"); continue; }
+			if (type !== 1 && type !== 2) { count(unsupported, hasOwn.call(BITWARDEN_KINDS, type) ? BITWARDEN_KINDS[type] : "other"); continue; }
 
-			var entry = importEntry(index + 1);
-			var login = member(item, "login");
+			// A note's "login" member, if it has one, is not read; nor is "secureNote".
+			var entry = importEntry(index + 1, type === 2 ? "note" : "login");
+			var login = type === 1 ? member(item, "login") : null;
 			if (isObject(login)) {
 				entry.username = textOf(login, "username");
 				entry.password = textOf(login, "password");
@@ -618,7 +622,17 @@
 		var unsupported = {};
 		for (var index = 0; index < items.length; index++) {
 			var item = items[index];
-			if (!isObject(item) || textOf(item, "type") !== "login") { count(unsupported, "other"); continue; }
+			if (!isObject(item) || (textOf(item, "type") !== "login" && textOf(item, "type") !== "note")) { count(unsupported, "other"); continue; }
+			if (textOf(item, "type") === "note") {
+				// A note: name, notes and favorite, read as for a login. Nothing else of it is read: a
+				// login's members on a note, a "totp" that is not a key among them, are ignored.
+				var note = importEntry(index + 1, "note");
+				note.name = textOf(item, "name");
+				note.notes = textOf(item, "notes");
+				note.favorite = isTrue(item, "favorite");
+				entries.push(note);
+				continue;
+			}
 			var entry = importEntry(index + 1);
 			entry.name = textOf(item, "name");
 			entry.username = textOf(item, "username");
@@ -1086,6 +1100,7 @@
 	// cannot be stored if it cannot. Nothing is ever cut short to make it fit. Returns null for an
 	// entry with nothing in it, which is counted and otherwise passed over.
 	function normalizeEntry(entry, copyExtrasToNotes) {
+		if (entry.kind === "note") { return normalizeNote(entry, copyExtrasToNotes); }
 		var name = trim(entry.name);
 
 		// One value may hold several addresses, one on each line. Each is trimmed, empty ones are
@@ -1137,6 +1152,7 @@
 
 		return {
 			position: entry.position,
+			type: "login",
 			status: reason === null ? "add" : "not_imported",
 			duplicate: false,
 			reason: reason,
@@ -1154,11 +1170,62 @@
 		};
 	}
 
+	// §7.7: a secure note as it would be stored, in the shape of a login's candidate (no username,
+	// password, address or key), or null for one with nothing in it.
+	function normalizeNote(entry, copyExtrasToNotes) {
+		var name = trim(entry.name);
+		var customFields = entry.customFields.filter(function (field) { return !isBlank(field.value); });
+		var extras = { totp: "", folder: trim(entry.folder), otherAddresses: [], customFields: customFields };
+		if (name.length === 0 && isBlank(entry.notes) && customFields.length === 0) {
+			return null;   // nothing but, at most, the name of a folder
+		}
+		var nameWasDerived = false;
+		if (name.length === 0) {
+			// The first line of the text that is not blank, trimmed, if it fits; the next is not tried.
+			var lines = splitLines(entry.notes);
+			var first = "";
+			for (var i = 0; i < lines.length; i++) { if (!isBlank(lines[i])) { first = trim(lines[i]); break; } }
+			name = first.length > 0 && first.length <= ITEM.name ? first : TEXTS.untitledName;
+			nameWasDerived = true;
+		}
+		var reason = entry.problem !== null ? entry.problem
+			: name.length > ITEM.name ? "name_too_long"
+			: entry.notes.length > ITEM.notes ? "notes_too_long" : null;
+		var notes = entry.notes;
+		if (copyExtrasToNotes) {
+			notes = withExtras(notes, extras);
+			if (reason === null && notes.length > ITEM.notes) { reason = "notes_too_long_with_extras"; }
+		}
+		return {
+			position: entry.position,
+			type: "note",
+			status: reason === null ? "add" : "not_imported",
+			duplicate: false,
+			reason: reason,
+			name: name,
+			username: "",
+			password: "",
+			urls: [],
+			notes: notes,
+			favorite: entry.favorite,
+			nameWasDerived: nameWasDerived,
+			httpsAdded: 0,
+			totp: null,
+			totpRefused: null,
+			extras: extras
+		};
+	}
+
 	// ---- §8, §9 the plan: what importing a file into a vault would do ----
 	// The four values a duplicate is told by as one string that no other four values give: each one
 	// preceded by its length, so that no character has to serve as a separator.
+	// A note is told by its name and its text as it would be stored, and is never a login's
+	// duplicate: the two kinds of key start differently.
+	function noteDuplicateKey(name, notes) {
+		return "note " + name.length + ":" + name + notes.length + ":" + notes;
+	}
 	function duplicateKey(name, username, password, urls) {
-		var key = name.length + ":" + name + username.length + ":" + username + password.length + ":" + password + urls.length + ":";
+		var key = "login " + name.length + ":" + name + username.length + ":" + username + password.length + ":" + password + urls.length + ":";
 		for (var i = 0; i < urls.length; i++) { key += urls[i].length + ":" + urls[i]; }
 		return key;
 	}
@@ -1173,13 +1240,15 @@
 
 		var seen = new Set();
 		vaultItems.forEach(function (item) {
-			// Names and addresses of the vault's items are trimmed for the comparison, as those of the file are.
+			// Names and addresses of the vault's items are trimmed for the comparison, as those of the
+			// file are. An item without a type is a login.
+			if (item.type === "note") { seen.add(noteDuplicateKey(trim(item.name), item.notes == null ? "" : item.notes)); return; }
 			seen.add(duplicateKey(trim(item.name), item.username == null ? "" : item.username, item.password == null ? "" : item.password, item.urls.map(trim)));
 		});
 
 		var candidates = [];
 		var counts = {
-			toAdd: 0, duplicates: 0, notImported: 0, empty: 0, httpsAdded: 0, namesDerived: 0, totpKeys: 0, totpUnreadable: 0,
+			toAdd: 0, notesToAdd: 0, duplicates: 0, notImported: 0, empty: 0, httpsAdded: 0, namesDerived: 0, totpKeys: 0, totpUnreadable: 0,
 			vaultItemsBefore: vaultItems.length, vaultItemsAfter: 0, exceedsVaultItemLimit: false
 		};
 		var extras = {};
@@ -1188,7 +1257,8 @@
 			if (candidate === null) { counts.empty++; return; }
 			// An entry that is not imported is nobody's duplicate, and nothing is a duplicate of it.
 			if (candidate.status === "add") {
-				var key = duplicateKey(candidate.name, candidate.username, candidate.password, candidate.urls);
+				var key = candidate.type === "note" ? noteDuplicateKey(candidate.name, candidate.notes)
+					: duplicateKey(candidate.name, candidate.username, candidate.password, candidate.urls);
 				if (seen.has(key)) {
 					candidate.duplicate = true;
 					counts.duplicates++;
@@ -1201,6 +1271,7 @@
 			if (candidate.status === "add") {
 				// Extras, added https:// and derived names are counted over the entries that will be added.
 				counts.toAdd++;
+				if (candidate.type === "note") { counts.notesToAdd++; }
 				counts.httpsAdded += candidate.httpsAdded;
 				if (candidate.nameWasDerived) { counts.namesDerived++; }
 				if (candidate.totp !== null) { counts.totpKeys++; }
@@ -1245,6 +1316,24 @@
 		var items = [];
 		plan.candidates.forEach(function (candidate) {
 			if (candidate.status !== "add") { return; }
+			if (candidate.type === "note") {
+				// A note: its text as the file holds it (an empty one as none), nothing of a login.
+				items.push(Object.freeze({
+					id: vc.newId(),
+					type: "note",
+					name: detached(candidate.name),
+					username: null,
+					password: null,
+					urls: Object.freeze([]),
+					notes: candidate.notes.length > 0 ? detached(candidate.notes) : null,
+					favorite: candidate.favorite === true,
+					totp: null,
+					createdAt: now,
+					createdAtText: null,
+					updatedAt: now
+				}));
+				return;
+			}
 			items.push(Object.freeze({
 				id: vc.newId(),
 				type: "login",
@@ -1313,9 +1402,11 @@
 	// §11.1: Chrome's layout. UTF-8 without a byte order mark; the header line not quoted; then one
 	// line for each item, every value in double quotes with a double quote inside it written twice;
 	// CR LF after every line, the last one included. url is the item's first address.
+	// A secure note has no place in this layout and is left out (countNotes says how many).
 	function exportCsv(items) {
 		var lines = ["name,url,username,password,note\r\n"];
 		items.forEach(function (item) {
+			if (item.type === "note") { return; }
 			lines.push(csvValue(item.name) + "," + csvValue(item.urls.length > 0 ? item.urls[0] : "") + ","
 				+ csvValue(item.username == null ? "" : item.username) + "," + csvValue(item.password == null ? "" : item.password) + ","
 				+ csvValue(item.notes == null ? "" : item.notes) + "\r\n");
@@ -1349,6 +1440,17 @@
 			version: 1,
 			exportedAt: exportedAt.toISOString().slice(0, 19) + "Z",
 			items: items.map(function (item) {
+				if (item.type === "note") {
+					// None of a login's members; "notes" is the text, empty when there is none.
+					return {
+						type: "note",
+						name: wellFormed(item.name),
+						notes: wellFormed(item.notes == null ? "" : item.notes),
+						favorite: item.favorite === true,
+						createdAt: itemTimestamp(item.createdAt, item.createdAtText),
+						updatedAt: itemTimestamp(item.updatedAt, item.updatedAtText)
+					};
+				}
 				return {
 					type: "login",
 					name: wellFormed(item.name),
@@ -1389,6 +1491,14 @@
 		return n;
 	}
 
+	// How many items are secure notes. A CSV export leaves them out: this is the number a person is
+	// told before choosing it.
+	function countNotes(items) {
+		var n = 0;
+		items.forEach(function (item) { if (item.type === "note") { n++; } });
+		return n;
+	}
+
 	// BitosX-export-YYYY-MM-DD.csv or .json, with the local date of `now`.
 	function exportFileName(format, now) {
 		if (format !== EXPORT_CSV && format !== EXPORT_JSON) { throw new RangeError("Unknown export format."); }
@@ -1419,6 +1529,7 @@
 		exportJson: exportJson,
 		countItemsWithSeveralUrls: countItemsWithSeveralUrls,
 		countItemsWithTotp: countItemsWithTotp,
+		countNotes: countNotes,
 		exportFileName: exportFileName,
 		// The parts, for the unit tests.
 		_trim: trim,

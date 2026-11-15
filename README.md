@@ -308,7 +308,7 @@ functions, no DOM, no network, no vault — and `vault.js` is the page around it
 - **Not imported:** custom fields, folder and group names, addresses that are not http(s) and
   authenticator keys that could not be read (kept as text in the notes if the first choice is made,
   never otherwise);
-  everything that is not a login (secure notes, cards, identities, SSH keys, …); items in the
+  everything that is not a login (cards, identities, SSH keys, …; secure notes too until web 0.10.0, which imports them as notes, see phase 13); items in the
   trash or the recycle bin; an entry's history, passkeys, attachments, tags, icons, expiry dates and
   the times an entry was created and changed.
 
@@ -426,7 +426,7 @@ desktop's key, refusal or no key, all 40 keys and times the desktop's code, disp
 The desktop's encrypted vault with keys (`tests/fixtures/totp.vault.json`, written by the desktop's own
 code, copied unchanged) opens under Node and in Chromium, reads as schema 2, is written back byte for
 byte, and shows at each moment of its meta file the desktop's code, display and seconds left. The
-import and export changes are held to the desktop's 48 conformance fixtures (the four new ones with
+import and export changes are held to the desktop's 48 conformance fixtures of that time (the four new ones with
 keys among them), under Node and in Chromium. The mocked suite drives the editor (every kind of
 refusal, *Save item* blocked, masked, Show), the code view at a fixed clock (the next step, the
 countdown, *Copy*), saving as schema 2 and back to 1, locking (no HMAC is computed while locked),
@@ -473,6 +473,23 @@ form (`parseVault`, `serializeVault`, `validateItem`, `requiredSchemaVersion`, `
   secret as a password, and leaves the browser only inside the encrypted vault. The web vault has no
   password-health overview; nothing that looks at passwords (the strength estimate in the editor)
   looks at a note.
+- **Import** (`docs/IMPORT_EXPORT.md` §7.7 at the desktop's commit `9c4acb0`). A Bitwarden JSON item of
+  `type` 2 and a Bitwarden CSV row whose `type` is `note` are secure notes now, no longer counted
+  as an unsupported kind: name, text and favorite are read, the folder and custom fields are extras
+  exactly as for a login (left out, or appended to the text on opt-in, with the limit checked on
+  the result); a note's login cells or `login` member are not read. So is a BitosX JSON item of
+  `type` `"note"` (its other members, a `totp` among them, are ignored). A note without a name is
+  named after the first line of its text that is not blank, trimmed, if it is 1 to 200 long, and
+  `Untitled` otherwise; one with no name, a blank text and no custom field with a value is empty.
+  A note is a duplicate of a note with the same name and the same text as it would be stored, never
+  of a login. KeePass entries, and CSV rows of other exporters, are logins as before. The preview
+  counts the notes apart ("3 logins and 2 notes would be added …", *Import 5 items*), says what
+  makes a note a duplicate and how a nameless note is named, and shows nothing of a text.
+- **Export.** BitosX's JSON writes a note as `{ "type": "note", "name", "notes", "favorite",
+  "createdAt", "updatedAt" }` (`notes` is `""` when there is none); `version` stays 1, so an older
+  importer (web `0.9.0`, desktop `0.15.0`) counts a note as an *other* item and leaves it out. A CSV
+  file in Chrome's layout has no place for notes: they are left out, and both the dialog and the
+  result say how many ("2 notes are not in a CSV file; only the JSON file holds them.").
 - **Compatibility.** A note is stored as `{"type":"note","Id","Name","Notes","Favorite","CreatedAt",
   "UpdatedAt"}` — the members every item has, nothing of a login; `Notes` is left out when there is
   no text. The vault's content is written with the lowest schema version that holds it: **1** without
@@ -487,11 +504,19 @@ form (`parseVault`, `serializeVault`, `validateItem`, `requiredSchemaVersion`, `
 
 **Verified:** `tests/notes.test.js` holds `vault-crypto.js` to the schema rules and to the desktop's
 content fixture (`tests/fixtures/notes/content.json`, copied byte for byte: all 41 documents give the
-desktop's items, refusal kind and written-back version). The mocked suite creates a note (the editor's
+desktop's items, refusal kind and written-back version), and to the desktop's encrypted vault with
+notes (`tests/fixtures/notes.vault.json`, written by the desktop's own code, copied unchanged): it
+opens under Node and in Chromium, reads as the desktop read it (the meta file's `items`) and is
+written back byte for byte. The import is held to the desktop's 51 conformance fixtures, all written
+again for notes and three new (`bitwarden-notes.json`, `bitwarden-notes.csv`,
+`bitosx-export-notes.json`), under Node and in Chromium, and this page's own JSON export of the
+fixture vault (now with two notes) reads back to the desktop's candidates. The mocked suite creates a note (the editor's
 masking, *Save item* disabled, the labels and accessible names, *Show*, *Copy text*, markup as text, no
 text in any attribute or console message), saves it as schema 3, searches, filters, sorts, edits and
 deletes notes (the last one gone, the vault is the desktop's bytes again), and locks and signs out with
-a text shown and with the editor open. The live suite saves a note to the real API and finds it,
+a text shown and with the editor open, imports Bitwarden's notes through the page and saves them as
+schema 3, and exports the desktop's vault with notes as CSV (the notes left out, and said so) and as
+JSON (the notes as the desktop writes them). The live suite saves a note to the real API and finds it,
 with its text, after signing in again. **Not verified:** browsers other than headless Chromium;
 screen readers (the accessible names are checked as attributes, not heard); a real desktop opening a
 browser-written version 3 vault through `api.bitosx.se`.

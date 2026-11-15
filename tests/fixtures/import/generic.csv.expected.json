@@ -23,6 +23,7 @@
         ],
         "counts": {
           "toAdd": 4,
+          "notesToAdd": 0,
           "duplicates": 0,
           "notImported": 4,
           "empty": 1,
@@ -42,6 +43,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -66,6 +68,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -90,6 +93,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -114,6 +118,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -142,6 +147,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",
@@ -166,6 +172,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "too_many_urls",
@@ -254,6 +261,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_too_long",
@@ -278,6 +286,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "name_too_long",
@@ -322,6 +331,7 @@
         ],
         "counts": {
           "toAdd": 4,
+          "notesToAdd": 0,
           "duplicates": 0,
           "notImported": 4,
           "empty": 1,
@@ -341,6 +351,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -365,6 +376,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -389,6 +401,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -413,6 +426,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -441,6 +455,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",
@@ -465,6 +480,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "too_many_urls",
@@ -553,6 +569,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_too_long",
@@ -577,6 +594,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "name_too_long",

@@ -216,3 +216,31 @@ test("a member twice in one object is refused anywhere in the document, as the d
 	// The same name in two objects, or as a value, is not twice; nor is text that only looks like a name.
 	assert.equal(vc.parseVault(utf8('{"schemaVersion":3,"items":[{"type":"note","Name":"Name","Notes":"\\"Notes\\":{,}[","Id":"11111111-1111-4111-8111-111111111111"},{"type":"note","Name":"Notes","Id":"22222222-2222-4222-8222-222222222222"}]}')).items.length, 2);
 });
+
+// ------------------------------------------------------------- the desktop's encrypted vault with notes
+test("the desktop's encrypted vault with notes (tests/fixtures/notes.vault.json) opens, reads as the desktop read it, and is written back byte for byte", async () => {
+	const hashwasm = require("../vault/public/assets/vendor/hash-wasm/argon2.umd.min.js");
+	const vcFull = factory(hashwasm, globalThis.crypto);
+	const bytes = new Uint8Array(fs.readFileSync(path.join(__dirname, "fixtures", "notes.vault.json")));
+	const meta = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "notes.meta.json"), "utf8"));
+	assert.equal(bytes.length, meta.sizeBytes);
+	assert.equal(await vcFull.sha256Hex(bytes), meta.fingerprint);
+	const envelope = vcFull.parseEnvelope(bytes);
+	assert.deepEqual(Buffer.from(vcFull.serializeEnvelope(envelope)), Buffer.from(bytes));
+	const opened = await vcFull.unlock(envelope, meta.typedPassword);
+	assert.equal(text(opened.plaintext), meta.plaintextUtf8);
+	const vault = vcFull.parseVault(opened.plaintext);
+	assert.equal(vault.schemaVersion, 3);
+	assert.deepEqual(vault.items.map((i) => {
+		const out = { id: i.id, type: i.type, name: i.name, notes: i.notes, favorite: i.favorite };
+		if (i.type === "login") { out.hasTotp = i.totp !== null; }
+		return out;
+	}), meta.items);
+	assert.equal(meta.items.filter((i) => i.type === "note").length, 2);
+	// Written back exactly as the desktop wrote it, and as version 3.
+	assert.equal(text(vcFull.serializeVault(vault)), meta.plaintextUtf8);
+	assert.equal(vcFull.requiredSchemaVersion(vault.items), 3);
+	// Every item passes the checks Save to server makes.
+	vault.items.forEach((i) => vcFull.validateItem(i));
+	opened.vaultKey.fill(0);
+});

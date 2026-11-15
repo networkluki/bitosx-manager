@@ -1,0 +1,16 @@
+folder,favorite,type,name,notes,fields,reprompt,archivedDate,login_uri,login_username,login_password,login_totp
+FAKE Notes,1,note,Wi-Fi at home,"Network: FAKE-net
+Key: FAKE-wifi-key, ""quoted""","Router PIN: FAKE-0000
+No value: ",0,,,,,
+,,note,,"
+  FAKE first line of a nameless note
+second",,0,,,,,
+,,note,A note with login cells,FAKE text,,0,,https://ignored.example.com/,fake.ignored,FAKE-ignored-pw,FAKEFAKEFAKEFAKE
+,, NOTE ,Type in capitals,FAKE text of a note typed NOTE,,0,,,,,
+FAKE Notes,,note,,,,0,,,,,
+,1,note,Wi-Fi at home,"Network: FAKE-net
+Key: FAKE-wifi-key, ""quoted""",,0,,,,,
+,,login,Wi-Fi at home,"Network: FAKE-net
+Key: FAKE-wifi-key, ""quoted""",,0,,,,FAKE-login-pw,
+,,note,A note with only a name,,,0,,,,,
+,,note,Moved values,FAKE text,with a comma,0,,,,,,FAKE-extra

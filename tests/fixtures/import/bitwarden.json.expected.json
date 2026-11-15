@@ -16,7 +16,6 @@
         "label": "Bitwarden (JSON)",
         "records": 16,
         "unsupported": {
-          "secure_note": 1,
           "card": 1,
           "identity": 1,
           "ssh_key": 1,
@@ -28,7 +27,8 @@
         "inTrash": 1,
         "ignoredColumns": [],
         "counts": {
-          "toAdd": 6,
+          "toAdd": 7,
+          "notesToAdd": 1,
           "duplicates": 1,
           "notImported": 0,
           "empty": 0,
@@ -37,7 +37,7 @@
           "totpKeys": 1,
           "totpUnreadable": 0,
           "vaultItemsBefore": 0,
-          "vaultItemsAfter": 6,
+          "vaultItemsAfter": 7,
           "exceedsVaultItemLimit": false
         },
         "extras": {
@@ -48,6 +48,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -95,7 +96,31 @@
             }
           },
           {
+            "position": 2,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A secure note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "The text of the note.",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
             "position": 11,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -120,6 +145,7 @@
           },
           {
             "position": 12,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -142,6 +168,7 @@
           },
           {
             "position": 13,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -167,6 +194,7 @@
           },
           {
             "position": 14,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -191,6 +219,7 @@
           },
           {
             "position": 15,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -215,6 +244,7 @@
           },
           {
             "position": 16,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -250,7 +280,6 @@
         "label": "Bitwarden (JSON)",
         "records": 16,
         "unsupported": {
-          "secure_note": 1,
           "card": 1,
           "identity": 1,
           "ssh_key": 1,
@@ -262,7 +291,8 @@
         "inTrash": 1,
         "ignoredColumns": [],
         "counts": {
-          "toAdd": 6,
+          "toAdd": 7,
+          "notesToAdd": 1,
           "duplicates": 1,
           "notImported": 0,
           "empty": 0,
@@ -271,7 +301,7 @@
           "totpKeys": 1,
           "totpUnreadable": 0,
           "vaultItemsBefore": 0,
-          "vaultItemsAfter": 6,
+          "vaultItemsAfter": 7,
           "exceedsVaultItemLimit": false
         },
         "extras": {
@@ -282,6 +312,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -329,7 +360,31 @@
             }
           },
           {
+            "position": 2,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A secure note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "The text of the note.",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
             "position": 11,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -354,6 +409,7 @@
           },
           {
             "position": 12,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -376,6 +432,7 @@
           },
           {
             "position": 13,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -401,6 +458,7 @@
           },
           {
             "position": 14,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -425,6 +483,7 @@
           },
           {
             "position": 15,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -449,6 +508,7 @@
           },
           {
             "position": 16,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
