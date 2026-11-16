@@ -35,6 +35,7 @@
         ],
         "counts": {
           "toAdd": 1,
+          "notesToAdd": 0,
           "duplicates": 0,
           "notImported": 0,
           "empty": 0,
@@ -50,6 +51,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,

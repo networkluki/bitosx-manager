@@ -15,16 +15,15 @@
         "format": "csv",
         "label": "Bitwarden (CSV)",
         "records": 8,
-        "unsupported": {
-          "secure_note": 1
-        },
+        "unsupported": {},
         "inTrash": 0,
         "ignoredColumns": [
           "reprompt",
           "archivedDate"
         ],
         "counts": {
-          "toAdd": 4,
+          "toAdd": 5,
+          "notesToAdd": 1,
           "duplicates": 1,
           "notImported": 1,
           "empty": 1,
@@ -33,18 +32,19 @@
           "totpKeys": 2,
           "totpUnreadable": 1,
           "vaultItemsBefore": 0,
-          "vaultItemsAfter": 4,
+          "vaultItemsAfter": 5,
           "exceedsVaultItemLimit": false
         },
         "extras": {
           "totp": 1,
-          "folder": 1,
+          "folder": 2,
           "other_address": 1,
           "custom_field": 2
         },
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -85,6 +85,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -108,7 +109,31 @@
             }
           },
           {
+            "position": 3,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A secure note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "The text of the note\non two lines",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "Private/Notes",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
             "position": 4,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -133,6 +158,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -160,6 +186,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "notes_too_long",
@@ -182,6 +209,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -216,16 +244,15 @@
         "format": "csv",
         "label": "Bitwarden (CSV)",
         "records": 8,
-        "unsupported": {
-          "secure_note": 1
-        },
+        "unsupported": {},
         "inTrash": 0,
         "ignoredColumns": [
           "reprompt",
           "archivedDate"
         ],
         "counts": {
-          "toAdd": 3,
+          "toAdd": 4,
+          "notesToAdd": 1,
           "duplicates": 1,
           "notImported": 2,
           "empty": 1,
@@ -234,17 +261,18 @@
           "totpKeys": 2,
           "totpUnreadable": 0,
           "vaultItemsBefore": 0,
-          "vaultItemsAfter": 3,
+          "vaultItemsAfter": 4,
           "exceedsVaultItemLimit": false
         },
         "extras": {
-          "folder": 1,
+          "folder": 2,
           "other_address": 1,
           "custom_field": 2
         },
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -285,6 +313,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -308,7 +337,31 @@
             }
           },
           {
+            "position": 3,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A secure note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "The text of the note\non two lines\n\nFolder: Private/Notes",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "Private/Notes",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
             "position": 4,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -333,6 +386,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -360,6 +414,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "notes_too_long",
@@ -382,6 +437,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "notes_too_long_with_extras",

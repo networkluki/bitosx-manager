@@ -34,6 +34,8 @@
 //   reload, sign in, re-open, the edit is there -> import a file -> add an authenticator key, Save (the
 //   server holds content schema 2) -> sign in again in another browser profile whose clock is held at
 //   a fixed instant: the same code as computed here -> export -> encrypted backup == GET /v1/sync/envelope ->
+//   add a secure note, Save (the server holds content schema 3) -> reload, sign in, re-open: the note is
+//   there with its text, hidden until Show ->
 //   passkeys (phase 10, Chromium's virtual authenticator over CDP, the page origin is the API's WebAuthn
 //   origin): add one with the password + a code -> TOTP cannot be turned off while it exists -> sign in
 //   with the password and the passkey -> sign in with the passkey alone (the vault still needs its
@@ -663,6 +665,53 @@ async function check(name, fn) {
 		assert.ok(saved.equals(bytes), "the backup is the server's bytes");
 		await page.click("#vault-lock");
 	});
+	// Phase 13: a secure note added in the browser is stored on the server and is there, with its
+	// text, after signing in again.
+	const NOTE_NAME = `Live note ${rand(3)}`;
+	const NOTE_SECRET = `note-secret-${rand(4)}`;
+	const NOTE_TEXT = `${NOTE_SECRET}\nsecond line <b>not markup</b> & ñ 🔑`;
+	await step("add a secure note and Save to server: the server's copy is content schema 3 and holds the note with its text", async () => {
+		await unlock();
+		await page.click("#vault-add-note");
+		await page.waitForSelector("#vault-editor:not([hidden])");
+		assert.equal(await page.textContent("#vault-editor-title"), "Add note");
+		await page.fill("#edit-name", NOTE_NAME);
+		await page.click("#edit-notes-toggle");   // masked until Show
+		await page.fill("#edit-notes", NOTE_TEXT);
+		await page.click("#edit-save");
+		await page.waitForSelector("#vault-editor", { state: "hidden" });
+		await page.click("#vault-save");
+		await page.waitForFunction((r) => document.getElementById("vault-notice").textContent.startsWith(`Saved: the server now holds revision ${r}.`), revision + 1);
+		revision += 1;
+		const { meta, bytes } = await serverEnvelope(other.accessToken);
+		assert.equal(meta.revision, revision);
+		const opened = await vcNode.unlock(vcNode.parseEnvelope(new Uint8Array(bytes)), fixtureMeta.typedPassword);
+		const text = Buffer.from(opened.plaintext).toString("utf8");
+		assert.ok(text.startsWith('{"schemaVersion":3,'), "written as content schema 3");
+		const notes = vcNode.parseVault(opened.plaintext).items.filter((i) => i.type === "note");
+		assert.deepEqual(notes.map((n) => [n.name, n.notes, n.favorite]), [[NOTE_NAME, NOTE_TEXT, false]]);
+		// The logins are still there, the authenticator key with them.
+		assert.deepEqual({ ...vcNode.parseVault(opened.plaintext).items.find((i) => i.id === GITHUB_ID).totp }, LIVE_KEY);
+	});
+	await step("reload (signed out), sign in again, re-open: the note is there, its text hidden until Show and then exactly what was saved", async () => {
+		await page.reload();
+		await page.waitForSelector("#login-panel:not([hidden])");
+		await passwordStep(password);
+		await codeStep(await nextTotp());
+		await vaultStatusLoaded();
+		assert.match(await page.textContent("#vault-status-text"), new RegExp(`revision ${revision},`));
+		await unlock();
+		const card = page.locator(".vault-item--note");
+		assert.equal(await card.count(), 1);
+		assert.equal((await card.locator(".vault-item__name").textContent()).trim(), `${NOTE_NAME} Secure note`);
+		assert.equal(await card.locator(".vault-note-text").textContent(), "••••••••••");
+		assert.ok(!(await page.content()).includes(NOTE_SECRET), "the text is not in the page before Show");
+		await card.locator('button[data-reveal="note"]').click();
+		assert.equal(await card.locator(".vault-note-text").textContent(), NOTE_TEXT);
+		assert.equal(await card.locator(".vault-note-text b").count(), 0, "text, never markup");
+		await page.click("#vault-lock");
+		assert.ok(!(await page.content()).includes(NOTE_SECRET), "locking clears the text");
+	});
 
 	console.log("passkeys");
 	const passkeyNames = () => page.locator("#passkey-list .passkey-item__name").allTextContents();
@@ -743,7 +792,7 @@ async function check(name, fn) {
 		await vaultStatusLoaded();
 		assert.equal(await page.isVisible("#vault-unlock-form"), true, "the vault is closed");
 		await unlock();
-		assert.equal(await page.locator("#vault-items .vault-item").count(), 3 + importedNames.length, "the vault as it was left: its three items and the imported logins");
+		assert.equal(await page.locator("#vault-items .vault-item").count(), 3 + importedNames.length + 1, "the vault as it was left: its three items, the imported logins and the note");
 		await page.click("#vault-lock");
 	});
 	await step("a second passkey through the page's own JSON conversion (no parseCreationOptionsFromJSON / toJSON), accepted by the real API and used alone", async () => {

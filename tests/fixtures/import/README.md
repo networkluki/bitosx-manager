@@ -2,7 +2,9 @@
 
 Every file in this directory except this one is a copy, **byte for byte**, of
 `tests/fixtures/import/` in the desktop application's repository (`networkluki/bitosx`), at commit
-`4d746fb1853b998f4b016f14b06b7122070e5f21` (phase 12: authenticator keys). Nothing here is written or edited in this repository.
+`9c4acb0faa3c7dfd66788fe1ff4f5a2458df1eaa` (its branch `claude/bitosx-phase-13-notes-xjgpd2`) (phase 13: secure notes; 51 expected
+files, three new ones with notes, and every one written again: each candidate has `type`, the
+counts `notesToAdd`). Nothing here is written or edited in this repository.
 
 Each `<input>.expected.json` holds what the desktop's import library (`BitosX.Core.ImportExport`)
 makes of its input — for each case (the two choices, and the vault to import into) either the

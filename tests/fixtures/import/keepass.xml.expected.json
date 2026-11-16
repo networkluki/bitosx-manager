@@ -20,6 +20,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 3,
+          "notesToAdd": 0,
           "duplicates": 1,
           "notImported": 1,
           "empty": 1,
@@ -38,6 +39,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -76,6 +78,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -100,6 +103,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "field_twice",
@@ -122,6 +126,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -146,6 +151,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -187,6 +193,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 3,
+          "notesToAdd": 0,
           "duplicates": 1,
           "notImported": 1,
           "empty": 1,
@@ -205,6 +212,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -243,6 +251,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -267,6 +276,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "field_twice",
@@ -289,6 +299,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -313,6 +324,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,

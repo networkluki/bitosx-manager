@@ -1,0 +1,79 @@
+{
+  "format": "bitosx-export",
+  "version": 1,
+  "exportedAt": "2026-11-15T12:00:00Z",
+  "items": [
+    {
+      "type": "note",
+      "name": "Recovery codes",
+      "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;",
+      "favorite": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-02T00:00:00Z"
+    },
+    {
+      "type": "note",
+      "name": "No notes member",
+      "favorite": false,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-02T00:00:00Z"
+    },
+    {
+      "type": "note",
+      "name": "Notes null",
+      "notes": null,
+      "favorite": "true"
+    },
+    {
+      "type": "note",
+      "name": "With login members",
+      "notes": "FAKE text",
+      "username": "fake.ignored",
+      "password": "FAKE-ignored-pw",
+      "urls": [
+        "https://ignored.example.com/"
+      ],
+      "totp": "not a key"
+    },
+    {
+      "type": "note",
+      "name": "  ",
+      "notes": "\n FAKE derived from the text "
+    },
+    {
+      "type": "note",
+      "notes": ""
+    },
+    {
+      "type": "Note",
+      "name": "Type in capitals",
+      "notes": "FAKE"
+    },
+    {
+      "type": "note",
+      "name": "Recovery codes",
+      "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;",
+      "favorite": false
+    },
+    {
+      "type": "login",
+      "name": "Recovery codes",
+      "username": "",
+      "password": "",
+      "urls": [],
+      "totp": null,
+      "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;",
+      "favorite": false
+    },
+    {
+      "type": "note",
+      "name": "Name too long nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+      "notes": "FAKE"
+    },
+    {
+      "type": "note",
+      "name": 42,
+      "notes": "FAKE a name that is a number"
+    }
+  ]
+}

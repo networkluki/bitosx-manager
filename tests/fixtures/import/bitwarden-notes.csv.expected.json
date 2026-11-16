@@ -1,0 +1,474 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "bitwarden-notes.csv"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "Bitwarden (CSV)",
+        "records": 9,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "reprompt",
+          "archivedDate"
+        ],
+        "counts": {
+          "toAdd": 6,
+          "notesToAdd": 5,
+          "duplicates": 1,
+          "notImported": 1,
+          "empty": 1,
+          "httpsAdded": 0,
+          "namesDerived": 1,
+          "totpKeys": 0,
+          "totpUnreadable": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 6,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "folder": 1,
+          "custom_field": 1
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Wi-Fi at home",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "FAKE Notes",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "Router PIN",
+                  "value": "FAKE-0000"
+                }
+              ]
+            }
+          },
+          {
+            "position": 2,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE first line of a nameless note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "\r\n  FAKE first line of a nameless note\r\nsecond",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A note with login cells",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE text",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Type in capitals",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE text of a note typed NOTE",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "type": "note",
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Wi-Fi at home",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "type": "login",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Wi-Fi at home",
+            "username": "",
+            "password": "FAKE-login-pw",
+            "urls": [],
+            "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A note with only a name",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "type": "note",
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "row_has_extra_values",
+            "name": "Moved values",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE text",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "",
+                  "value": "with a comma"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "the extras copied into the notes",
+      "options": {
+        "copyExtrasToNotes": true,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "csv",
+        "label": "Bitwarden (CSV)",
+        "records": 9,
+        "unsupported": {},
+        "inTrash": 0,
+        "ignoredColumns": [
+          "reprompt",
+          "archivedDate"
+        ],
+        "counts": {
+          "toAdd": 7,
+          "notesToAdd": 6,
+          "duplicates": 0,
+          "notImported": 1,
+          "empty": 1,
+          "httpsAdded": 0,
+          "namesDerived": 1,
+          "totpKeys": 0,
+          "totpUnreadable": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 7,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {
+          "folder": 1,
+          "custom_field": 1
+        },
+        "candidates": [
+          {
+            "position": 1,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Wi-Fi at home",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"\n\nFolder: FAKE Notes\nRouter PIN: FAKE-0000",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "FAKE Notes",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "Router PIN",
+                  "value": "FAKE-0000"
+                }
+              ]
+            }
+          },
+          {
+            "position": 2,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE first line of a nameless note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "\r\n  FAKE first line of a nameless note\r\nsecond",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A note with login cells",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE text",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Type in capitals",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE text of a note typed NOTE",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 6,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Wi-Fi at home",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 7,
+            "type": "login",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Wi-Fi at home",
+            "username": "",
+            "password": "FAKE-login-pw",
+            "urls": [],
+            "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A note with only a name",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "type": "note",
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "row_has_extra_values",
+            "name": "Moved values",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE text\n\nField: with a comma",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": [
+                {
+                  "name": "",
+                  "value": "with a comma"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

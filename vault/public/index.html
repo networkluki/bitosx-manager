@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Sign in — BitosX vault</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.9.0" />
+    <link rel="stylesheet" href="/assets/css/bitosx.css?v=0.10.0" />
     <meta name="theme-color" content="#26292E" />
     <script src="/assets/js/theme-init.js"></script>
 </head>
@@ -305,6 +305,7 @@
             </select>
             <span class="vault-count" id="vault-count" aria-live="polite"></span>
             <button class="btn ghost small" type="button" id="vault-add">Add login</button>
+            <button class="btn ghost small" type="button" id="vault-add-note">Add note</button>
             <button class="btn ghost small" type="button" id="vault-import">Import…</button>
             <button class="btn ghost small" type="button" id="vault-export">Export…</button>
             <button class="btn small" type="button" id="vault-save" disabled>Save to server</button>
@@ -319,6 +320,7 @@
               <input id="edit-name" type="text" autocomplete="off" spellcheck="false" maxlength="200" required />
               <span class="field-error" id="edit-name-error" hidden></span>
             </div>
+            <div id="edit-login-fields">
             <div class="field">
               <label for="edit-username">Username</label>
               <input id="edit-username" type="text" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore spellcheck="false" maxlength="320" />
@@ -361,9 +363,14 @@
               <textarea id="edit-urls" rows="2" autocomplete="off" spellcheck="false"></textarea>
               <span class="field-error" id="edit-urls-error" hidden></span>
             </div>
+            </div>
             <div class="field">
-              <label for="edit-notes">Notes</label>
+              <label for="edit-notes" id="edit-notes-label">Notes</label>
               <textarea id="edit-notes" rows="3" autocomplete="off" maxlength="16384" aria-describedby="edit-notes-count"></textarea>
+              <div class="vault-editor__mask" id="edit-notes-controls" hidden>
+                <span class="vault-value" id="edit-notes-mask">••••••••••</span>
+                <button class="btn ghost small" type="button" id="edit-notes-toggle" aria-pressed="false" title="Show or hide the text">Show</button>
+              </div>
               <span class="field-error" id="edit-notes-error" hidden></span>
               <span class="hint" id="edit-notes-count"></span>
             </div>
@@ -379,7 +386,7 @@
 
           <form id="vault-import-panel" class="vault-editor" novalidate hidden>
             <h2 class="panel-subhead">Import logins</h2>
-            <p class="help">Reads the logins another password manager exported: Chrome or Edge, Firefox, Bitwarden (CSV or unencrypted JSON), KeePassXC (CSV), KeePass 1.x (CSV), KeePass 2 (XML), any other CSV file whose first line names its columns, or BitosX's own export. The file is read <strong>in this browser</strong> and is never uploaded. You see what the import would do before anything is added, and nothing is on the server until you then press <strong>Save to server</strong>.</p>
+            <p class="help">Reads the logins another password manager exported, and the secure notes of Bitwarden and of BitosX's own export: Chrome or Edge, Firefox, Bitwarden (CSV or unencrypted JSON), KeePassXC (CSV), KeePass 1.x (CSV), KeePass 2 (XML), any other CSV file whose first line names its columns, or BitosX's own export. The file is read <strong>in this browser</strong> and is never uploaded. You see what the import would do before anything is added, and nothing is on the server until you then press <strong>Save to server</strong>.</p>
             <div class="field">
               <label for="import-file">File to import (at most 16 MiB)</label>
               <input id="import-file" type="file" accept=".csv,.json,.xml,text/csv,application/json,text/xml,application/xml" aria-describedby="import-file-hint" />
@@ -406,7 +413,7 @@
 
           <form id="vault-export-panel" class="vault-editor" novalidate hidden data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other">
             <h2 class="panel-subhead">Export the vault, unencrypted</h2>
-            <p class="help">Writes every login of this vault to a file another password manager can read. The file is made <strong>in this browser</strong> and saved as a download; nothing is sent to the server.</p>
+            <p class="help">Writes every login of this vault, and in JSON every secure note, to a file another password manager can read. The file is made <strong>in this browser</strong> and saved as a download; nothing is sent to the server.</p>
             <fieldset class="export-format">
               <legend>Format</legend>
               <label class="vault-editor__check"><input id="export-format-csv" name="export-format" type="radio" value="csv" checked /> CSV, in the layout Chrome writes and most password managers read: one address for each item</label>
@@ -414,6 +421,7 @@
             </fieldset>
             <p class="inline-note" id="export-several-urls" hidden></p>
             <p class="inline-note" id="export-totp" hidden></p>
+            <p class="inline-note" id="export-notes" hidden></p>
             <p class="export-warning" id="export-warning">This file will contain every password in plain text. Anyone who can read it can sign in as you. Keep it only as long as you need it, and delete it afterwards. Do not open it in a spreadsheet program: such programs can run formulas found in files like this. To keep a copy of your vault, use the encrypted backup instead.</p>
             <div class="field">
               <label class="vault-editor__check"><input id="export-ack" type="checkbox" aria-describedby="export-warning" /> I understand that this file is not encrypted</label>
@@ -446,7 +454,7 @@
           </div>
 
           <ul class="vault-items" id="vault-items"></ul>
-          <p class="inline-note">Passwords are hidden until you press Show. After <span id="note-clipboard-seconds">30</span> seconds the page clears a copied value from the clipboard if it is still there and the browser lets the page check it (browsers allow that only while this tab is in front; the page tries again when you come back, and says so if it could not). A clipboard history kept by your system is out of reach for any web page. The vault locks after <span id="note-vault-minutes">5</span> minutes without activity, when you sign out, and when the tab is closed or reloaded; it also locks when this tab is hidden, unless you have unsaved changes. Edits are uploaded only when you press Save to server, and only if nobody else changed the vault on the server meanwhile.</p>
+          <p class="inline-note">Passwords and the text of secure notes are hidden until you press Show. After <span id="note-clipboard-seconds">30</span> seconds the page clears a copied value from the clipboard if it is still there and the browser lets the page check it (browsers allow that only while this tab is in front; the page tries again when you come back, and says so if it could not). A clipboard history kept by your system is out of reach for any web page. The vault locks after <span id="note-vault-minutes">5</span> minutes without activity, when you sign out, and when the tab is closed or reloaded; it also locks when this tab is hidden, unless you have unsaved changes. Edits are uploaded only when you press Save to server, and only if nobody else changed the vault on the server meanwhile.</p>
         </div>
       </section>
 
@@ -454,7 +462,7 @@
   </main>
 
   <footer>
-    <div class="footer-version">web v0.9.0</div>
+    <div class="footer-version">web v0.10.0</div>
     <div class="footer-links">
       <a href="https://bitosx.se/#security" rel="noopener noreferrer">How your data is protected</a>
       <a href="https://github.com/networkluki/bitosx-api" target="_blank" rel="noopener noreferrer">API source</a>

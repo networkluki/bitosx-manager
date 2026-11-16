@@ -20,6 +20,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 12,
+          "notesToAdd": 0,
           "duplicates": 1,
           "notImported": 0,
           "empty": 0,
@@ -37,6 +38,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -66,6 +68,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -95,6 +98,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -124,6 +128,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -153,6 +158,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -177,6 +183,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -201,6 +208,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -225,6 +233,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -249,6 +258,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -273,6 +283,7 @@
           },
           {
             "position": 10,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -297,6 +308,7 @@
           },
           {
             "position": 11,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -324,6 +336,7 @@
           },
           {
             "position": 12,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -346,6 +359,7 @@
           },
           {
             "position": 13,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -392,6 +406,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 12,
+          "notesToAdd": 0,
           "duplicates": 1,
           "notImported": 0,
           "empty": 0,
@@ -409,6 +424,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -438,6 +454,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -467,6 +484,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -496,6 +514,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -525,6 +544,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -549,6 +569,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -573,6 +594,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -597,6 +619,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -621,6 +644,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -645,6 +669,7 @@
           },
           {
             "position": 10,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -669,6 +694,7 @@
           },
           {
             "position": 11,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -696,6 +722,7 @@
           },
           {
             "position": 12,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -718,6 +745,7 @@
           },
           {
             "position": 13,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -764,6 +792,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 13,
+          "notesToAdd": 0,
           "duplicates": 1,
           "notImported": 0,
           "empty": 0,
@@ -781,6 +810,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -810,6 +840,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -839,6 +870,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -868,6 +900,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -897,6 +930,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -921,6 +955,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -945,6 +980,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -969,6 +1005,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -993,6 +1030,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1017,6 +1055,7 @@
           },
           {
             "position": 10,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1041,6 +1080,7 @@
           },
           {
             "position": 11,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1068,6 +1108,7 @@
           },
           {
             "position": 12,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1090,6 +1131,7 @@
           },
           {
             "position": 13,
+            "type": "login",
             "status": "add",
             "duplicate": true,
             "reason": null,

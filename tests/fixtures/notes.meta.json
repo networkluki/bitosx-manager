@@ -1,0 +1,46 @@
+{
+  "note": "ForTesting profile (1 MiB); ASCII password; canonical encoding. Content schema version 3 (phase 13, secure notes): two notes - one favorite with a text of several lines (CR LF and LF), text outside ASCII and what looks like markup, one with only a name (no Notes member) - and two logins, one with an authenticator key and one without. items: what the desktop reads from it, in order.",
+  "typedPassword": "correct horse battery",
+  "passwordBytesHex": "636f727265637420686f7273652062617474657279",
+  "fingerprint": "af7cebb2ecaf28fff784f1e5910d0365e1b6d0f7a45a3150b74a9111c41b1fe1",
+  "sizeBytes": 2331,
+  "kdf": {
+    "MemoryKiB": 1024,
+    "Iterations": 1,
+    "DegreeOfParallelism": 1,
+    "KeyLengthBytes": 32
+  },
+  "plaintextUtf8": "{\u0022schemaVersion\u0022:3,\u0022items\u0022:[{\u0022type\u0022:\u0022note\u0022,\u0022Id\u0022:\u002255555555-5555-4555-8555-555555555551\u0022,\u0022Name\u0022:\u0022FAKE Wi-Fi caf\\u00E9 \\u003Cb\\u003Enote\\u003C/b\\u003E\u0022,\u0022Notes\u0022:\u0022Network: FAKE-n\\u00E4tverk\\r\\nKey: FAKE-wifi-key \\u0026 \\u0022quotes\\u0022\\n\\u003Cscript\\u003Ealert(\\u0027not markup\\u0027)\\u003C/script\\u003E\\n**not markdown** \\u65E5\\u672C\\u8A9E \\uD83D\\uDD11\\n\\tindented line \u0022,\u0022Favorite\u0022:true,\u0022CreatedAt\u0022:\u00222026-11-05T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-11-06T09:00:00\u002B00:00\u0022},{\u0022type\u0022:\u0022note\u0022,\u0022Id\u0022:\u002255555555-5555-4555-8555-555555555552\u0022,\u0022Name\u0022:\u0022FAKE note with only a name\u0022,\u0022Favorite\u0022:false,\u0022CreatedAt\u0022:\u00222026-11-07T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-11-07T09:00:00\u002B00:00\u0022},{\u0022type\u0022:\u0022login\u0022,\u0022Username\u0022:\u0022fake.user@example.test\u0022,\u0022Password\u0022:\u0022FAKE-mail-pw\u0022,\u0022Urls\u0022:[\u0022https://mail.example.test/\u0022],\u0022Totp\u0022:{\u0022Secret\u0022:\u0022GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ\u0022,\u0022Algorithm\u0022:\u0022SHA1\u0022,\u0022Digits\u0022:6,\u0022Period\u0022:30},\u0022Id\u0022:\u002255555555-5555-4555-8555-555555555553\u0022,\u0022Name\u0022:\u0022FAKE Mail (with a key)\u0022,\u0022Favorite\u0022:false,\u0022CreatedAt\u0022:\u00222026-11-01T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-11-02T09:00:00\u002B00:00\u0022},{\u0022type\u0022:\u0022login\u0022,\u0022Username\u0022:\u0022fake.shopper\u0022,\u0022Password\u0022:\u0022FAKE-shop-pw\u0022,\u0022Urls\u0022:[],\u0022Id\u0022:\u002255555555-5555-4555-8555-555555555554\u0022,\u0022Name\u0022:\u0022FAKE Shop (no key)\u0022,\u0022Notes\u0022:\u0022A login\\u0027s notes, FAKE.\u0022,\u0022Favorite\u0022:false,\u0022CreatedAt\u0022:\u00222026-11-03T09:00:00\u002B00:00\u0022,\u0022UpdatedAt\u0022:\u00222026-11-03T09:00:00\u002B00:00\u0022}]}",
+  "items": [
+    {
+      "id": "55555555-5555-4555-8555-555555555551",
+      "type": "note",
+      "name": "FAKE Wi-Fi caf\u00E9 \u003Cb\u003Enote\u003C/b\u003E",
+      "notes": "Network: FAKE-n\u00E4tverk\r\nKey: FAKE-wifi-key \u0026 \u0022quotes\u0022\n\u003Cscript\u003Ealert(\u0027not markup\u0027)\u003C/script\u003E\n**not markdown** \u65E5\u672C\u8A9E \uD83D\uDD11\n\tindented line ",
+      "favorite": true
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555552",
+      "type": "note",
+      "name": "FAKE note with only a name",
+      "notes": null,
+      "favorite": false
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555553",
+      "type": "login",
+      "name": "FAKE Mail (with a key)",
+      "notes": null,
+      "favorite": false,
+      "hasTotp": true
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555554",
+      "type": "login",
+      "name": "FAKE Shop (no key)",
+      "notes": "A login\u0027s notes, FAKE.",
+      "favorite": false,
+      "hasTotp": false
+    }
+  ]
+}

@@ -148,11 +148,13 @@ test("version 1 and version 2 documents are read; a key comes out as the item's 
 	assert.equal(vc.parseVault(doc(2, [])).items.length, 0);
 });
 
-test("a key in a version 1 document, version 0 and 3 and above, and any key that is not exactly valid are refused", () => {
+test("a key in a version 1 document, version 0 and 4 and above, and any key that is not exactly valid are refused", () => {
 	refusedContent(doc(1, [withTotp(TOTP)]));
 	refusedContent(doc(1, [withTotp(null)]));   // "Totp": null is refused in every version (D2)
 	refusedContent(doc(2, [withTotp(null)]));
-	for (const version of [0, 3, 4, 100, "2", 2.5, null]) { refusedContent(doc(version, [])); }
+	refusedContent(doc(3, [withTotp(null)]));
+	// Version 3 (phase 13: secure notes) is read; tests/notes.test.js has its rules.
+	for (const version of [0, 4, 5, 100, "2", "3", 2.5, null]) { refusedContent(doc(version, [])); }
 	const bad = [
 		{ Secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", Algorithm: "SHA1", Digits: 6 },               // a member missing
 		Object.assign({}, TOTP, { Extra: 1 }),                                                      // an unknown member

@@ -20,6 +20,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 3,
+          "notesToAdd": 0,
           "duplicates": 0,
           "notImported": 0,
           "empty": 0,
@@ -35,6 +36,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -59,6 +61,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -83,6 +86,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,

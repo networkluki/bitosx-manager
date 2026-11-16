@@ -1,0 +1,498 @@
+{
+  "schema": 1,
+  "input": {
+    "file": "bitosx-export-notes.json"
+  },
+  "cases": [
+    {
+      "name": "an empty vault, the choices as they are at first",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [],
+      "result": {
+        "format": "bitosx_json",
+        "label": "BitosX (JSON)",
+        "records": 11,
+        "unsupported": {
+          "other": 1
+        },
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 7,
+          "notesToAdd": 6,
+          "duplicates": 1,
+          "notImported": 1,
+          "empty": 1,
+          "httpsAdded": 0,
+          "namesDerived": 2,
+          "totpKeys": 0,
+          "totpUnreadable": 0,
+          "vaultItemsBefore": 0,
+          "vaultItemsAfter": 7,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Recovery codes",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "No notes member",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Notes null",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "With login members",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE text",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE derived from the text",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "\n FAKE derived from the text ",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "type": "note",
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Recovery codes",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "type": "login",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Recovery codes",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "type": "note",
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "name_too_long",
+            "name": "Name too long nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 11,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE a name that is a number",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE a name that is a number",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "a vault that holds the first note",
+      "options": {
+        "copyExtrasToNotes": false,
+        "importDuplicates": false
+      },
+      "vault": [
+        {
+          "type": "note",
+          "name": "Recovery codes",
+          "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;"
+        }
+      ],
+      "result": {
+        "format": "bitosx_json",
+        "label": "BitosX (JSON)",
+        "records": 11,
+        "unsupported": {
+          "other": 1
+        },
+        "inTrash": 0,
+        "ignoredColumns": [],
+        "counts": {
+          "toAdd": 6,
+          "notesToAdd": 5,
+          "duplicates": 2,
+          "notImported": 1,
+          "empty": 1,
+          "httpsAdded": 0,
+          "namesDerived": 2,
+          "totpKeys": 0,
+          "totpUnreadable": 0,
+          "vaultItemsBefore": 1,
+          "vaultItemsAfter": 7,
+          "exceedsVaultItemLimit": false
+        },
+        "extras": {},
+        "candidates": [
+          {
+            "position": 1,
+            "type": "note",
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Recovery codes",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;",
+            "favorite": true,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 2,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "No notes member",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 3,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Notes null",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 4,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "With login members",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE text",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 5,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE derived from the text",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "\n FAKE derived from the text ",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 8,
+            "type": "note",
+            "status": "duplicate",
+            "duplicate": true,
+            "reason": null,
+            "name": "Recovery codes",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 9,
+            "type": "login",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "Recovery codes",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE-1111\nFAKE-2222\n<i>FAKE</i> &amp;",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 10,
+            "type": "note",
+            "status": "not_imported",
+            "duplicate": false,
+            "reason": "name_too_long",
+            "name": "Name too long nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
+            "position": 11,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "FAKE a name that is a number",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "FAKE a name that is a number",
+            "favorite": false,
+            "nameWasDerived": true,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

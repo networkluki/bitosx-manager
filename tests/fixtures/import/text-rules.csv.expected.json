@@ -15,15 +15,14 @@
         "format": "csv",
         "label": "CSV",
         "records": 33,
-        "unsupported": {
-          "secure_note": 1
-        },
+        "unsupported": {},
         "inTrash": 0,
         "ignoredColumns": [
           "Ignored column"
         ],
         "counts": {
-          "toAdd": 26,
+          "toAdd": 27,
+          "notesToAdd": 1,
           "duplicates": 0,
           "notImported": 5,
           "empty": 1,
@@ -32,7 +31,7 @@
           "totpKeys": 1,
           "totpUnreadable": 0,
           "vaultItemsBefore": 0,
-          "vaultItemsAfter": 26,
+          "vaultItemsAfter": 27,
           "exceedsVaultItemLimit": false
         },
         "extras": {
@@ -43,6 +42,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -67,6 +67,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -91,6 +92,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -113,6 +115,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -142,6 +145,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -166,6 +170,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -193,6 +198,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -217,6 +223,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -241,6 +248,7 @@
           },
           {
             "position": 10,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -282,6 +290,7 @@
           },
           {
             "position": 11,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -306,6 +315,7 @@
           },
           {
             "position": 12,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -329,7 +339,31 @@
             }
           },
           {
+            "position": 13,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A secure note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
             "position": 14,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -354,6 +388,7 @@
           },
           {
             "position": 15,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -379,6 +414,7 @@
           },
           {
             "position": 16,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -403,6 +439,7 @@
           },
           {
             "position": 17,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "name_too_long",
@@ -427,6 +464,7 @@
           },
           {
             "position": 18,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -451,6 +489,7 @@
           },
           {
             "position": 19,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -475,6 +514,7 @@
           },
           {
             "position": 20,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -499,6 +539,7 @@
           },
           {
             "position": 21,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -523,6 +564,7 @@
           },
           {
             "position": 22,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",
@@ -547,6 +589,7 @@
           },
           {
             "position": 23,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -571,6 +614,7 @@
           },
           {
             "position": 24,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -595,6 +639,7 @@
           },
           {
             "position": 25,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",
@@ -619,6 +664,7 @@
           },
           {
             "position": 26,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",
@@ -643,6 +689,7 @@
           },
           {
             "position": 27,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -667,6 +714,7 @@
           },
           {
             "position": 28,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -693,6 +741,7 @@
           },
           {
             "position": 29,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -717,6 +766,7 @@
           },
           {
             "position": 30,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -739,6 +789,7 @@
           },
           {
             "position": 31,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -761,6 +812,7 @@
           },
           {
             "position": 32,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -785,6 +837,7 @@
           },
           {
             "position": 33,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",
@@ -821,15 +874,14 @@
         "format": "csv",
         "label": "CSV",
         "records": 33,
-        "unsupported": {
-          "secure_note": 1
-        },
+        "unsupported": {},
         "inTrash": 0,
         "ignoredColumns": [
           "Ignored column"
         ],
         "counts": {
-          "toAdd": 26,
+          "toAdd": 27,
+          "notesToAdd": 1,
           "duplicates": 0,
           "notImported": 5,
           "empty": 1,
@@ -838,7 +890,7 @@
           "totpKeys": 1,
           "totpUnreadable": 0,
           "vaultItemsBefore": 0,
-          "vaultItemsAfter": 26,
+          "vaultItemsAfter": 27,
           "exceedsVaultItemLimit": false
         },
         "extras": {
@@ -849,6 +901,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -873,6 +926,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -897,6 +951,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -919,6 +974,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -948,6 +1004,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -972,6 +1029,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -999,6 +1057,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1023,6 +1082,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1047,6 +1107,7 @@
           },
           {
             "position": 10,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1088,6 +1149,7 @@
           },
           {
             "position": 11,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1112,6 +1174,7 @@
           },
           {
             "position": 12,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1135,7 +1198,31 @@
             }
           },
           {
+            "position": 13,
+            "type": "note",
+            "status": "add",
+            "duplicate": false,
+            "reason": null,
+            "name": "A secure note",
+            "username": "",
+            "password": "",
+            "urls": [],
+            "notes": "",
+            "favorite": false,
+            "nameWasDerived": false,
+            "httpsAdded": 0,
+            "totp": null,
+            "totpRefused": null,
+            "extras": {
+              "totp": "",
+              "folder": "",
+              "otherAddresses": [],
+              "customFields": []
+            }
+          },
+          {
             "position": 14,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1160,6 +1247,7 @@
           },
           {
             "position": 15,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1185,6 +1273,7 @@
           },
           {
             "position": 16,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1209,6 +1298,7 @@
           },
           {
             "position": 17,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "name_too_long",
@@ -1233,6 +1323,7 @@
           },
           {
             "position": 18,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1257,6 +1348,7 @@
           },
           {
             "position": 19,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1281,6 +1373,7 @@
           },
           {
             "position": 20,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1305,6 +1398,7 @@
           },
           {
             "position": 21,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1329,6 +1423,7 @@
           },
           {
             "position": 22,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",
@@ -1353,6 +1448,7 @@
           },
           {
             "position": 23,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1377,6 +1473,7 @@
           },
           {
             "position": 24,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1401,6 +1498,7 @@
           },
           {
             "position": 25,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",
@@ -1425,6 +1523,7 @@
           },
           {
             "position": 26,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",
@@ -1449,6 +1548,7 @@
           },
           {
             "position": 27,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1473,6 +1573,7 @@
           },
           {
             "position": 28,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1499,6 +1600,7 @@
           },
           {
             "position": 29,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1523,6 +1625,7 @@
           },
           {
             "position": 30,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1545,6 +1648,7 @@
           },
           {
             "position": 31,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1567,6 +1671,7 @@
           },
           {
             "position": 32,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -1591,6 +1696,7 @@
           },
           {
             "position": 33,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "url_invalid",

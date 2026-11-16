@@ -20,6 +20,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 6,
+          "notesToAdd": 0,
           "duplicates": 1,
           "notImported": 2,
           "empty": 0,
@@ -37,6 +38,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -61,6 +63,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -85,6 +88,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -109,6 +113,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -133,6 +138,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -157,6 +163,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -181,6 +188,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -205,6 +213,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "password_too_long",
@@ -229,6 +238,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "row_has_extra_values",
@@ -293,6 +303,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 5,
+          "notesToAdd": 0,
           "duplicates": 2,
           "notImported": 2,
           "empty": 0,
@@ -310,6 +321,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -334,6 +346,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -358,6 +371,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -382,6 +396,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -406,6 +421,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -430,6 +446,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -454,6 +471,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -478,6 +496,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "password_too_long",
@@ -502,6 +521,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "row_has_extra_values",
@@ -566,6 +586,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 7,
+          "notesToAdd": 0,
           "duplicates": 2,
           "notImported": 2,
           "empty": 0,
@@ -583,6 +604,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": true,
             "reason": null,
@@ -607,6 +629,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -631,6 +654,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -655,6 +679,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -679,6 +704,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": true,
             "reason": null,
@@ -703,6 +729,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -727,6 +754,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -751,6 +779,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "password_too_long",
@@ -775,6 +804,7 @@
           },
           {
             "position": 9,
+            "type": "login",
             "status": "not_imported",
             "duplicate": false,
             "reason": "row_has_extra_values",

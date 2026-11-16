@@ -20,6 +20,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 8,
+          "notesToAdd": 0,
           "duplicates": 0,
           "notImported": 0,
           "empty": 0,
@@ -35,6 +36,7 @@
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -59,6 +61,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -83,6 +86,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -107,6 +111,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -131,6 +136,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -153,6 +159,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -177,6 +184,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -201,6 +209,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -291,6 +300,16 @@
           "username": "DOMAIN\\fake.user",
           "password": "FAKE\\pw\\\\two",
           "urls": []
+        },
+        {
+          "type": "note",
+          "name": "Wi-Fi at home",
+          "notes": "Network: FAKE-net\nKey: FAKE-wifi-key, \"quoted\"\r\n<b>not markup</b> åäö"
+        },
+        {
+          "type": "note",
+          "name": "A note with only a name",
+          "notes": ""
         }
       ],
       "result": {
@@ -302,6 +321,7 @@
         "ignoredColumns": [],
         "counts": {
           "toAdd": 1,
+          "notesToAdd": 0,
           "duplicates": 7,
           "notImported": 0,
           "empty": 0,
@@ -309,14 +329,15 @@
           "namesDerived": 0,
           "totpKeys": 0,
           "totpUnreadable": 0,
-          "vaultItemsBefore": 8,
-          "vaultItemsAfter": 9,
+          "vaultItemsBefore": 10,
+          "vaultItemsAfter": 11,
           "exceedsVaultItemLimit": false
         },
         "extras": {},
         "candidates": [
           {
             "position": 1,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -341,6 +362,7 @@
           },
           {
             "position": 2,
+            "type": "login",
             "status": "add",
             "duplicate": false,
             "reason": null,
@@ -365,6 +387,7 @@
           },
           {
             "position": 3,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -389,6 +412,7 @@
           },
           {
             "position": 4,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -413,6 +437,7 @@
           },
           {
             "position": 5,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -435,6 +460,7 @@
           },
           {
             "position": 6,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -459,6 +485,7 @@
           },
           {
             "position": 7,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,
@@ -483,6 +510,7 @@
           },
           {
             "position": 8,
+            "type": "login",
             "status": "duplicate",
             "duplicate": true,
             "reason": null,

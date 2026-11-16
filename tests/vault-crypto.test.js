@@ -216,9 +216,11 @@ test("content this version does not understand is refused rather than guessed at
 	throwsKind(() => vc.parseVault(utf8("not json")), vc.KINDS.CONTENT);
 	throwsKind(() => vc.parseVault(utf8("[]")), vc.KINDS.CONTENT);
 	throwsKind(() => vc.parseVault(doc([item], { unknown: true })), vc.KINDS.CONTENT);
-	// Version 2 (phase 12: authenticator keys) is read; 3 and above are not. tests/totp.test.js has the rest.
+	// Version 2 (phase 12: authenticator keys) and 3 (phase 13: secure notes) are read; 4 and above
+	// are not. tests/totp.test.js and tests/notes.test.js have the rest.
 	assert.equal(vc.parseVault(utf8('{"schemaVersion":2,"items":[]}')).schemaVersion, 2);
-	throwsKind(() => vc.parseVault(utf8('{"schemaVersion":3,"items":[]}')), vc.KINDS.CONTENT);
+	assert.equal(vc.parseVault(utf8('{"schemaVersion":3,"items":[]}')).schemaVersion, 3);
+	throwsKind(() => vc.parseVault(utf8('{"schemaVersion":4,"items":[]}')), vc.KINDS.CONTENT);
 	throwsKind(() => vc.parseVault(utf8('{"items":[]}')), vc.KINDS.CONTENT);
 	throwsKind(() => vc.parseVault(doc([null])), vc.KINDS.CONTENT);
 	throwsKind(() => vc.parseVault(doc([Object.assign({}, item, { type: "card" })])), vc.KINDS.CONTENT);
